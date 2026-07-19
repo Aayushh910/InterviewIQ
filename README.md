@@ -105,7 +105,7 @@ allowing users to practice for specific roles with customized interview sessions
 ### Clone Repository
 
 ```bash
-git clone https://github.com/yourusername/InterviewIQ.git
+git clone https://github.com/Aayushh910/InterviewIQ.git
 cd InterviewIQ
 Backend Setup
 cd backend
@@ -205,17 +205,23 @@ git push origin feature-name
 
 # 📄 License
 
-This project is licensed under the **MIT License**.
+InterviewIQ – AI Interview Performance Analyzer
+
+Copyright © 2026 **Aayush Savaliya**
+
+This project was developed as part of an academic study at CHARUSAT University (CSPIT) for learning and educational purposes.
+
+**All Rights Reserved.**
+Unauthorized copying, distribution, or submission of this work as one's own is prohibited.
 
 ---
-
-# 👨‍💻 Development:
-- Aayush Savaliya
-
----
-
 <div align="center">
+  
+## ✨ Project Creator
 
+> Designed, Developed, and Maintained by
+# Aayush Savaliya
+---
 ## ⭐ If you like this project, don't forget to star the repository!
 
 **Made with ❤️ using React, FastAPI, PostgreSQL and AI**
