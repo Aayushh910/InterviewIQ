@@ -1,0 +1,92 @@
+ 
+# Python
+ 
+__pycache__/
+*.py[cod]
+*$py.class
+
+
+# Virtual Environment
+venv/
+.venv/
+env/
+ENV/
+
+ 
+# Environment Variables
+ 
+.env
+.env.*
+!.env.example
+
+ 
+# IDE
+ 
+.vscode/
+.idea/
+*.swp
+*.swo
+
+ 
+# Logs
+ 
+*.log
+logs/
+
+ 
+# Database
+ 
+*.db
+*.sqlite3
+
+ 
+# Pytest
+ 
+.pytest_cache/
+.coverage
+htmlcov/
+
+ 
+# Mypy
+ 
+.mypy_cache/
+
+ 
+# Ruff
+ 
+.ruff_cache/
+
+ 
+# Distribution
+ 
+build/
+dist/
+*.egg-info/
+
+ 
+# Alembic
+ 
+alembic/versions/__pycache__/
+
+ 
+# OS Files
+ 
+.DS_Store
+Thumbs.db
+
+ 
+# Jupyter
+ 
+.ipynb_checkpoints/
+
+ 
+# Temporary Files
+ 
+*.tmp
+*.bak
+*.cache
+
+ 
+# Python Version
+ 
+.python-version
