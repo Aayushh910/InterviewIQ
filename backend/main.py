@@ -3,23 +3,27 @@ from sqlalchemy import text
 
 from app.database.base import Base
 from app.database.database import engine
+from app.api.routes import auth
 
-# ✅ Import all models here BEFORE create_all() is called.
-# This registers each model's table with Base.metadata.
-import app.models.user  # noqa: F401
+import app.models.user
 
 app = FastAPI(
     title="InterviewIQ API",
     version="1.0.0"
 )
 
+app.include_router(auth.router)
 
 @app.on_event("startup")
 def startup_db():
     try:
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
-        print("✅ Database connected successfully!")
+
+        Base.metadata.create_all(bind=engine)
+
+        print(" Database connected successfully!")
+        print(" Tables created successfully!")
 
     except Exception as e:
         print("❌ Database connection failed!")
