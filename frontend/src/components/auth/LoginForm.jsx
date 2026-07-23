@@ -1,12 +1,12 @@
 import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
-import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import Input from "../common/Input";
 import Button from "../common/Button";
 import { validateEmail } from "../../utils/validators";
 
-export default function LoginForm({ onSubmit, loading }) {
+export default function LoginForm({ onSubmit, loading, error: externalError }) {
   const [showPass, setShowPass] = useState(false);
   const { register, handleSubmit, formState: { errors } } = useForm();
 
@@ -17,6 +17,13 @@ export default function LoginForm({ onSubmit, loading }) {
           <h1 className="text-2xl font-extrabold text-[#173F5F] mb-1.5">Welcome back</h1>
           <p className="text-sm text-[#6B7280]">Sign in to continue your interview prep</p>
         </div>
+
+        {externalError && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+            <AlertCircle size={20} className="text-red-600 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-red-700">{externalError}</p>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
           <Input

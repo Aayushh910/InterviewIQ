@@ -8,12 +8,13 @@ export async function login({ email, password }) {
   return data;
 }
 
-export async function signup({ firstName, lastName, email, password }) {
-  const data = await api.post("/auth/register", {
+export async function signup({ firstName, lastName, email, password, phone }) {
+  const data = await api.post("/auth/signup", {
     first_name: firstName,
     last_name: lastName,
     email,
     password,
+    phone: phone || null,
   });
   saveToken(data.access_token);
   saveUser(data.user);
@@ -22,4 +23,8 @@ export async function signup({ firstName, lastName, email, password }) {
 
 export async function getMe() {
   return api.get("/auth/me");
+}
+
+export async function logout() {
+  return { success: true };
 }

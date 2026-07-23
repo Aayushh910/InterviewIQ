@@ -15,18 +15,21 @@ class UserService:
     def create_user(db: Session, user_data: UserCreate):
 
         hashed_password = hash_password(user_data.password)
+        
+        full_name = f"{user_data.first_name} {user_data.last_name}"
 
         new_user = User(
-            full_name=user_data.full_name,
+            full_name=full_name,
             email=user_data.email,
             password=hashed_password,
+            phone=user_data.phone,
         )
 
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
 
-        return new_user;
+        return new_user
 
     @staticmethod
     def authenticate_user(db: Session, email: str, password: str):

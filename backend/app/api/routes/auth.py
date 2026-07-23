@@ -24,10 +24,22 @@ def signup(user: UserCreate, db: Session = Depends(get_db)):
             detail="Email already registered"
         )
 
-    UserService.create_user(db, user)
+    new_user = UserService.create_user(db, user)
+    
+    access_token = create_access_token(
+        data={"sub": str(new_user.id)}
+    )
 
     return {
-        "message": "User created successfully"
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": str(new_user.id),
+            "full_name": new_user.full_name,
+            "email": new_user.email,
+            "role": new_user.role,
+            "is_verified": new_user.is_verified,
+        }
     }
 
 
@@ -52,7 +64,14 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
 
     return {
         "access_token": access_token,
-        "token_type": "bearer"
+        "token_type": "bearer",
+        "user": {
+            "id": str(authenticated_user.id),
+            "full_name": authenticated_user.full_name,
+            "email": authenticated_user.email,
+            "role": authenticated_user.role,
+            "is_verified": authenticated_user.is_verified,
+        }
     }
 
 @router.get("/me")

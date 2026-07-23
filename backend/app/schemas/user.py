@@ -1,13 +1,15 @@
 from uuid import UUID
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr
 
 
 class UserCreate(BaseModel):
-    full_name: str
+    first_name: str
+    last_name: str
     email: EmailStr
     password: str
-    phone: str
+    phone: Optional[str] = None
 
 
 class UserLogin(BaseModel):

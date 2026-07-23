@@ -1,12 +1,12 @@
 import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import Input from "../common/Input";
 import Button from "../common/Button";
 import { validateEmail, validatePassword } from "../../utils/validators";
 
-export default function SignupForm({ onSubmit, loading }) {
+export default function SignupForm({ onSubmit, loading, error: externalError }) {
   const [showPass, setShowPass] = useState(false);
   const { register, handleSubmit, watch, formState: { errors } } = useForm();
   const password = watch("password");
@@ -18,6 +18,13 @@ export default function SignupForm({ onSubmit, loading }) {
           <h1 className="text-2xl font-extrabold text-[#173F5F] mb-1.5">Create your account</h1>
           <p className="text-sm text-[#6B7280]">Start your AI interview prep journey today</p>
         </div>
+
+        {externalError && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+            <AlertCircle size={20} className="text-red-600 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-red-700">{externalError}</p>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
           <div className="grid grid-cols-2 gap-3">
