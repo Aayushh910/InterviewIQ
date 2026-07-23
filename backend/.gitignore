@@ -1,92 +1,114 @@
- 
-# Python
- 
+﻿# Python
 __pycache__/
 *.py[cod]
 *$py.class
-
+*.so
+.Python
 
 # Virtual Environment
 venv/
 .venv/
 env/
 ENV/
+env.bak/
+venv.bak/
+pip-log.txt
+pip-delete-this-directory.txt
 
- 
 # Environment Variables
- 
 .env
-.env.*
+.env.local
+.env.*.local
 !.env.example
 
- 
 # IDE
- 
 .vscode/
 .idea/
+.project
+.pydevproject
 *.swp
 *.swo
+*.sublime-project
+*.sublime-workspace
 
- 
 # Logs
- 
-*.log
 logs/
+*.log
+*.pot
 
- 
 # Database
- 
 *.db
 *.sqlite3
+*.sqlite
 
- 
-# Pytest
- 
+# Testing
 .pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
+.tox/
+.hypothesis/
 
- 
-# Mypy
- 
+# Type Checking
 .mypy_cache/
+.dmypy.json
+dmypy.json
 
- 
-# Ruff
- 
+# Linting
 .ruff_cache/
+.flake8
 
- 
 # Distribution
- 
 build/
+develop-eggs/
 dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
 *.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
- 
 # Alembic
- 
 alembic/versions/__pycache__/
+alembic/versions/
 
- 
 # OS Files
- 
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+Desktop.ini
 
- 
 # Jupyter
- 
 .ipynb_checkpoints/
+*.ipynb
 
- 
 # Temporary Files
- 
 *.tmp
 *.bak
 *.cache
+.cache/
 
- 
 # Python Version
- 
 .python-version
+
+# IDE Settings
+.vscode/settings.json
+.idea/workspace.xml
+
+# VS Code
+.vscode/launch.json
+.vscode/tasks.json

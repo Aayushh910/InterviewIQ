@@ -1,0 +1,66 @@
+# IDE and Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+
+# OS Files
+.DS_Store
+Thumbs.db
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+!.env.example
+!.env.example.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies and Build Files
+node_modules/
+dist/
+build/
+*.egg-info/
+__pycache__/
+
+# Database
+*.db
+*.sqlite3
+
+# Temporary and Cache Files
+*.tmp
+*.bak
+*.cache
+.cache/
+.vite/
+
+# IDE Cache
+.eslintcache
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.python-version
+
+# OS-specific
+*.pid
+
+# Project-specific
+Workflow/
