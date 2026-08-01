@@ -1,75 +1,131 @@
-import { useRef } from "react";
-import { motion, useInView } from "framer-motion";
-import { Bot, FileText, Briefcase, Zap, Mic, BarChart3, FileDown, Map } from "lucide-react";
+import React from 'react';
+import { motion } from 'framer-motion';
+import { Eye, Mic, Cpu, Bot, Activity, FileCheck, CheckCircle2 } from 'lucide-react';
+import { Badge } from '../common/Badge';
 
-const FEATURES = [
-  { icon: Bot, title: "AI Mock Interviews", desc: "Adaptive AI interviewer that evolves questions based on your answers and target role.", color: "#F5A623", glow: "rgba(245,166,35,0.15)" },
-  { icon: FileText, title: "Resume-Based", desc: "Upload your resume and get questions that probe your actual experience and skills.", color: "#FF6B6B", glow: "rgba(255,107,107,0.15)" },
-  { icon: Briefcase, title: "JD-Based Interviews", desc: "Paste any job description and practice with questions crafted for that exact role.", color: "#A8E063", glow: "rgba(168,224,99,0.15)" },
-  { icon: Zap, title: "Real-Time Feedback", desc: "Instant AI feedback on every answer — structure, depth, relevance, and delivery.", color: "#F5A623", glow: "rgba(245,166,35,0.15)" },
-  { icon: Mic, title: "Speech Analysis", desc: "Whisper AI transcribes your voice and analyzes pace, clarity, and filler words.", color: "#FF6B6B", glow: "rgba(255,107,107,0.15)" },
-  { icon: BarChart3, title: "Performance Analytics", desc: "Track progress over time with detailed charts on technical and communication scores.", color: "#A8E063", glow: "rgba(168,224,99,0.15)" },
-  { icon: FileDown, title: "PDF Reports", desc: "Download a comprehensive report with scores, feedback, and improvement areas.", color: "#F5A623", glow: "rgba(245,166,35,0.15)" },
-  { icon: Map, title: "Learning Roadmaps", desc: "Personalized study plan based on your weak areas to accelerate interview readiness.", color: "#FF6B6B", glow: "rgba(255,107,107,0.15)" },
-];
-
-function FeatureCard({ icon: Icon, title, desc, color, glow, index }) {
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: "-60px" });
+export const Features = () => {
+  const capabilities = [
+    {
+      icon: Eye,
+      tag: "Eye Contact & Posture",
+      subtitle: "Facial & Pose Analysis",
+      title: "Facial Expression Analysis",
+      description: "Tracks eye contact, posture, facial expressions and confidence during interviews.",
+      highlights: ["Eye Contact Ratio", "Composure Index", "Facial Expressions"],
+    },
+    {
+      icon: Mic,
+      tag: "130-150 WPM Target",
+      subtitle: "Voice & Tone Evaluation",
+      title: "Voice & Communication Analysis",
+      description: "Evaluates speech clarity, speaking pace, filler words, pronunciation and confidence.",
+      highlights: ["Speaking Pace", "Filler Word Detection", "Voice Clarity"],
+    },
+    {
+      icon: Cpu,
+      tag: "STAR & Technical Scoring",
+      subtitle: "Response Evaluation",
+      title: "AI Answer Evaluation",
+      description: "Scores technical answers, HR responses, STAR structure and communication quality.",
+      highlights: ["Technical Accuracy", "STAR Method", "Response Quality"],
+    },
+    {
+      icon: Bot,
+      tag: "Intelligent Follow-ups",
+      subtitle: "Adaptive Intelligence",
+      title: "Adaptive AI Interviewer",
+      description: "Generates intelligent follow-up questions based on previous answers.",
+      highlights: ["Follow-up Questions", "Adaptive Probing", "Real-Time Adjustment"],
+    },
+    {
+      icon: Activity,
+      tag: "Progress Tracking",
+      subtitle: "Interactive Dashboards",
+      title: "Performance Analytics",
+      description: "Visualises communication, confidence and technical performance using interactive dashboards.",
+      highlights: ["Interview Dashboards", "Confidence Charts", "Skill Analysis"],
+    },
+    {
+      icon: FileCheck,
+      tag: "Downloadable PDF",
+      subtitle: "Personalized Guidance",
+      title: "Personalized AI Feedback",
+      description: "Generates improvement tips, AI learning roadmap and downloadable PDF reports.",
+      highlights: ["Personalized Tips", "AI Learning Roadmap", "Downloadable PDF"],
+    },
+  ];
 
   return (
-    <motion.article
-      ref={ref}
-      initial={{ opacity: 0, y: 32 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.5, delay: (index % 4) * 0.08, ease: [0.22, 1, 0.36, 1] }}
-      className="card-3d group relative bg-[#1E1E2E] rounded-2xl border border-white/6 p-6 cursor-default overflow-hidden"
-    >
-      {/* Glow on hover */}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl"
-        style={{ background: `radial-gradient(circle at 30% 30%, ${glow}, transparent 70%)` }} />
-
-      <div className="relative z-10">
-        <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3"
-          style={{ background: `${color}15`, boxShadow: `0 0 20px ${color}20` }}>
-          <Icon size={22} style={{ color }} strokeWidth={1.8} />
-        </div>
-        <h3 className="text-base font-bold text-[#F4F2EE] mb-2">{title}</h3>
-        <p className="text-sm text-[#8B8FA8] leading-relaxed">{desc}</p>
+    <section id="features" className="py-16 px-4 sm:px-8 lg:px-12 w-full max-w-[1400px] mx-auto relative z-10">
+      {/* Header */}
+      <div className="text-center max-w-2xl mx-auto mb-12 relative z-10">
+        <Badge size="sm" className="mb-3 font-mono px-2.5 py-0.5 text-[10px] bg-[#141414] text-neutral-200 border border-white/20">
+          InterviewIQ Platform Features
+        </Badge>
+        <h2 className="text-3xl sm:text-4xl font-sans font-extrabold text-white tracking-tight">
+          AI Interview Intelligence
+        </h2>
+        <p className="text-neutral-300 mt-2 text-xs sm:text-sm font-normal leading-relaxed max-w-xl mx-auto">
+          InterviewIQ evaluates communication, confidence, technical knowledge and behaviour using multimodal AI.
+        </p>
       </div>
 
-      {/* Corner accent */}
-      <div className="absolute top-0 right-0 w-16 h-16 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-        style={{ background: `radial-gradient(circle at top right, ${color}10, transparent 70%)` }} />
-    </motion.article>
-  );
-}
+      {/* 6-Card Feature Grid - Crisp White Outlines */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 relative z-10">
+        {capabilities.map((item, idx) => {
+          const Icon = item.icon;
+          return (
+            <motion.div
+              key={item.title}
+              initial={{ opacity: 0, y: 15 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.3, delay: idx * 0.08 }}
+              whileHover={{ y: -4, scale: 1.01 }}
+              className="h-full"
+            >
+              <div className="h-full p-6 rounded-2xl bg-[#0A0A0A] border border-white/20 hover:border-white/50 transition-all duration-200 flex flex-col justify-between relative overflow-hidden group shadow-xl">
+                <div>
+                  {/* Top Bar: Icon + Tag */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-[#181818] border border-white/20 text-white flex items-center justify-center shadow-sm group-hover:border-white/40 transition-colors">
+                      <Icon className="w-5 h-5 text-white" />
+                    </div>
+                    <span className="text-[10px] font-mono text-neutral-300 bg-[#121212] px-2.5 py-0.5 rounded border border-white/20">
+                      {item.tag}
+                    </span>
+                  </div>
 
-export default function Features() {
-  const headRef = useRef(null);
-  const inView = useInView(headRef, { once: true, margin: "-80px" });
+                  <span className="text-[10px] font-mono text-neutral-400 uppercase tracking-wider block mb-1">
+                    {item.subtitle}
+                  </span>
 
-  return (
-    <section id="features" className="py-28 bg-[#0F0F14]" aria-label="Features">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div ref={headRef}
-          initial={{ opacity: 0, y: 20 }} animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.5 }} className="text-center mb-16">
-          <span className="inline-block text-xs font-bold text-[#F5A623] uppercase tracking-widest mb-3 bg-[#F5A623]/8 px-4 py-1.5 rounded-full border border-[#F5A623]/15">
-            Everything You Need
-          </span>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#F4F2EE] tracking-tight mb-4">
-            Built for Serious Candidates
-          </h2>
-          <p className="text-[#8B8FA8] text-base max-w-xl mx-auto leading-relaxed">
-            Every feature replicates real interview conditions and gives you the edge you need.
-          </p>
-        </motion.div>
+                  <h3 className="text-base font-sans font-bold text-white mb-2 group-hover:text-white transition-colors">
+                    {item.title}
+                  </h3>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {FEATURES.map((f, i) => <FeatureCard key={f.title} {...f} index={i} />)}
-        </div>
+                  <p className="text-xs text-neutral-300 leading-relaxed font-normal mb-4">
+                    {item.description}
+                  </p>
+                </div>
+
+                {/* Feature Highlight Pills Footer */}
+                <div className="pt-3.5 border-t border-white/15 flex flex-wrap gap-1.5">
+                  {item.highlights.map((h, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center gap-1 text-[10px] font-mono text-neutral-300 bg-[#121212] px-2 py-0.5 rounded border border-white/15"
+                    >
+                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                      {h}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
       </div>
     </section>
   );
-}
+};
