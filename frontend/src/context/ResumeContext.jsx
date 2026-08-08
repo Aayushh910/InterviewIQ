@@ -25,6 +25,27 @@ export const ResumeProvider = ({ children }) => {
   });
 
   useEffect(() => {
+    let isMounted = true;
+    const fetchApiResumes = async () => {
+      try {
+        const { apiClient } = await import('../services/apiClient');
+        const res = await apiClient.get('/resumes');
+        if (isMounted && res.data && res.data.length > 0) {
+          setResumes(res.data);
+          if (!activeResumeId) {
+            setActiveResumeId(res.data[0].id);
+          }
+        }
+      } catch (err) {
+        console.warn('Backend API connection notice, using local cached resumes:', err);
+      }
+    };
+    fetchApiResumes();
+
+    return () => { isMounted = false; };
+  }, []);
+
+  useEffect(() => {
     try {
       localStorage.setItem('interviewiq_resumes', JSON.stringify(resumes));
     } catch (e) {

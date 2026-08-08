@@ -23,7 +23,7 @@ export const Resume = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#141414] border border-white/20 text-emerald-400 text-xs font-mono font-semibold mb-2 shadow-sm">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#141414] border border-white/20 text-amber-400 text-xs font-mono font-semibold mb-2 shadow-sm">
             <FileText className="w-3.5 h-3.5" /> Resume Intelligence Hub
           </div>
           <h1 className="text-2xl sm:text-3xl font-sans font-extrabold text-white dark:text-white light:text-slate-900 tracking-tight">
@@ -42,7 +42,7 @@ export const Resume = () => {
       <div className="space-y-4">
         <div>
           <h2 className="text-base font-bold text-white dark:text-white light:text-slate-900 flex items-center gap-2">
-            <Star className="w-4 h-4 text-emerald-400 fill-current" /> Uploaded Resumes & Target Role Profiles ({resumes.length})
+            <Star className="w-4 h-4 text-amber-400 fill-current" /> Uploaded Resumes & Target Role Profiles ({resumes.length})
           </h2>
           <p className="text-xs text-neutral-400">Select your active resume to automatically sync keywords & skills with your AI Technical Mock loops</p>
         </div>
@@ -89,14 +89,14 @@ export const Resume = () => {
 
               <div className="p-6 rounded-2xl bg-[#141414] border border-white/10 space-y-4 font-mono text-xs text-neutral-300">
                 <div className="border-b border-white/10 pb-3">
-                  <span className="text-emerald-400 font-bold block mb-1">Target Role: {previewResume.targetRole}</span>
+                  <span className="text-cyan-400 font-bold block mb-1">Target Role: {previewResume.targetRole}</span>
                   <span>ATS Match Score: {previewResume.matchScore}%</span>
                 </div>
                 <div>
                   <span className="text-neutral-400 font-bold block mb-1">Extracted Technical Skills:</span>
                   <div className="flex flex-wrap gap-1.5">
                     {previewResume.skillsFound?.map((sk, i) => (
-                      <span key={i} className="px-2 py-1 rounded bg-[#0A0A0A] border border-white/15 text-emerald-400 text-xs">
+                      <span key={i} className="px-2 py-1 rounded bg-[#0A0A0A] border border-white/15 text-cyan-400 text-xs">
                         {sk}
                       </span>
                     ))}

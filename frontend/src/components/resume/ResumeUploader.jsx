@@ -26,7 +26,7 @@ export const ResumeUploader = () => {
   return (
     <section className="surface-container p-6 sm:p-8 space-y-4">
       <div className="flex items-center gap-2 border-b border-white/10 pb-3">
-        <div className="w-8 h-8 rounded-lg bg-[#1A1A1A] border border-white/10 flex items-center justify-center text-emerald-400">
+        <div className="w-8 h-8 rounded-lg bg-[#1A1A1A] border border-white/10 flex items-center justify-center text-amber-400">
           <UploadCloud className="w-4 h-4" />
         </div>
         <div>
@@ -46,7 +46,7 @@ export const ResumeUploader = () => {
               onChange={handleFileUpload}
               className="hidden"
             />
-            <div className="w-12 h-12 rounded-2xl bg-[#0A0A0A] border border-white/15 flex items-center justify-center text-emerald-400 mb-3 group-hover:scale-110 transition-transform">
+            <div className="w-12 h-12 rounded-2xl bg-[#0A0A0A] border border-white/15 flex items-center justify-center text-amber-400 mb-3 group-hover:scale-110 transition-transform">
               <UploadCloud className="w-6 h-6" />
             </div>
             <div className="text-xs font-bold text-white dark:text-white light:text-slate-800">
@@ -68,12 +68,12 @@ export const ResumeUploader = () => {
               value={targetRole}
               onChange={(e) => setTargetRole(e.target.value)}
               placeholder="e.g. Senior React Developer"
-              className="w-full bg-[#0A0A0A] border border-white/15 text-xs rounded-xl p-2.5 text-white focus:outline-none focus:border-emerald-400 transition-colors"
+              className="w-full bg-[#0A0A0A] border border-white/15 text-xs rounded-xl p-2.5 text-white focus:outline-none focus:border-amber-400 transition-colors"
             />
           </div>
 
-          <div className="p-2.5 rounded-xl bg-[#0A0A0A] border border-white/15 text-[11px] text-emerald-400 font-mono flex items-center gap-2">
-            <Sparkles className="w-4 h-4 shrink-0 text-emerald-400" />
+          <div className="p-2.5 rounded-xl bg-[#0A0A0A] border border-white/15 text-[11px] text-violet-400 font-mono flex items-center gap-2">
+            <Sparkles className="w-4 h-4 shrink-0 text-violet-400" />
             <span>Resumes automatically sync to your Technical Mock loops.</span>
           </div>
         </div>
