@@ -48,6 +48,17 @@ export const Sidebar = ({ collapsed, setCollapsed, onLogoutClick }) => {
           {SIDEBAR_PRIMARY.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path || (item.path !== '/dashboard' && location.pathname.startsWith(item.path));
+            
+            const routeColors = {
+              '/dashboard': { bar: 'bg-cyan-400', icon: 'text-cyan-400' },
+              '/interview': { bar: 'bg-amber-400', icon: 'text-amber-400' },
+              '/resume': { bar: 'bg-violet-400', icon: 'text-violet-400' },
+              '/analytics': { bar: 'bg-cyan-400', icon: 'text-cyan-400' },
+              '/achievements': { bar: 'bg-amber-400', icon: 'text-amber-400' },
+              '/reports': { bar: 'bg-rose-400', icon: 'text-rose-400' },
+              '/history': { bar: 'bg-violet-400', icon: 'text-violet-400' },
+            };
+            const activeColor = routeColors[item.path] || { bar: 'bg-cyan-400', icon: 'text-cyan-400' };
 
             return (
               <Link
@@ -61,9 +72,9 @@ export const Sidebar = ({ collapsed, setCollapsed, onLogoutClick }) => {
                 title={collapsed ? item.name : undefined}
               >
                 {isActive && (
-                  <span className="absolute left-0 top-2 bottom-2 w-1 bg-emerald-400 rounded-r-full" />
+                  <span className={`absolute left-0 top-2 bottom-2 w-1 rounded-r-full ${activeColor.bar}`} />
                 )}
-                <Icon className={`w-5 h-5 shrink-0 transition-transform group-hover:scale-105 ${isActive ? 'text-emerald-400' : 'text-neutral-400'}`} />
+                <Icon className={`w-5 h-5 shrink-0 transition-transform group-hover:scale-105 ${isActive ? activeColor.icon : 'text-neutral-400'}`} />
                 {!collapsed && <span>{item.name}</span>}
               </Link>
             );
@@ -76,6 +87,8 @@ export const Sidebar = ({ collapsed, setCollapsed, onLogoutClick }) => {
         {SIDEBAR_SECONDARY.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
+          const activeColor = item.path === '/profile' ? 'text-cyan-400 bg-cyan-400' : 'text-violet-400 bg-violet-400';
+
           return (
             <Link
               key={item.path}
@@ -88,9 +101,9 @@ export const Sidebar = ({ collapsed, setCollapsed, onLogoutClick }) => {
               title={collapsed ? item.name : undefined}
             >
               {isActive && (
-                <span className="absolute left-0 top-2 bottom-2 w-1 bg-emerald-400 rounded-r-full" />
+                <span className={`absolute left-0 top-2 bottom-2 w-1 rounded-r-full ${activeColor.split(' ')[1]}`} />
               )}
-              <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-emerald-400' : 'text-neutral-400'}`} />
+              <Icon className={`w-5 h-5 shrink-0 ${isActive ? activeColor.split(' ')[0] : 'text-neutral-400'}`} />
               {!collapsed && <span>{item.name}</span>}
             </Link>
           );

@@ -108,6 +108,26 @@ body {
   flex-shrink: 0;
 }
 
+/* Dashboard Smooth Scrolling & Compositing Hardware Acceleration */
+.dashboard-scroll-container {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  will-change: scroll-position;
+  transform: translateZ(0);
+}
+
+.gpu-layer {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+.header-backdrop {
+  isolation: isolate;
+  transform: translateZ(0);
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -126,4 +146,5 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(16, 185, 129, 0.6);
 }
+
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -8,6 +8,7 @@ import { Sidebar, SIDEBAR_PRIMARY, SIDEBAR_SECONDARY } from '../components/layou
 import { LogoutModal } from '../components/common/LogoutModal';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useLenis } from '../hooks/useLenis';
 import { APP_NAME } from '../utils/constants';
 
 export const WorkspaceLayout = ({ children }) => {
@@ -15,10 +16,24 @@ export const WorkspaceLayout = ({ children }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
 
+  const mainRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+
+  // Initialize smooth Lenis scroll targeting the workspace main scroll container
+  const lenisRef = useLenis({ wrapper: mainRef });
+
+  // Reset scroll position on route change
+  useEffect(() => {
+    if (mainRef.current) {
+      mainRef.current.scrollTop = 0;
+    }
+    if (lenisRef.current) {
+      lenisRef.current.scrollTo(0, { immediate: true });
+    }
+  }, [location.pathname]);
 
   const handleConfirmLogout = () => {
     logoutModalOpen && setLogoutModalOpen(false);
@@ -38,7 +53,7 @@ export const WorkspaceLayout = ({ children }) => {
       {/* Main Column (Only this area scrolls) */}
       <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative z-10">
         {/* Header Bar */}
-        <header className="h-16 shrink-0 bg-[#0A0A0A]/90 border-b border-white/10 px-4 sm:px-8 flex items-center justify-between z-20 backdrop-blur-xl shadow-md">
+        <header className="h-16 shrink-0 bg-[#0A0A0A]/90 border-b border-white/10 px-4 sm:px-8 flex items-center justify-between z-20 backdrop-blur-xl shadow-md header-backdrop gpu-layer">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setMobileOpen(true)}
@@ -98,8 +113,10 @@ export const WorkspaceLayout = ({ children }) => {
         </header>
 
         {/* Dynamic Content */}
-        <main className="flex-1 overflow-y-auto bg-transparent">
-          {children || <Outlet />}
+        <main ref={mainRef} className="flex-1 overflow-y-auto bg-transparent dashboard-scroll-container">
+          <div className="min-h-full w-full">
+            {children || <Outlet />}
+          </div>
         </main>
       </div>
 

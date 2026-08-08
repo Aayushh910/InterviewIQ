@@ -129,8 +129,8 @@ export const DarkParticleBackground = () => {
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 pointer-events-none z-0"
-      style={{ opacity: 0.95 }}
+      className="fixed inset-0 pointer-events-none z-0 gpu-layer"
+      style={{ opacity: 0.95, transform: 'translateZ(0)', willChange: 'transform' }}
     />
   );
 };
