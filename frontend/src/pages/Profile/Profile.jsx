@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Github, Linkedin, Globe, Code2, Award, Share2, Eye, Check, X, Save, Sparkles } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/common/Button';
+import { apiClient } from '../../services/apiClient';
 
 export const Profile = () => {
   const { user } = useAuth();
@@ -28,12 +29,67 @@ export const Profile = () => {
   const [savedToast, setSavedToast] = useState(false);
   const [showPublicPreview, setShowPublicPreview] = useState(false);
 
+  useEffect(() => {
+    let isMounted = true;
+    const fetchProfile = async () => {
+      try {
+        const res = await apiClient.get('/profile');
+        if (isMounted && res.data) {
+          setFormData((prev) => ({
+            ...prev,
+            name: res.data.name || prev.name,
+            email: res.data.email || prev.email,
+            role: res.data.role || prev.role,
+            targetPosition: res.data.target_position || prev.targetPosition,
+            bio: res.data.bio || prev.bio,
+            location: res.data.location || prev.location,
+            skills: res.data.skills || prev.skills,
+            education: res.data.education || prev.education,
+            github: res.data.github || prev.github,
+            leetcode: res.data.leetcode || prev.leetcode,
+            codeforces: res.data.codeforces || prev.codeforces,
+            codechef: res.data.codechef || prev.codechef,
+            hackerrank: res.data.hackerrank || prev.hackerrank,
+            linkedin: res.data.linkedin || prev.linkedin,
+            website: res.data.website || prev.website,
+          }));
+        }
+      } catch (err) {
+        console.warn('Profile fetch notice (local mode):', err);
+      }
+    };
+    fetchProfile();
+    return () => { isMounted = false; };
+  }, []);
+
   const handleChange = (field, val) => {
     setFormData((prev) => ({ ...prev, [field]: val }));
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
+    try {
+      await apiClient.put('/profile', {
+        name: formData.name,
+        email: formData.email,
+        role: formData.role,
+        target_position: formData.targetPosition,
+        bio: formData.bio,
+        location: formData.location,
+        skills: formData.skills,
+        education: formData.education,
+        github: formData.github,
+        leetcode: formData.leetcode,
+        codeforces: formData.codeforces,
+        codechef: formData.codechef,
+        hackerrank: formData.hackerrank,
+        linkedin: formData.linkedin,
+        website: formData.website,
+      });
+    } catch (err) {
+      console.warn('Profile put notice (local mode):', err);
+    }
+
     setSavedToast(true);
     setTimeout(() => setSavedToast(false), 3000);
   };
@@ -346,11 +402,20 @@ export const Profile = () => {
                 <div className="space-y-2">
                   <span className="text-xs font-mono font-bold uppercase text-neutral-400">Verified Technical Skill Set</span>
                   <div className="flex flex-wrap gap-2">
-                    {formData.skills.split(',').map((sk, i) => (
-                      <span key={i} className="px-3 py-1.5 rounded-xl bg-[#141414] border border-white/15 text-xs text-emerald-400 font-mono font-semibold">
-                        {sk.trim()}
-                      </span>
-                    ))}
+                    {formData.skills.split(',').map((sk, i) => {
+                      const colors = [
+                        "text-cyan-400 border-cyan-500/20 bg-cyan-500/10",
+                        "text-amber-400 border-amber-500/20 bg-amber-500/10",
+                        "text-violet-400 border-violet-500/20 bg-violet-500/10",
+                        "text-rose-400 border-rose-500/20 bg-rose-500/10",
+                        "text-emerald-400 border-emerald-500/20 bg-emerald-500/10"
+                      ];
+                      return (
+                        <span key={i} className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-semibold ${colors[i % colors.length]}`}>
+                          {sk.trim()}
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -360,7 +425,7 @@ export const Profile = () => {
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs font-mono">
                     {formData.github && (
                       <a href={formData.github} target="_blank" rel="noreferrer" className="p-3 rounded-xl bg-[#141414] border border-white/10 hover:border-white/30 text-neutral-200 flex items-center gap-2 truncate">
-                        <Github className="w-4 h-4 text-emerald-400 shrink-0" /> GitHub
+                        <Github className="w-4 h-4 text-cyan-400 shrink-0" /> GitHub
                       </a>
                     )}
                     {formData.leetcode && (
@@ -369,13 +434,13 @@ export const Profile = () => {
                       </a>
                     )}
                     {formData.codeforces && (
-                      <a href={formData.codeforces} target="_blank" rel="noreferrer" className="p-3 rounded-xl bg-[#141414] border border-white/10 hover:border-white/30 text-cyan-400 flex items-center gap-2 truncate">
-                        <Globe className="w-4 h-4 text-cyan-400 shrink-0" /> Codeforces
+                      <a href={formData.codeforces} target="_blank" rel="noreferrer" className="p-3 rounded-xl bg-[#141414] border border-white/10 hover:border-white/30 text-violet-400 flex items-center gap-2 truncate">
+                        <Globe className="w-4 h-4 text-violet-400 shrink-0" /> Codeforces
                       </a>
                     )}
                     {formData.hackerrank && (
-                      <a href={formData.hackerrank} target="_blank" rel="noreferrer" className="p-3 rounded-xl bg-[#141414] border border-white/10 hover:border-white/30 text-emerald-400 flex items-center gap-2 truncate">
-                        <Award className="w-4 h-4 text-emerald-400 shrink-0" /> HackerRank
+                      <a href={formData.hackerrank} target="_blank" rel="noreferrer" className="p-3 rounded-xl bg-[#141414] border border-white/10 hover:border-white/30 text-rose-400 flex items-center gap-2 truncate">
+                        <Award className="w-4 h-4 text-rose-400 shrink-0" /> HackerRank
                       </a>
                     )}
                     {formData.linkedin && (
@@ -390,7 +455,7 @@ export const Profile = () => {
                 <div className="p-5 rounded-2xl bg-[#141414] border border-white/15 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center font-mono">
                   <div>
                     <span className="text-[10px] text-neutral-400 uppercase">AI Score</span>
-                    <div className="text-xl font-extrabold text-emerald-400">92.4%</div>
+                    <div className="text-xl font-extrabold text-violet-400">92.4%</div>
                   </div>
                   <div>
                     <span className="text-[10px] text-neutral-400 uppercase">Mock Loops</span>
