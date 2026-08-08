@@ -1,66 +1,171 @@
-# IDE and Editor
-.vscode/
-.idea/
-*.swp
-*.swo
-*.sublime-project
-*.sublime-workspace
-*.code-workspace
-
-# OS Files
-.DS_Store
-Thumbs.db
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Desktop.ini
-
-# Environment Variables
+# ==========================================
+# Environment & Secrets
+# ==========================================
 .env
-.env.local
-.env.*.local
+.env.*
 !.env.example
-!.env.example.local
+!.env.example.*
+*.env
+*.pem
+*.key
+*.crt
 
-# Logs
+# ==========================================
+# Python & Virtual Environments
+# ==========================================
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+bin/
+include/
+lib/
+lib64/
+share/
+pyvenv.cfg
+
+# Python Bytecode & Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+.eggs/
+*.egg
+*.manifest
+*.spec
+
+# ==========================================
+# Testing & Coverage (Python & Node)
+# ==========================================
+.pytest_cache/
+.coverage
+.coverage.*
+coverage/
+htmlcov/
+.nyc_output/
+.hypothesis/
+.tox/
+.nox/
+.ruff_cache/
+.mypy_cache/
+.jest_cache/
+test-results/
+test_results/
+playwright-report/
+blob-report/
+cypress/videos/
+cypress/screenshots/
+*.cover
+*.pyg
+nosetests.xml
+coverage.xml
+
+# ==========================================
+# Node.js & Web Frontend
+# ==========================================
+node_modules/
+dist/
+dist-ssr/
+build/
+.out/
+.next/
+.vite/
+.vite-cache/
+.cache/
+.eslintcache
+.stylelintcache
+.parcelcache
+*.tsbuildinfo
+*.tsbuildinfo.json
+.svelte-kit/
+storybook-static/
+
+# ==========================================
+# Logs & Debugging
+# ==========================================
 logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
+yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Dependencies and Build Files
-node_modules/
-dist/
-build/
-*.egg-info/
-__pycache__/
-
-# Database
+# ==========================================
+# Database & Storage Dumps
+# ==========================================
 *.db
+*.sqlite
 *.sqlite3
+*.sqlite3-journal
+*.db-journal
 
-# Temporary and Cache Files
+# ==========================================
+# Temporary & Media/Upload Cache
+# ==========================================
 *.tmp
+*.temp
 *.bak
 *.cache
-.cache/
-.vite/
+*.swp
+*.swo
+*~
+tmp/
+temp/
+uploads/
+audio_temp/
+recordings_temp/
 
-# IDE Cache
-.eslintcache
-.pytest_cache/
-.coverage
-htmlcov/
-.mypy_cache/
-.ruff_cache/
-.python-version
+# ==========================================
+# IDE & Code Editors
+# ==========================================
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+.project
+.pydevproject
+.settings/
 
-# OS-specific
+# ==========================================
+# Operating System Files
+# ==========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
 *.pid
+*.seed
+*.pid.lock
 
-# Project-specific
+# ==========================================
+# Project Specific
+# ==========================================
 Workflow/
+
+# ==========================================
+# AI / ML Temporary Artifacts
+# ==========================================
+
+models/cache/
+models/tmp/
+
+# ==========================================
+# Python Tooling
+# ==========================================
+
+.pyre/
+.pytype/
+.pyright/

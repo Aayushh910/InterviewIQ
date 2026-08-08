@@ -5,6 +5,18 @@ import {
   Eye, ScanFace, Activity, Clock, HelpCircle, MessageSquareText, Send, CheckCircle2, FlipHorizontal
 } from 'lucide-react';
 import { Button } from '../common/Button';
+import {
+  createInterview,
+  getUserInterviews,
+  createSession,
+  startSession,
+  completeSession,
+  getInterviewQuestions,
+  addInterviewQuestion,
+  submitAnswer,
+} from '../../services/interviewService';
+import { transcribeAudio } from '../../services/speechService';
+import { useAudioRecorder } from '../../hooks/useAudioRecorder';
 
 const SAMPLE_QUESTIONS = {
   Technical: [
@@ -32,20 +44,95 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
   const [micEnabled, setMicEnabled] = useState(true);
   const [cameraEnabled, setCameraEnabled] = useState(true);
 
+  // Backend Integration State
+  const [sessionId, setSessionId] = useState(null);
+  const [backendQuestions, setBackendQuestions] = useState([]);
+  const [questionStartTime, setQuestionStartTime] = useState(() => new Date().toISOString());
+
+  // Active Question (Main or Adaptive Counter Question)
+  const [activeQuestion, setActiveQuestion] = useState({
+    id: 'q_1',
+    text: questions[0],
+    type: 'main',
+    depth: 0,
+  });
+
+  // Audio Recording Hook
+  const { isRecording, startRecording, stopRecording, reset: resetRecorder } = useAudioRecorder();
+
   // AI & User State
   const [aiState, setAiState] = useState('speaking'); // 'speaking' | 'listening' | 'thinking'
   const [transcript, setTranscript] = useState('');
-
-  // Metrics Simulation State
-  const [eyeContactScore, setEyeContactScore] = useState(94);
-  const [confidenceScore, setConfidenceScore] = useState(91);
-  const [expression, setExpression] = useState('Focused & Composed');
 
   // Device Camera Capture State
   const [webcamStream, setWebcamStream] = useState(null);
   const [cameraError, setCameraError] = useState(null);
   const [isMirrored, setIsMirrored] = useState(true);
   const videoRef = useRef(null);
+
+  // Initialize Backend Interview Session
+  useEffect(() => {
+    let isMounted = true;
+
+    const initBackendSession = async () => {
+      try {
+        const interviews = await getUserInterviews();
+        let activeInterview = interviews.find(
+          (i) => i.domain === config.domain && i.interview_type === config.interviewType
+        );
+        if (!activeInterview) {
+          activeInterview = await createInterview(config);
+        }
+
+        let qList = await getInterviewQuestions(activeInterview.id);
+        if (!qList || qList.length === 0) {
+          const sampleTexts = SAMPLE_QUESTIONS[config.interviewType] || SAMPLE_QUESTIONS.Technical;
+          qList = [];
+          for (let i = 0; i < sampleTexts.length; i++) {
+            const createdQ = await addInterviewQuestion(activeInterview.id, {
+              question_text: sampleTexts[i],
+              question_order: i + 1,
+              question_type: (config.interviewType || 'Technical').toLowerCase(),
+            });
+            qList.push(createdQ);
+          }
+        }
+
+        if (isMounted) {
+          setBackendQuestions(qList);
+          if (qList.length > 0) {
+            setActiveQuestion({
+              id: qList[0].id,
+              text: qList[0].question_text,
+              type: 'main',
+              depth: 0,
+            });
+          }
+        }
+
+        const session = await createSession(activeInterview.id);
+        const started = await startSession(session.id);
+
+        if (isMounted) {
+          setSessionId(started.id);
+          setQuestionStartTime(new Date().toISOString());
+        }
+      } catch (err) {
+        console.warn('Backend interview session notice (offline local fallback mode active):', err);
+      }
+    };
+
+    initBackendSession();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [config]);
+
+  // Update Question Start Time when Active Question Changes
+  useEffect(() => {
+    setQuestionStartTime(new Date().toISOString());
+  }, [activeQuestion]);
 
   // Timer Effect
   useEffect(() => {
@@ -56,32 +143,33 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
     return () => clearInterval(interval);
   }, [isPaused]);
 
-  // Direct Device Camera Request Handler
+  // Direct Device Camera & Mic Request Handler
   const requestDeviceCamera = async () => {
     try {
       setCameraError(null);
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
-          audio: false
+          audio: true
         });
         setWebcamStream(stream);
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          await videoRef.current.play().catch(() => {});
+          await videoRef.current.play().catch(() => { });
         }
       }
     } catch (err) {
       console.error('Device camera capture error:', err);
-      setCameraError(err.message || 'Camera permission required');
+      setCameraError(err.message || 'Camera & Microphone permission required');
     }
   };
 
-  // Setup Device Camera on Mount
+  // Setup Device Camera & Mic on Mount & Cleanup on Unmount
   useEffect(() => {
     requestDeviceCamera();
 
     return () => {
+      resetRecorder();
       if (webcamStream) {
         webcamStream.getTracks().forEach((track) => track.stop());
       }
@@ -95,7 +183,7 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
         requestDeviceCamera();
       } else if (videoRef.current) {
         videoRef.current.srcObject = webcamStream;
-        videoRef.current.play().catch(() => {});
+        videoRef.current.play().catch(() => { });
       }
     } else if (webcamStream) {
       webcamStream.getTracks().forEach((t) => t.stop());
@@ -103,10 +191,17 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
     }
   }, [cameraEnabled]);
 
-  // AI Speech simulation when question changes
+  // Start Audio Recording when AI is listening
+  useEffect(() => {
+    if (aiState === 'listening' && micEnabled && webcamStream && !isRecording) {
+      startRecording(webcamStream);
+    }
+  }, [aiState, micEnabled, webcamStream, isRecording, startRecording]);
+
+  // AI Speech simulation when active question changes
   useEffect(() => {
     setAiState('speaking');
-    const questionText = questions[currentQIndex % questions.length];
+    const questionText = activeQuestion.text;
 
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
@@ -121,7 +216,7 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
       const timeout = setTimeout(() => setAiState('listening'), 3500);
       return () => clearTimeout(timeout);
     }
-  }, [currentQIndex]);
+  }, [activeQuestion]);
 
   // Simulated Live Transcript Stream when user speaks
   useEffect(() => {
@@ -148,26 +243,115 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
     return () => clearInterval(transcriptInterval);
   }, [aiState, currentQIndex, micEnabled, isPaused]);
 
-  const handleFinishUserAnswer = () => {
+  const handleFinishUserAnswer = async () => {
     setAiState('thinking');
-    setTimeout(() => {
-      if (currentQIndex + 1 >= totalQuestions) {
+    const submittedAt = new Date().toISOString();
+
+    // 1. Stop audio recording for this question
+    let audioBlob = null;
+    if (isRecording) {
+      audioBlob = await stopRecording();
+    }
+
+    // 2. Transcribe recorded audio with backend STT
+    let finalAnswerText = transcript;
+    if (audioBlob && audioBlob.size > 0) {
+      try {
+        const sttResponse = await transcribeAudio(audioBlob);
+        if (sttResponse && sttResponse.text && sttResponse.text.trim()) {
+          finalAnswerText = sttResponse.text.trim();
+          setTranscript(finalAnswerText);
+        }
+      } catch (err) {
+        console.warn('Speech transcription notice:', err);
+      }
+    }
+
+    // 3. Submit Answer to Backend Session & Receive Next Question
+    let nextQuestionInfo = null;
+    let isComplete = false;
+
+    if (sessionId) {
+      try {
+        const res = await submitAnswer(sessionId, {
+          question_id: activeQuestion.id,
+          answer_text: finalAnswerText || "Candidate audio response recorded.",
+          started_at: questionStartTime,
+          submitted_at: submittedAt,
+        });
+
+        if (res) {
+          nextQuestionInfo = res.next_question;
+          isComplete = res.interview_complete;
+        }
+      } catch (err) {
+        console.warn('Backend answer submission notice:', err);
+      }
+    }
+
+    setTimeout(async () => {
+      if (isComplete || (!nextQuestionInfo && currentQIndex + 1 >= totalQuestions)) {
+        // Complete Backend Practice Session
+        if (sessionId) {
+          try {
+            await completeSession(sessionId);
+          } catch (err) {
+            console.warn('Backend session completion notice:', err);
+          }
+        }
+
+        // Clean up webcam and recorder resources
+        resetRecorder();
+        if (webcamStream) {
+          webcamStream.getTracks().forEach((track) => track.stop());
+          setWebcamStream(null);
+        }
+
         onFinish({
           durationMinutes: Math.ceil(timerSeconds / 60) || 5,
           score: 92,
-          summary: "Demonstrated exceptional Virtual DOM understanding with steady 94% eye contact.",
+          summary: "Demonstrated exceptional technical articulation with steady eye contact and high composure.",
+          sessionId: sessionId,
         });
+      } else if (nextQuestionInfo) {
+        setActiveQuestion({
+          id: nextQuestionInfo.id,
+          text: nextQuestionInfo.question_text,
+          type: nextQuestionInfo.question_type,
+          parent_id: nextQuestionInfo.parent_question_id,
+          depth: nextQuestionInfo.follow_up_depth,
+        });
+        if (nextQuestionInfo.question_type === 'main') {
+          setCurrentQIndex((prev) => prev + 1);
+        }
+        setTranscript('');
       } else {
-        setCurrentQIndex((prev) => prev + 1);
+        const nextIdx = currentQIndex + 1;
+        const nextQ = backendQuestions[nextIdx % backendQuestions.length] || { id: `q_${nextIdx + 1}`, question_text: questions[nextIdx % questions.length] };
+        setCurrentQIndex(nextIdx);
+        setActiveQuestion({
+          id: nextQ.id,
+          text: nextQ.question_text,
+          type: 'main',
+          depth: 0,
+        });
         setTranscript('');
       }
     }, 1500);
   };
 
   const handleRestartSession = () => {
+    resetRecorder();
     setCurrentQIndex(0);
     setTimerSeconds(0);
     setTranscript('');
+    const firstQ = backendQuestions[0] || { id: 'q_1', question_text: questions[0] };
+    setActiveQuestion({
+      id: firstQ.id,
+      text: firstQ.question_text,
+      type: 'main',
+      depth: 0,
+    });
     setAiState('speaking');
   };
 
@@ -179,10 +363,10 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
 
   return (
     <div className="h-[calc(100vh-4rem)] w-full bg-transparent flex flex-col justify-between overflow-hidden text-white p-3 sm:p-4 gap-4 font-sans">
-      
+
       {/* MAIN SCREEN GRID (Camera on Left, Big AI Square & Question/Script on Right) */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-0">
-        
+
         {/* LEFT 60%: USER CAMERA (Completely Clean Feed with Only Mic & Camera Toggles) */}
         <div className="lg:col-span-7 bg-[#0A0A0A]/90 border border-white/15 rounded-3xl p-3 flex flex-col justify-between relative overflow-hidden backdrop-blur-xl shadow-2xl">
           <div className="relative flex-1 rounded-2xl bg-black border border-white/10 overflow-hidden flex items-center justify-center">
@@ -193,15 +377,14 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
                     videoRef.current = node;
                     if (node && webcamStream && node.srcObject !== webcamStream) {
                       node.srcObject = webcamStream;
-                      node.play().catch(() => {});
+                      node.play().catch(() => { });
                     }
                   }}
                   autoPlay
                   playsInline
                   muted
-                  className={`w-full h-full object-cover rounded-2xl transition-transform duration-300 ${
-                    isMirrored ? '-scale-x-100' : 'scale-x-100'
-                  }`}
+                  className={`w-full h-full object-cover rounded-2xl transition-transform duration-300 ${isMirrored ? '-scale-x-100' : 'scale-x-100'
+                    }`}
                 />
 
                 {!webcamStream && (
@@ -233,11 +416,10 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
             <div className="absolute bottom-4 left-4 z-20 flex items-center gap-2 font-mono">
               <button
                 onClick={() => setMicEnabled(!micEnabled)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 backdrop-blur-md border shadow-lg transition-colors ${
-                  micEnabled
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 backdrop-blur-md border shadow-lg transition-colors ${micEnabled
                     ? 'bg-black/80 text-emerald-400 border-white/20 hover:bg-black'
                     : 'bg-red-500/90 text-white border-red-400'
-                }`}
+                  }`}
               >
                 {micEnabled ? <Mic className="w-4 h-4 text-emerald-400" /> : <MicOff className="w-4 h-4" />}
                 <span>{micEnabled ? 'MIC ON' : 'MIC MUTED'}</span>
@@ -245,11 +427,10 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
 
               <button
                 onClick={() => setCameraEnabled(!cameraEnabled)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 backdrop-blur-md border shadow-lg transition-colors ${
-                  cameraEnabled
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 backdrop-blur-md border shadow-lg transition-colors ${cameraEnabled
                     ? 'bg-black/80 text-cyan-400 border-white/20 hover:bg-black'
                     : 'bg-red-500/90 text-white border-red-400'
-                }`}
+                  }`}
               >
                 {cameraEnabled ? <Camera className="w-4 h-4 text-cyan-400" /> : <CameraOff className="w-4 h-4" />}
                 <span>{cameraEnabled ? 'CAMERA ON' : 'CAMERA OFF'}</span>
@@ -269,7 +450,7 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
 
         {/* RIGHT 40%: BIG LIVE ANIMATED AI SQUARE & QUESTION + USER SCRIPT CONTAINER */}
         <div className="lg:col-span-5 flex flex-col gap-4 min-h-0">
-          
+
           {/* BIG LIVE ANIMATED AI SQUARE CARD */}
           <div className="bg-[#0A0A0A]/90 border border-white/15 rounded-3xl p-5 flex flex-col justify-between shadow-2xl backdrop-blur-xl relative overflow-hidden h-64 sm:h-72 shrink-0">
             {/* Background Ambient Radial Glow */}
@@ -300,7 +481,14 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
                 </button>
 
                 <button
-                  onClick={() => onFinish({ durationMinutes: Math.ceil(timerSeconds / 60) || 5, score: 88 })}
+                  onClick={() => {
+                    resetRecorder();
+                    if (webcamStream) {
+                      webcamStream.getTracks().forEach((track) => track.stop());
+                      setWebcamStream(null);
+                    }
+                    onFinish({ durationMinutes: Math.ceil(timerSeconds / 60) || 5, score: 88, sessionId });
+                  }}
                   className="px-2.5 py-1 rounded-xl bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 text-xs font-bold flex items-center gap-1 transition-colors"
                 >
                   <XCircle className="w-3.5 h-3.5 text-red-400" />
@@ -312,7 +500,7 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
             {/* Central Live Animated AI Visualizer */}
             <div className="flex-1 flex flex-col items-center justify-center relative py-2 z-10">
               <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-white/20 via-neutral-700 to-white/30 p-1 shadow-2xl flex items-center justify-center">
-                
+
                 {/* Animated Pulsing Wave Rings */}
                 {aiState === 'speaking' && (
                   <>
@@ -350,13 +538,12 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
 
             {/* Bottom Info Bar: AI State & Session Timer */}
             <div className="flex items-center justify-between z-10 pt-2 border-t border-white/10 font-mono text-xs">
-              <span className={`px-2.5 py-0.5 rounded-full border font-bold text-[11px] ${
-                aiState === 'speaking'
+              <span className={`px-2.5 py-0.5 rounded-full border font-bold text-[11px] ${aiState === 'speaking'
                   ? 'bg-[#141414] border-emerald-500/40 text-emerald-400'
                   : aiState === 'thinking'
-                  ? 'bg-[#141414] border-amber-500/40 text-amber-400 animate-pulse'
-                  : 'bg-[#141414] border-white/20 text-cyan-400'
-              }`}>
+                    ? 'bg-[#141414] border-amber-500/40 text-amber-400 animate-pulse'
+                    : 'bg-[#141414] border-white/20 text-cyan-400'
+                }`}>
                 {aiState === 'speaking' ? 'Speaking Question...' : aiState === 'thinking' ? 'Evaluating Response...' : 'Listening to Candidate'}
               </span>
 
@@ -368,20 +555,27 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
 
           {/* COMPACT QUESTION CARD WITH USER SCRIPT DIRECTLY UNDERNEATH */}
           <div className="flex-1 bg-[#0A0A0A]/90 border border-white/15 rounded-3xl p-5 flex flex-col justify-between overflow-y-auto shadow-2xl backdrop-blur-xl space-y-4">
-            
+
             {/* Top Part: AI Question */}
             <div className="space-y-2.5">
               <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-1.5">
-                  <HelpCircle className="w-4 h-4 text-emerald-400" /> Question {currentQIndex + 1} of {totalQuestions}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-1.5">
+                    <HelpCircle className="w-4 h-4 text-emerald-400" /> Question {currentQIndex + 1} of {totalQuestions}
+                  </span>
+                  {activeQuestion.type === 'counter' && (
+                    <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/30 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-amber-400" /> Adaptive Counter Question
+                    </span>
+                  )}
+                </div>
                 <span className="text-[10px] font-mono text-neutral-400 bg-[#1A1A1A] px-2.5 py-1 rounded-full border border-white/10">
                   {config.interviewType} Domain
                 </span>
               </div>
 
               <h2 className="text-base sm:text-lg font-sans font-extrabold text-white leading-relaxed tracking-tight">
-                "{questions[currentQIndex % questions.length]}"
+                "{activeQuestion.text}"
               </h2>
             </div>
 
@@ -411,7 +605,7 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
                   iconPosition="right"
                   className="w-full bg-white text-black hover:bg-neutral-200 font-bold border border-white/20 text-xs sm:text-sm py-3 shadow-xl font-mono disabled:opacity-50"
                 >
-                  {currentQIndex + 1 === totalQuestions ? 'Submit Answer & Complete Session' : 'Submit Answer / Next Question'}
+                  {activeQuestion.type === 'main' && currentQIndex + 1 === totalQuestions ? 'Submit Answer & Complete Session' : 'Submit Answer / Next Question'}
                 </Button>
               </div>
             </div>

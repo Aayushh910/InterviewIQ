@@ -42,6 +42,24 @@ export const InterviewProvider = ({ children }) => {
   });
 
   useEffect(() => {
+    let isMounted = true;
+    const fetchApiInterviews = async () => {
+      try {
+        const { apiClient } = await import('../services/apiClient');
+        const res = await apiClient.get('/interviews');
+        if (isMounted && res.data && res.data.length > 0) {
+          setInterviews(res.data);
+        }
+      } catch (err) {
+        console.warn('Backend API connection notice, using local cached sessions:', err);
+      }
+    };
+    fetchApiInterviews();
+
+    return () => { isMounted = false; };
+  }, []);
+
+  useEffect(() => {
     try {
       localStorage.setItem('interviewiq_interviews', JSON.stringify(interviews));
       localStorage.setItem('interviewiq_reports', JSON.stringify(reports));
