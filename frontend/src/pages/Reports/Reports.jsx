@@ -96,45 +96,55 @@ export const Reports = () => {
           </h2>
           <p className="text-xs text-neutral-400">Open full AI transcript analysis or download instant official PDF reports</p>
         </div>
-        {filteredReports.map((item) => (
-          <div
-            key={item.id}
-            className="p-6 rounded-3xl bg-[#0A0A0A]/90 dark:bg-[#0A0A0A]/90 light:bg-white border border-white/15 dark:border-white/15 light:border-slate-200 shadow-2xl backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-white/30 transition-all"
-          >
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-[#141414] border border-white/15 flex items-center justify-center text-emerald-400 shrink-0">
-                <FileText className="w-6 h-6" />
+        {filteredReports.map((item, index) => {
+          const colorList = [
+            { text: "text-cyan-400", bg: "bg-cyan-500/10 border-cyan-500/20" },
+            { text: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
+            { text: "text-violet-400", bg: "bg-violet-500/10 border-violet-500/20" },
+            { text: "text-rose-400", bg: "bg-rose-500/10 border-rose-500/20" }
+          ];
+          const color = colorList[index % colorList.length];
+
+          return (
+            <div
+              key={item.id}
+              className="p-6 rounded-3xl bg-[#0A0A0A]/90 dark:bg-[#0A0A0A]/90 light:bg-white border border-white/15 dark:border-white/15 light:border-slate-200 shadow-2xl backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-white/30 transition-all"
+            >
+              <div className="flex items-start gap-4">
+                <div className={`w-12 h-12 rounded-2xl border flex items-center justify-center shrink-0 ${color.bg} ${color.text}`}>
+                  <FileText className="w-6 h-6" />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-white dark:text-white light:text-slate-900">
+                      {item.title}
+                    </h3>
+                    <Badge variant="emerald" size="sm" className="bg-[#141414] border-white/20 text-neutral-200 font-mono text-[10px]">{item.typeBadge || 'Technical'}</Badge>
+                  </div>
+                  <p className="text-xs text-neutral-400 line-clamp-1">{item.summary}</p>
+                  <div className="flex items-center gap-4 text-xs text-neutral-400 font-mono pt-1">
+                    <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-neutral-500" /> {item.date}</span>
+                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-neutral-500" /> {item.duration}</span>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-base font-bold text-white dark:text-white light:text-slate-900">
-                    {item.title}
-                  </h3>
-                  <Badge variant="emerald" size="sm" className="bg-[#141414] border-white/20 text-neutral-200 font-mono text-[10px]">{item.typeBadge || 'Technical'}</Badge>
+
+              <div className="flex items-center justify-between sm:justify-end gap-6 shrink-0 pt-4 sm:pt-0 border-t sm:border-0 border-white/10">
+                <div className="text-right font-mono">
+                  <span className="text-[10px] text-neutral-400 uppercase">AI Score</span>
+                  <div className={`text-xl font-extrabold ${color.text}`}>{item.score}%</div>
                 </div>
-                <p className="text-xs text-neutral-400 line-clamp-1">{item.summary}</p>
-                <div className="flex items-center gap-4 text-xs text-neutral-400 font-mono pt-1">
-                  <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-neutral-500" /> {item.date}</span>
-                  <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-neutral-500" /> {item.duration}</span>
-                </div>
+
+                <Link
+                  to={`/reports?id=${item.id}`}
+                  className="px-4 py-2.5 rounded-xl bg-white text-black font-bold hover:bg-neutral-200 text-xs shadow-xl border border-white/20 flex items-center gap-1.5 transition-all"
+                >
+                  View Full Report <ArrowRight className="w-4 h-4" />
+                </Link>
               </div>
             </div>
-
-            <div className="flex items-center justify-between sm:justify-end gap-6 shrink-0 pt-4 sm:pt-0 border-t sm:border-0 border-white/10">
-              <div className="text-right font-mono">
-                <span className="text-[10px] text-neutral-400 uppercase">AI Score</span>
-                <div className="text-xl font-extrabold text-emerald-400">{item.score}%</div>
-              </div>
-
-              <Link
-                to={`/reports?id=${item.id}`}
-                className="px-4 py-2.5 rounded-xl bg-white text-black font-bold hover:bg-neutral-200 text-xs shadow-xl border border-white/20 flex items-center gap-1.5 transition-all"
-              >
-                View Full Report <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </motion.div>
   );

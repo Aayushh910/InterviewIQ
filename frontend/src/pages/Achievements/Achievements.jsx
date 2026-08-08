@@ -1,363 +1,497 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Award, Zap, Shield, Flame, CheckCircle2, Lock, Trophy, Star,
-  GraduationCap, Users, Target, Crosshair, Sparkles, Sword, Crown, Check
+  Award, Target, GraduationCap, CheckCircle2, Lock, Sparkles,
+  Download, Share2, ExternalLink, Check, ShieldCheck, Cpu,
+  Layers, MessageSquare, Radio, Star, Zap, Activity
 } from 'lucide-react';
-import { Badge } from '../../components/common/Badge';
+import { useAuth } from '../../context/AuthContext';
+import { apiClient } from '../../services/apiClient';
 
-const QUESTS = [
-  { id: 'q1', title: 'Flawless System Trade-offs', desc: 'State latency vs throughput trade-offs in 5 Technical Mock loops.', current: 3, target: 5, rewardXp: 500, status: 'In Progress' },
-  { id: 'q2', title: 'Zero Filler Oracle', desc: 'Maintain under 0.5 filler words/min across 3 consecutive sessions.', current: 2, target: 3, rewardXp: 350, status: 'In Progress' },
-  { id: 'q3', title: 'ATS Resume Overclock', desc: 'Upload a target resume scoring 90%+ ATS role compatibility.', current: 1, target: 1, rewardXp: 600, status: 'Claimable' },
-  { id: 'q4', title: 'Behavioral STAR Warlord', desc: 'Deliver 4 STAR-structured behavioral answers with high confidence.', current: 4, target: 4, rewardXp: 750, status: 'Completed' },
-  { id: 'q5', title: 'Night Owl Speed Drill', desc: 'Complete a 30-minute timed mock interview session after 9:00 PM.', current: 0, target: 1, rewardXp: 400, status: 'Locked' },
+const MILESTONES = [
+  {
+    id: 'm1',
+    title: 'Distributed System Architecture',
+    desc: 'Demonstrate latency vs throughput trade-offs in 5 mock interview loops.',
+    current: 5,
+    target: 5,
+    status: 'Claimable'
+  },
+  {
+    id: 'm2',
+    title: 'Acoustic Clarity & Vocal Control',
+    desc: 'Maintain under 0.5 filler words per minute across 3 consecutive sessions.',
+    current: 2,
+    target: 3,
+    status: 'In Progress'
+  },
+  {
+    id: 'm3',
+    title: 'ATS Resume Match Optimization',
+    desc: 'Achieve a 90%+ ATS structural role match score on resume upload.',
+    current: 1,
+    target: 1,
+    status: 'Completed'
+  },
+  {
+    id: 'm4',
+    title: 'STAR Method Leadership Delivery',
+    desc: 'Deliver 4 STAR-structured behavioral answers with high confidence.',
+    current: 4,
+    target: 4,
+    status: 'Completed'
+  },
+  {
+    id: 'm5',
+    title: 'Database Indexing & Rate Limiting',
+    desc: 'Formulate query optimization and rate limiting strategies in technical loop.',
+    current: 1,
+    target: 2,
+    status: 'In Progress'
+  }
 ];
 
-const ACHIEVEMENTS_GRID = [
-  { id: 'b1', title: 'First Interview', desc: 'Completed your very first AI mock interview simulation.', icon: Zap, rarity: 'Common', xp: '+100 XP', unlocked: true, date: 'Unlocked July 18' },
-  { id: 'b2', title: '10 Interviews Master', desc: 'Completed 10 full AI technical mock sessions.', icon: Award, rarity: 'Rare', xp: '+400 XP', unlocked: true, date: 'Unlocked July 24' },
-  { id: 'b3', title: 'Virtual DOM Whisperer', desc: 'Scored 95%+ depth on React Fiber reconciliation questions.', icon: Sparkles, rarity: 'Epic', xp: '+750 XP', unlocked: true, date: 'Unlocked July 26' },
-  { id: 'b4', title: '7-Day Flame Legend', desc: 'Maintained a 7-day consecutive practice streak.', icon: Flame, rarity: 'Legendary', xp: '+1200 XP', unlocked: true, date: 'Unlocked July 28' },
-  { id: 'b5', title: 'Zero Filler Oracle', desc: 'Recorded 0 filler words in a full 20-minute session.', icon: Shield, rarity: 'Legendary', xp: '+1000 XP', unlocked: true, date: 'Unlocked July 29' },
-  { id: 'b6', title: 'ATS Overclock 95%', desc: 'Uploaded a resume achieving 94%+ ATS match score.', icon: Star, rarity: 'Rare', xp: '+500 XP', unlocked: true, date: 'Unlocked July 20' },
-  { id: 'b7', title: 'STAR Method Warlord', desc: 'Mastered Situation-Task-Action-Result structure.', icon: Sword, rarity: 'Epic', xp: '+800 XP', unlocked: true, date: 'Unlocked July 25' },
-  { id: 'b8', title: 'Eye Contact Sentinel', desc: 'Maintained 95%+ vision gaze alignment in live webcam feed.', icon: Crosshair, rarity: 'Rare', xp: '+450 XP', unlocked: true, date: 'Unlocked July 27' },
-  { id: 'b9', title: '50 Interviews Legend', desc: 'Complete 50 technical & behavioral mock loops.', icon: Trophy, rarity: 'Mythic', xp: '+2500 XP', unlocked: false, progress: '18 / 50' },
-  { id: 'b10', title: 'Microservice Titan', desc: 'Explain rate limiting and database indexing flawlessly.', icon: Shield, rarity: 'Epic', xp: '+900 XP', unlocked: false, progress: '2 / 3' },
-  { id: 'b11', title: 'Speed Demon Drill', desc: 'Finish 5 questions in under 15 minutes with >85% score.', icon: Zap, rarity: 'Rare', xp: '+500 XP', unlocked: false, progress: '1 / 2' },
-  { id: 'b12', title: 'Offer Collector', desc: 'Achieve overall AI Readiness score of 95%+ on 5 interviews.', icon: Crown, rarity: 'Mythic', xp: '+3000 XP', unlocked: false, progress: '3 / 5' },
+const BADGES = [
+  {
+    id: 'b1',
+    title: 'Distributed Systems Architect',
+    desc: 'Mastered distributed caching, CAP theorem, and rate limiting.',
+    icon: Cpu,
+    category: 'Architecture',
+    unlocked: true,
+    date: 'July 2026'
+  },
+  {
+    id: 'b2',
+    title: 'Virtual DOM & Reconciliation',
+    desc: 'Scored 95%+ accuracy on React Fiber diffing algorithms.',
+    icon: Layers,
+    category: 'Frontend',
+    unlocked: true,
+    date: 'July 2026'
+  },
+  {
+    id: 'b3',
+    title: 'STAR Method Leadership',
+    desc: 'Demonstrated structured executive presence in behavioral questions.',
+    icon: ShieldCheck,
+    category: 'Behavioral',
+    unlocked: true,
+    date: 'July 2026'
+  },
+  {
+    id: 'b4',
+    title: 'Vocal Clarity & Zero Filler',
+    desc: 'Recorded 0 filler words across a full 20-minute session.',
+    icon: Radio,
+    category: 'Acoustics',
+    unlocked: true,
+    date: 'July 2026'
+  },
+  {
+    id: 'b5',
+    title: 'Vision Gaze Alignment',
+    desc: 'Maintained 95%+ eye contact alignment during live webcam feed.',
+    icon: Activity,
+    category: 'Analytics',
+    unlocked: true,
+    date: 'July 2026'
+  },
+  {
+    id: 'b6',
+    title: 'ATS Resume Benchmark',
+    desc: 'Achieved 94%+ match rating on targeted role resume scan.',
+    icon: Star,
+    category: 'Resume',
+    unlocked: true,
+    date: 'July 2026'
+  },
+  {
+    id: 'b7',
+    title: 'High-Scale Systems Titan',
+    desc: 'Complete 10 System Design mock loops with >90% score.',
+    icon: Award,
+    category: 'Architecture',
+    unlocked: false,
+    progress: '6 / 10 Completed'
+  },
+  {
+    id: 'b8',
+    title: 'State Management Architect',
+    desc: 'Explain normalized state stores and memoization techniques.',
+    icon: Zap,
+    category: 'Frontend',
+    unlocked: true,
+    date: 'July 2026'
+  }
 ];
 
-const LEADERBOARD = [
-  { rank: 1, name: 'Elena Rostova', title: 'System Archmage', xp: '14,250 XP', score: '96.8%', streak: '14 Days 🔥', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80', badge: '🥇 Gold' },
-  { rank: 2, name: 'Alex Rivera (You)', title: 'Technical Overlord', xp: '8,450 XP', score: '92.4%', streak: '5 Days 🔥', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80', badge: '🥈 Silver' },
-  { rank: 3, name: 'David Chen', title: 'Backend Sentinel', xp: '7,900 XP', score: '91.2%', streak: '9 Days 🔥', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80', badge: '🥉 Bronze' },
-  { rank: 4, name: 'Sarah Jenkins', title: 'Principal Titan', xp: '6,850 XP', score: '90.5%', streak: '4 Days 🔥', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&auto=format&fit=crop&q=80', badge: '#4 Rank' },
+const CERTIFICATIONS = [
+  {
+    id: 'c1',
+    title: 'Verified Staff Systems Architect',
+    specialization: 'Distributed Systems & Database Optimization',
+    issuer: 'InterviewIQ Standards Board',
+    score: '94.8%',
+    issueDate: 'July 2026',
+    hash: '0x8F9A7B3C2D1E4F5A6B7C8D9E0F1A2B3C',
+    status: 'Verified'
+  },
+  {
+    id: 'c2',
+    title: 'Principal Behavioral Leadership Credential',
+    specialization: 'STAR Method & Executive Communication',
+    issuer: 'InterviewIQ Leadership Council',
+    score: '96.2%',
+    issueDate: 'July 2026',
+    hash: '0x3B2E1F0A9D8C7B6A5F4E3D2C1B0A9F8E',
+    status: 'Verified'
+  }
 ];
 
 export const Achievements = () => {
-  const [activeTab, setActiveTab] = useState('missions'); // 'missions' | 'badges' | 'certificates' | 'leaderboard'
-  const [claimedQuests, setClaimedQuests] = useState(['q4']);
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState('milestones');
+  const [claimed, setClaimed] = useState(['m3', 'm4']);
+  const [selectedCert, setSelectedCert] = useState(null);
+  const [apiData, setApiData] = useState(null);
 
-  const handleClaim = (questId) => {
-    if (!claimedQuests.includes(questId)) {
-      setClaimedQuests((prev) => [...prev, questId]);
+  useEffect(() => {
+    let isMounted = true;
+    const fetchAchievements = async () => {
+      try {
+        const res = await apiClient.get('/achievements');
+        if (isMounted && res.data) {
+          setApiData(res.data);
+        }
+      } catch (err) {
+        console.warn('Achievements fetch notice (local mode):', err);
+      }
+    };
+    fetchAchievements();
+    return () => { isMounted = false; };
+  }, []);
+
+  const handleClaim = (id) => {
+    if (!claimed.includes(id)) {
+      setClaim(prev => [...prev, id]);
     }
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 15 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto"
+      transition={{ duration: 0.3 }}
+      className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-6xl mx-auto font-sans"
     >
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#141414] border border-white/20 text-amber-400 text-xs font-mono font-semibold mb-2 shadow-sm">
-            <Trophy className="w-3.5 h-3.5" /> Gamification & Live Mission HUD
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-sans font-extrabold text-white dark:text-white light:text-slate-900 tracking-tight">
-            Gaming Mission Tracing & Achievements
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            Achievements & Credentials
           </h1>
-          <p className="text-xs sm:text-sm text-neutral-400">
-            Trace live active quests, level up your candidate rank, unlock unique skill badges, and dominate the global leaderboard.
+          <p className="text-xs sm:text-sm text-neutral-400 mt-1">
+            Track your interview milestones, earned skill badges, and verified credentials.
           </p>
         </div>
 
-        {/* Tab Selector */}
-        <div className="flex flex-wrap rounded-2xl bg-[#0A0A0A] border border-white/15 p-1 self-start sm:self-auto font-mono text-xs">
-          <button
-            onClick={() => setActiveTab('missions')}
-            className={`px-3.5 py-2 font-bold rounded-xl transition-all ${
-              activeTab === 'missions' ? 'bg-white text-black shadow-lg' : 'text-neutral-400 hover:text-white'
-            }`}
-          >
-            Live Missions
-          </button>
-          <button
-            onClick={() => setActiveTab('badges')}
-            className={`px-3.5 py-2 font-bold rounded-xl transition-all ${
-              activeTab === 'badges' ? 'bg-white text-black shadow-lg' : 'text-neutral-400 hover:text-white'
-            }`}
-          >
-            Badges Locker ({ACHIEVEMENTS_GRID.filter(b => b.unlocked).length}/{ACHIEVEMENTS_GRID.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('certificates')}
-            className={`px-3.5 py-2 font-bold rounded-xl transition-all ${
-              activeTab === 'certificates' ? 'bg-white text-black shadow-lg' : 'text-neutral-400 hover:text-white'
-            }`}
-          >
-            Certificates
-          </button>
-          <button
-            onClick={() => setActiveTab('leaderboard')}
-            className={`px-3.5 py-2 font-bold rounded-xl transition-all ${
-              activeTab === 'leaderboard' ? 'bg-white text-black shadow-lg' : 'text-neutral-400 hover:text-white'
-            }`}
-          >
-            Leaderboard
-          </button>
-        </div>
-      </div>
-
-      {/* GAMIFIED HERO HUD BAR */}
-      <div className="rounded-3xl bg-[#0A0A0A]/95 border border-white/15 p-6 shadow-2xl backdrop-blur-xl relative overflow-hidden space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-[#141414] border border-white/20 flex flex-col items-center justify-center text-amber-400 shrink-0 shadow-lg font-mono">
-              <Crown className="w-7 h-7" />
-              <span className="text-[10px] font-extrabold text-white uppercase">LVL 14</span>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-extrabold text-white">Alex Rivera</h2>
-                <span className="px-2.5 py-0.5 rounded-full bg-[#141414] border border-white/20 text-emerald-400 text-xs font-mono font-bold">
-                  Technical Overlord
-                </span>
-              </div>
-              <p className="text-xs text-neutral-400 font-mono mt-0.5">
-                Current Level 14 Candidate • 8,450 / 10,000 XP to Level 15
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-6 font-mono text-xs">
-            <div className="p-3 rounded-2xl bg-[#141414] border border-white/15 text-center shrink-0">
-              <span className="text-[10px] text-neutral-400 uppercase block">Streak Multiplier</span>
-              <span className="text-sm font-extrabold text-amber-400 flex items-center justify-center gap-1">
-                <Flame className="w-4 h-4 text-orange-500 fill-current" /> 5-Day Flame (2.5x XP)
-              </span>
-            </div>
-
-            <div className="p-3 rounded-2xl bg-[#141414] border border-white/15 text-center shrink-0">
-              <span className="text-[10px] text-neutral-400 uppercase block">Global Rank</span>
-              <span className="text-sm font-extrabold text-cyan-400">#2 Worldwide</span>
-            </div>
-          </div>
-        </div>
-
-        {/* XP Progress Bar */}
-        <div className="space-y-1.5 pt-2">
-          <div className="flex items-center justify-between text-xs font-mono">
-            <span className="text-neutral-400">XP Progress to Level 15 (84.5%)</span>
-            <span className="text-emerald-400 font-bold">8,450 / 10,000 XP</span>
-          </div>
-          <div className="w-full bg-[#141414] border border-white/10 rounded-full h-3 overflow-hidden p-0.5">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: '84.5%' }}
-              transition={{ duration: 1 }}
-              className="h-full bg-emerald-400 rounded-full shadow-sm shadow-emerald-400/50"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Tab 1: Live Missions & Quest Tracing */}
-      {activeTab === 'missions' && (
-        <div className="space-y-4">
-          <div className="px-1">
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <Target className="w-5 h-5 text-emerald-400" /> Active Quests & Real-Time Mission Tracing
-            </h2>
-            <p className="text-xs text-neutral-400">Complete live mock interview objectives to earn instant XP boosts and unique badges</p>
-          </div>
-
-          <div className="space-y-3">
-            {QUESTS.map((q) => {
-              const isClaimed = claimedQuests.includes(q.id);
-              const isReadyToClaim = q.status === 'Claimable' || (q.current === q.target && !isClaimed);
-
-              return (
-                <div
-                  key={q.id}
-                  className="p-5 rounded-3xl bg-[#0A0A0A]/90 border border-white/15 shadow-2xl backdrop-blur-xl flex flex-col md:flex-row md:items-center justify-between gap-4 font-mono hover:border-white/30 transition-all"
-                >
-                  <div className="flex items-start gap-4">
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${
-                      isClaimed || q.status === 'Completed'
-                        ? 'bg-[#141414] border-white/20 text-emerald-400'
-                        : isReadyToClaim
-                        ? 'bg-[#141414] border-emerald-500/50 text-emerald-400 animate-pulse'
-                        : 'bg-black border-white/10 text-neutral-500'
-                    }`}>
-                      <Crosshair className="w-6 h-6" />
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-bold text-white font-sans">{q.title}</h3>
-                        <span className={`text-[10px] px-2.5 py-0.5 rounded-full border font-bold ${
-                          isClaimed || q.status === 'Completed'
-                            ? 'bg-[#141414] border-white/20 text-neutral-400'
-                            : isReadyToClaim
-                            ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
-                            : 'bg-[#141414] border-white/15 text-cyan-400'
-                        }`}>
-                          {isClaimed ? 'Claimed ✓' : q.status}
-                        </span>
-                      </div>
-                      <p className="text-xs text-neutral-400 font-sans">{q.desc}</p>
-                      
-                      {/* Quest mini progress */}
-                      <div className="flex items-center gap-3 pt-1 text-[11px]">
-                        <span className="text-neutral-400">Progress: <strong className="text-white">{q.current} / {q.target}</strong></span>
-                        <span className="text-amber-400 font-bold">Reward: +{q.rewardXp} XP</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 shrink-0 self-end md:self-center">
-                    {isReadyToClaim && !isClaimed ? (
-                      <button
-                        onClick={() => handleClaim(q.id)}
-                        className="px-5 py-2.5 rounded-xl bg-white text-black font-bold text-xs hover:bg-neutral-200 transition-all shadow-lg border border-white/20 flex items-center gap-1.5"
-                      >
-                        <Sparkles className="w-4 h-4 text-emerald-600" /> Claim +{q.rewardXp} XP
-                      </button>
-                    ) : isClaimed ? (
-                      <span className="px-4 py-2 rounded-xl bg-[#141414] border border-white/15 text-neutral-400 text-xs font-bold flex items-center gap-1">
-                        <Check className="w-4 h-4 text-emerald-400" /> Claimed
-                      </span>
-                    ) : (
-                      <div className="w-32 bg-[#141414] border border-white/10 rounded-full h-2 overflow-hidden">
-                        <div className="bg-cyan-400 h-full rounded-full" style={{ width: `${(q.current / q.target) * 100}%` }} />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Tab 2: 12 Unique Achievements Locker */}
-      {activeTab === 'badges' && (
-        <div className="space-y-4">
-          <div className="px-1">
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <Award className="w-5 h-5 text-amber-400" /> Unique Candidate Badges & Trophy Locker
-            </h2>
-            <p className="text-xs text-neutral-400">Collect 12 unique skill badges by mastering Virtual DOM, STAR framing, and zero filler drills</p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {ACHIEVEMENTS_GRID.map((b) => {
-              const Icon = b.icon;
-              return (
-                <div
-                  key={b.id}
-                  className={`p-6 rounded-3xl border transition-all flex items-start gap-4 backdrop-blur-xl ${
-                    b.unlocked
-                      ? 'bg-[#0A0A0A]/90 border-white/15 shadow-2xl hover:border-white/30 hover:bg-[#141414]'
-                      : 'bg-[#141414]/40 border-white/10 opacity-60'
-                  }`}
-                >
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
-                    b.unlocked
-                      ? 'bg-[#141414] border border-white/20 text-amber-400 shadow-md'
-                      : 'bg-black border border-white/10 text-neutral-600'
-                  }`}>
-                    {b.unlocked ? <Icon className="w-6 h-6" /> : <Lock className="w-6 h-6" />}
-                  </div>
-
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-bold text-white">{b.title}</h3>
-                      <span className="text-[10px] font-mono font-bold text-amber-400 bg-[#141414] px-2 py-0.5 rounded-full border border-white/15">
-                        {b.rarity}
-                      </span>
-                    </div>
-                    <p className="text-xs text-neutral-400 leading-relaxed">{b.desc}</p>
-
-                    <div className="flex items-center justify-between text-[10px] font-mono text-neutral-400 pt-2 border-t border-white/10 mt-2">
-                      <span className="text-emerald-400 font-bold">{b.xp}</span>
-                      <span>{b.unlocked ? b.date : `Progress: ${b.progress}`}</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Tab 3: Official Verification Certificates */}
-      {activeTab === 'certificates' && (
-        <div className="rounded-3xl bg-[#0A0A0A]/90 border border-white/15 p-8 shadow-2xl backdrop-blur-xl text-center space-y-6">
-          <div className="w-16 h-16 rounded-2xl bg-[#141414] border border-white/15 text-amber-400 mx-auto flex items-center justify-center shadow-md">
-            <GraduationCap className="w-8 h-8" />
-          </div>
-          <div className="max-w-md mx-auto space-y-2">
-            <h2 className="text-xl font-bold text-white">
-              Official InterviewIQ Certification
-            </h2>
-            <p className="text-xs text-neutral-400">
-              Complete 20 technical mock sessions with 90%+ average score to unlock your Verified Staff Engineer Competency Certificate.
-            </p>
-          </div>
-
-          <div className="p-6 rounded-2xl bg-[#141414] border border-white/15 max-w-xl mx-auto text-left space-y-3 font-mono text-xs shadow-xl">
-            <div className="text-amber-400 font-bold text-sm border-b border-white/10 pb-2 flex justify-between items-center">
-              <span>CERTIFICATE OF EXCELLENCE - IN PROGRESS</span>
-              <span className="text-emerald-400 text-xs">90% Complete</span>
-            </div>
-            <div className="text-neutral-200">Candidate: <strong>Alex Rivera</strong></div>
-            <div className="text-neutral-400">Specialization: Senior Full-Stack Architecture</div>
-            <div className="text-neutral-400">Verification Hash: <span className="text-cyan-400">0x8F9A...2C4D</span></div>
-            <div className="text-emerald-400 font-bold pt-1">Requirements: 18 / 20 Sessions Completed</div>
-          </div>
-        </div>
-      )}
-
-      {/* Tab 4: Gaming Leaderboard */}
-      {activeTab === 'leaderboard' && (
-        <div className="rounded-3xl bg-[#0A0A0A]/90 border border-white/15 p-6 shadow-2xl backdrop-blur-xl space-y-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-amber-400" />
-              <h2 className="text-base font-bold text-white">
-                Platform Global Leaderboard
-              </h2>
-            </div>
-            <span className="text-xs font-mono text-neutral-400">Rankings updated live every hour</span>
-          </div>
-
-          <div className="space-y-3 font-mono">
-            {LEADERBOARD.map((lb) => (
-              <div
-                key={lb.rank}
-                className={`p-4 rounded-2xl border flex items-center justify-between gap-4 transition-all ${
-                  lb.rank === 2
-                    ? 'bg-[#141414] border-white/30 text-white shadow-md'
-                    : 'bg-[#141414]/60 border-white/10 text-neutral-300'
+        {/* Simplified Tabs */}
+        <div className="flex items-center bg-[#0A0A0A] border border-white/15 p-1 rounded-xl font-mono text-xs shadow-lg">
+          {[
+            { id: 'milestones', label: 'Milestones', icon: Target },
+            { id: 'badges', label: 'Skill Badges', icon: Award },
+            { id: 'certificates', label: 'Certifications', icon: GraduationCap },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-lg font-semibold transition-all ${
+                  isActive
+                    ? 'bg-white text-black shadow-md'
+                    : 'text-neutral-400 hover:text-white'
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <span className="px-3 py-1.5 rounded-xl bg-[#0A0A0A] font-extrabold text-xs text-amber-400 border border-white/15">
-                    {lb.badge}
-                  </span>
-                  <img src={lb.avatar} alt="Avatar" className="w-10 h-10 rounded-full object-cover border border-white/20" />
-                  <div>
-                    <h3 className="text-xs font-bold text-white">{lb.name}</h3>
-                    <p className="text-[11px] text-neutral-400">{lb.title} • {lb.xp}</p>
+                <Icon className="w-3.5 h-3.5" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Clean Overview Card */}
+      <div className="surface-card p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-bold text-white">{user?.name || 'Alex Rivera'}</h2>
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-semibold">
+              {user?.role || 'Full-Stack Candidate'}
+            </span>
+          </div>
+          <p className="text-xs text-neutral-400 font-mono mt-1">
+            Overall AI Readiness: <strong className="text-white">{apiData?.avgScore || 92.4}%</strong> • {apiData?.totalSessions || 4} Practice Sessions Completed
+          </p>
+        </div>
+
+        {/* 3 Simple Stats */}
+        <div className="flex items-center gap-4 font-mono text-xs">
+          <div className="surface-control px-4 py-2.5 text-center">
+            <span className="text-[10px] text-neutral-400 uppercase block">Milestones</span>
+            <span className="text-sm font-bold text-white">4 / 5</span>
+          </div>
+          <div className="surface-control px-4 py-2.5 text-center">
+            <span className="text-[10px] text-neutral-400 uppercase block">Badges</span>
+            <span className="text-sm font-bold text-emerald-400">7 / 8</span>
+          </div>
+          <div className="surface-control px-4 py-2.5 text-center">
+            <span className="text-[10px] text-neutral-400 uppercase block">Certificates</span>
+            <span className="text-sm font-bold text-cyan-400">2 Verified</span>
+          </div>
+        </div>
+      </div>
+
+      {/* TAB 1: MILESTONES */}
+      {activeTab === 'milestones' && (
+        <div className="space-y-3">
+          {MILESTONES.map((m) => {
+            const isDone = claimed.includes(m.id) || m.status === 'Completed';
+            const isReady = m.status === 'Claimable' && !isDone;
+
+            return (
+              <div
+                key={m.id}
+                className="surface-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-sans"
+              >
+                <div className="flex items-start gap-3.5">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
+                    isDone
+                      ? 'bg-[#141414] border-white/20 text-emerald-400'
+                      : 'bg-black border-white/10 text-neutral-400'
+                  }`}>
+                    {isDone ? <CheckCircle2 className="w-5 h-5" /> : <Target className="w-5 h-5" />}
+                  </div>
+
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-white">{m.title}</h3>
+                      <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-semibold ${
+                        isDone
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                          : isReady
+                          ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                          : 'bg-[#141414] text-neutral-400 border border-white/10'
+                      }`}>
+                        {isDone ? 'Completed ✓' : m.status}
+                      </span>
+                    </div>
+                    <p className="text-xs text-neutral-400">{m.desc}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 text-xs">
-                  <span className="font-mono text-neutral-400">{lb.streak}</span>
-                  <span className="font-extrabold text-emerald-400">{lb.score} Score</span>
+                <div className="flex items-center gap-3 shrink-0 self-end sm:self-center font-mono text-xs">
+                  {isReady ? (
+                    <button
+                      onClick={() => handleClaim(m.id)}
+                      className="px-4 py-2 rounded-lg bg-white text-black font-bold hover:bg-neutral-200 transition-all text-xs flex items-center gap-1.5 shadow-md"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-600" /> Claim Completion
+                    </button>
+                  ) : isDone ? (
+                    <span className="text-neutral-400 font-semibold flex items-center gap-1 text-xs">
+                      <Check className="w-4 h-4 text-emerald-400" /> Done
+                    </span>
+                  ) : (
+                    <span className="text-neutral-400 text-xs">
+                      Progress: <strong className="text-white">{m.current}/{m.target}</strong>
+                    </span>
+                  )}
                 </div>
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
       )}
+
+      {/* TAB 2: SKILL BADGES */}
+      {activeTab === 'badges' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {BADGES.map((b) => {
+            const Icon = b.icon;
+            return (
+              <div
+                key={b.id}
+                className={`surface-card p-4 space-y-3 flex flex-col justify-between transition-all ${
+                  b.unlocked ? 'hover:border-white/30' : 'opacity-50'
+                }`}
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${
+                      b.unlocked
+                        ? 'bg-[#141414] border-white/20 text-emerald-400'
+                        : 'bg-black border-white/10 text-neutral-600'
+                    }`}>
+                      {b.unlocked ? <Icon className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
+                    </div>
+
+                    <span className="text-[10px] font-mono text-neutral-400 bg-[#141414] px-2 py-0.5 rounded border border-white/10">
+                      {b.category}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-bold text-white">{b.title}</h3>
+                    <p className="text-xs text-neutral-400 leading-relaxed mt-1">{b.desc}</p>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-white/10 text-[10px] font-mono text-neutral-400 flex items-center justify-between">
+                  {b.unlocked ? (
+                    <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> {b.date}
+                    </span>
+                  ) : (
+                    <span>{b.progress}</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* TAB 3: CERTIFICATIONS */}
+      {activeTab === 'certificates' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {CERTIFICATIONS.map((cert) => (
+            <div
+              key={cert.id}
+              className="surface-card p-6 space-y-5 flex flex-col justify-between"
+            >
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="w-10 h-10 rounded-xl bg-[#141414] border border-white/20 text-amber-400 flex items-center justify-center">
+                    <GraduationCap className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                    {cert.status}
+                  </span>
+                </div>
+
+                <div>
+                  <h3 className="text-base font-bold text-white">{cert.title}</h3>
+                  <p className="text-xs text-neutral-400 mt-0.5">{cert.specialization}</p>
+                </div>
+
+                <div className="surface-control p-3 space-y-1.5 font-mono text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-neutral-400">Issuer:</span>
+                    <span className="text-white font-semibold">{cert.issuer}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-neutral-400">Evaluated Score:</span>
+                    <span className="text-emerald-400 font-bold">{cert.score}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-neutral-400">Issue Date:</span>
+                    <span className="text-neutral-300">{cert.issueDate}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center gap-3">
+                <button
+                  onClick={() => setSelectedCert(cert)}
+                  className="flex-1 py-2.5 rounded-xl bg-white text-black font-bold text-xs hover:bg-neutral-200 transition-all flex items-center justify-center gap-2 shadow-md"
+                >
+                  <ExternalLink className="w-4 h-4 text-black" /> View Certificate
+                </button>
+                <button
+                  onClick={() => alert(`Certificate ${cert.id} PDF download initiated.`)}
+                  className="p-2.5 rounded-xl surface-control text-neutral-200 hover:text-white border border-white/10"
+                  title="Download PDF"
+                >
+                  <Download className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* CERTIFICATE MODAL */}
+      <AnimatePresence>
+        {selectedCert && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedCert(null)}
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative w-full max-w-lg bg-[#0A0A0A] border border-white/20 rounded-2xl p-6 space-y-5 shadow-2xl z-10 font-sans text-white"
+            >
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <div className="flex items-center gap-2 font-mono text-xs font-bold text-emerald-400">
+                  <ShieldCheck className="w-4 h-4" /> Official Credential
+                </div>
+                <button
+                  onClick={() => setSelectedCert(null)}
+                  className="text-neutral-400 hover:text-white text-sm font-mono"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="p-5 rounded-xl bg-[#121212] border border-white/10 space-y-4 text-center font-mono text-xs">
+                <div className="space-y-1">
+                  <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">CERTIFICATE OF COMPETENCY</span>
+                  <h3 className="text-base font-bold text-white font-sans">{selectedCert.title}</h3>
+                  <p className="text-xs text-neutral-400">{selectedCert.specialization}</p>
+                </div>
+
+                <div className="py-3 border-y border-white/10 flex items-center justify-between">
+                  <span>Candidate: <strong className="text-white">Alex Rivera</strong></span>
+                  <span>Score: <strong className="text-emerald-400">{selectedCert.score}</strong></span>
+                </div>
+
+                <div className="text-[10px] text-neutral-400 text-left truncate">
+                  Verification Hash: <span className="text-cyan-400">{selectedCert.hash}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 font-mono text-xs">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(`https://interviewiq.ai/verify/${selectedCert.hash}`);
+                    alert('Verification link copied!');
+                  }}
+                  className="px-4 py-2 rounded-xl surface-control text-neutral-200 hover:text-white border border-white/10 font-semibold flex items-center gap-1.5"
+                >
+                  <Share2 className="w-3.5 h-3.5 text-emerald-400" /> Share Link
+                </button>
+
+                <button
+                  onClick={() => alert('PDF Export started.')}
+                  className="px-4 py-2 rounded-xl bg-white text-black font-bold hover:bg-neutral-200 transition-all flex items-center gap-1.5 shadow-md"
+                >
+                  <Download className="w-3.5 h-3.5" /> Download PDF
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

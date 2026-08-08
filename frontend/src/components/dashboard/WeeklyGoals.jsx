@@ -4,10 +4,10 @@ import { motion } from 'framer-motion';
 
 export const WeeklyGoals = () => {
   const goals = [
-    { title: "Complete 3 Technical Interviews", current: 3, target: 3, completed: true },
-    { title: "Achieve 90%+ Voice Clarity Score", current: 92, target: 90, completed: true },
-    { title: "Practice 2 HR & Behavioral Loops", current: 1, target: 2, completed: false },
-    { title: "Maintain 7-Day Practice Streak", current: 5, target: 7, completed: false },
+    { title: "Complete 3 Technical Interviews", current: 3, target: 3, completed: true, colorClass: "text-cyan-400" },
+    { title: "Achieve 90%+ Voice Clarity Score", current: 92, target: 90, completed: true, colorClass: "text-emerald-400" },
+    { title: "Practice 2 HR & Behavioral Loops", current: 1, target: 2, completed: false, colorClass: "text-violet-400" },
+    { title: "Maintain 7-Day Practice Streak", current: 5, target: 7, completed: false, colorClass: "text-amber-400" },
   ];
 
   const overallProgress = Math.round((goals.filter(g => g.completed).length / goals.length) * 100);
@@ -17,7 +17,7 @@ export const WeeklyGoals = () => {
       <div>
         <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-3">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-[#1A1A1A] border border-white/10 flex items-center justify-center text-emerald-400">
+            <div className="w-7 h-7 rounded-lg bg-[#1A1A1A] border border-white/10 flex items-center justify-center text-amber-400">
               <Target className="w-4 h-4" />
             </div>
             <div>
@@ -28,7 +28,7 @@ export const WeeklyGoals = () => {
             </div>
           </div>
 
-          <span className="text-xs font-mono font-bold text-emerald-400 bg-[#1A1A1A] px-2.5 py-1 rounded-full border border-white/10 shadow-sm">
+          <span className="text-xs font-mono font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20 shadow-sm">
             5 Day Streak 🔥
           </span>
         </div>
@@ -39,7 +39,7 @@ export const WeeklyGoals = () => {
             initial={{ width: 0 }}
             animate={{ width: `${overallProgress}%` }}
             transition={{ duration: 1 }}
-            className="h-full bg-emerald-400 rounded-full"
+            className="h-full bg-gradient-to-r from-amber-400 via-emerald-400 to-cyan-400 rounded-full"
           />
         </div>
 
@@ -47,12 +47,12 @@ export const WeeklyGoals = () => {
           {goals.map((g, i) => (
             <div key={i} className="surface-card p-3 flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className={`w-4 h-4 ${g.completed ? 'text-emerald-400' : 'text-neutral-600'}`} />
+                <CheckCircle2 className={`w-4 h-4 ${g.completed ? g.colorClass : 'text-neutral-600'}`} />
                 <span className={g.completed ? 'line-through text-neutral-500 font-sans' : 'text-neutral-200 font-medium font-sans'}>
                   {g.title}
                 </span>
               </div>
-              <span className="font-mono text-[11px] text-neutral-400">
+              <span className={`font-mono text-[11px] font-semibold ${g.colorClass}`}>
                 {g.current}/{g.target}
               </span>
             </div>

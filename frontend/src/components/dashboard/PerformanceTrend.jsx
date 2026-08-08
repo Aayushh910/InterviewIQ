@@ -16,7 +16,7 @@ export const PerformanceTrend = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-white/10 pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-[#1A1A1A] border border-white/10 flex items-center justify-center text-emerald-400">
+            <div className="w-7 h-7 rounded-lg bg-[#1A1A1A] border border-white/10 flex items-center justify-center text-cyan-400">
               <BarChart2 className="w-4 h-4" />
             </div>
             <h2 className="text-base font-bold text-white">
@@ -26,7 +26,7 @@ export const PerformanceTrend = () => {
           <p className="text-xs text-neutral-400 font-mono mt-0.5">Historical AI mastery curve across your recent mock sessions</p>
         </div>
 
-        <div className="flex items-center gap-2 text-xs font-mono font-semibold px-3 py-1 rounded-full bg-[#1A1A1A] text-emerald-400 border border-white/10 shadow-sm">
+        <div className="flex items-center gap-2 text-xs font-mono font-semibold px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-sm">
           <TrendingUp className="w-4 h-4" /> +20% Improvement Rate
         </div>
       </div>
@@ -48,10 +48,10 @@ export const PerformanceTrend = () => {
               }}
             />
             <Legend wrapperStyle={{ paddingTop: '10px', fontSize: '12px', color: '#a3a3a3' }} />
-            <Line type="monotone" dataKey="score" name="Overall Score" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-            <Line type="monotone" dataKey="confidence" name="Confidence" stroke="#34d399" strokeWidth={2} dot={{ r: 3 }} />
-            <Line type="monotone" dataKey="grammar" name="Grammar" stroke="#a7f3d0" strokeWidth={2} dot={{ r: 3 }} />
-            <Line type="monotone" dataKey="communication" name="Communication" stroke="#6ee7b7" strokeWidth={2} dot={{ r: 3 }} />
+            <Line type="monotone" dataKey="score" name="Overall Score" stroke="#06b6d4" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+            <Line type="monotone" dataKey="confidence" name="Confidence" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} />
+            <Line type="monotone" dataKey="grammar" name="Grammar" stroke="#a855f7" strokeWidth={2} dot={{ r: 3 }} />
+            <Line type="monotone" dataKey="communication" name="Communication" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
           </LineChart>
         </ResponsiveContainer>
       </div>
