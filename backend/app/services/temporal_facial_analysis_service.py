@@ -1,7 +1,9 @@
 import os
 import cv2
 import tempfile
-from typing import Dict, Any
+import logging
+from typing import Dict, Any, Optional
+from sqlalchemy.orm import Session
 from app.ai.facial.analyzer import FacialAnalyzer
 from app.ai.facial.video import VideoProcessor
 from app.ai.facial.temporal import TemporalFacialAggregator
@@ -11,6 +13,10 @@ from app.ai.facial.config import (
     MAX_VIDEO_DURATION_SECONDS,
 )
 from app.schemas.temporal_facial_analysis import TemporalFacialAnalysisResponse
+from app.schemas.answer import AnswerResponse
+from app.services.answer_service import get_answer_by_id
+
+logger = logging.getLogger(__name__)
 
 # Allowed video MIME types / extension keywords
 ALLOWED_VIDEO_MIME_TYPES = {
@@ -92,5 +98,32 @@ def analyze_temporal_facial_video(
         if tmp_path and os.path.exists(tmp_path):
             try:
                 os.remove(tmp_path)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Failed to remove temporary video file '{tmp_path}': {e}")
+
+
+def attach_facial_video_to_answer(
+    db: Session,
+    session_id: str,
+    answer_id: str,
+    user_id: str,
+    video_bytes: bytes,
+    filename: str = "",
+    content_type: str = ""
+) -> AnswerResponse:
+    """
+    Verify ownership of answer_id within session_id, execute temporal video facial analysis,
+    persist observable computer-vision metrics on the Answer record in PostgreSQL, and return updated answer schema.
+    """
+    answer = get_answer_by_id(db, answer_id=answer_id, session_id=session_id, user_id=user_id)
+    if not answer:
+        raise KeyError("Answer not found or unauthorized")
+
+    temporal_res = analyze_temporal_facial_video(video_bytes, filename=filename, content_type=content_type)
+    temporal_data = temporal_res.model_dump()
+
+    answer.facial_analysis = temporal_data
+    db.commit()
+    db.refresh(answer)
+
+    return AnswerResponse.model_validate(answer)

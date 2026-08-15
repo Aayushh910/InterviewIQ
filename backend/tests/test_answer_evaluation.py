@@ -84,6 +84,54 @@ def test_empty_answer_evaluation():
     assert "No substantive candidate answer" in res["summary"]
 
 
+def test_excellent_answer_evaluation():
+    evaluator = AnswerEvaluator()
+    res = evaluator.evaluate(
+        question_text="Explain database indexing in PostgreSQL.",
+        answer_text="PostgreSQL B-Tree and GIN indexes speed up query execution by reducing table scans. Using EXPLAIN ANALYZE helps verify index usage.",
+        interview_meta={"interview_type": "Technical", "domain": "Backend", "difficulty": "Hard"}
+    )
+    assert res["relevance_score"] >= 80.0
+    assert res["correctness_score"] >= 80.0
+    assert res["clarity_score"] >= 80.0
+    assert res["overall_score"] >= 80.0
+    assert len(res["strengths"]) >= 1
+
+
+def test_irrelevant_answer_evaluation():
+    evaluator = AnswerEvaluator()
+    res = evaluator.evaluate(
+        question_text="What is database index query optimization?",
+        answer_text="I really enjoy playing football and watching sports on weekends with my friends. The weather is great today.",
+        interview_meta={"interview_type": "Technical", "domain": "Backend"}
+    )
+    assert res["relevance_score"] <= 40.0
+    assert "off-topic" in res["summary"].lower() or "failed to address" in res["summary"].lower()
+
+
+def test_very_short_answer_evaluation():
+    evaluator = AnswerEvaluator()
+    res = evaluator.evaluate(
+        question_text="What is REST?",
+        answer_text="Representational State Transfer.",
+        interview_meta={"interview_type": "Technical"}
+    )
+    assert res["overall_score"] > 50.0
+    assert res["relevance_score"] >= 80.0
+
+
+def test_long_answer_evaluation():
+    evaluator = AnswerEvaluator()
+    long_text = "In software engineering, architectural patterns like microservices and event-driven architecture allow decoupled scaling. " * 30
+    res = evaluator.evaluate(
+        question_text="Discuss microservices architecture patterns.",
+        answer_text=long_text,
+        interview_meta={"interview_type": "Technical"}
+    )
+    assert res["overall_score"] > 70.0
+    assert 0.0 <= res["overall_score"] <= 100.0
+
+
 def test_answer_evaluation_endpoint_unauthenticated():
     resp = client.post("/api/v1/analysis/evaluation/answer", json={"answer_id": "fake_id"})
     assert resp.status_code == 401

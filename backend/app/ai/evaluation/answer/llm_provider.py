@@ -32,24 +32,44 @@ class LLMAnswerEvaluationProvider(BaseAnswerEvaluationProvider):
         interview_type = meta.get("interview_type", "Technical")
         domain = meta.get("domain", "Software Engineering")
         difficulty = meta.get("difficulty", "Medium")
+        job_role = meta.get("job_role", "Candidate")
+        expected_topics = meta.get("expected_topics") or []
 
         if not self.api_key:
             logger.error("AI_API_KEY is not configured for LLMAnswerEvaluationProvider.")
             raise AIProviderError("AI provider authentication key is not configured.")
 
         system_prompt = (
-            "You are an expert AI interview evaluator. Evaluate candidate responses accurately. "
-            "Return ONLY a JSON object with the following fields: "
-            "relevance (0-100), correctness (0-100), completeness (0-100), "
-            "clarity (0-100), technical_depth (0-100), communication (0-100), confidence (0.0-1.0), "
-            "strengths (list of strings), improvements (list of strings), and summary (string)."
+            "You are an objective AI interview evaluator assessing a candidate response. "
+            "Return ONLY a raw JSON object with NO markdown formatting. "
+            "JSON structure required:\n"
+            "{\n"
+            '  "relevance": float (0.0-100.0),\n'
+            '  "correctness": float (0.0-100.0),\n'
+            '  "completeness": float (0.0-100.0),\n'
+            '  "clarity": float (0.0-100.0),\n'
+            '  "technical_depth": float (0.0-100.0),\n'
+            '  "communication": float (0.0-100.0),\n'
+            '  "confidence": float (0.0-1.0),\n'
+            '  "strengths": list of concise, actionable strings,\n'
+            '  "improvements": list of concise, actionable strings,\n'
+            '  "summary": string summary of candidate evaluation\n'
+            "}\n\n"
+            "Strict Evaluation Guidelines:\n"
+            "1. Relevance: Low score (<40) if answer is off-topic or fails to answer the question asked.\n"
+            "2. Correctness: Evaluate factual & technical correctness. Do not reward confident false statements.\n"
+            "3. Clarity & Communication: Evaluate logical clarity and explanation quality based strictly on the text/transcript provided.\n"
+            "4. Confidence: Treat confidence strictly as observable clarity and structured verbal articulation. NEVER diagnose psychological state or internal emotions.\n"
+            "5. Do NOT invent candidate details not present in the answer."
         )
 
         user_prompt = f"""
-Target Interview Context:
+Interview Context:
 - Type: {interview_type}
 - Domain: {domain}
 - Difficulty: {difficulty}
+- Role Target: {job_role}
+- Expected Topics: {', '.join(expected_topics) if expected_topics else 'N/A'}
 
 Question:
 {question_text}
@@ -57,7 +77,7 @@ Question:
 Candidate Answer:
 {answer_text}
 
-Provide your structured JSON evaluation.
+Provide structured JSON evaluation:
 """
 
         headers = {

@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey
+from sqlalchemy import Column, String, Text, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 
@@ -15,6 +15,7 @@ class Answer(Base):
     session_id = Column(String, ForeignKey("interview_sessions.id", ondelete="CASCADE"), nullable=False, index=True)
     question_id = Column(String, nullable=False, index=True)
     answer_text = Column(Text, nullable=True)
+    facial_analysis = Column(JSON, nullable=True)
     started_at = Column(DateTime, nullable=True)
     submitted_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
