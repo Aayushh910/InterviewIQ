@@ -65,6 +65,60 @@ export const submitAnswer = async (sessionId, answerData) => {
   return response.data;
 };
 
+export const submitAudioAnswer = async (sessionId, questionId, audioBlob) => {
+  const formData = new FormData();
+  formData.append('question_id', questionId);
+  const ext = audioBlob?.type?.includes('mp4') ? 'mp4' : audioBlob?.type?.includes('wav') ? 'wav' : 'webm';
+  formData.append('file', audioBlob, `candidate_answer.${ext}`);
+
+  const response = await apiClient.post(`/sessions/${sessionId}/answers/audio`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+export const submitAnswerFacialFrame = async (sessionId, answerId, imageBlob) => {
+  const formData = new FormData();
+  formData.append('file', imageBlob, 'frame.jpg');
+
+  const response = await apiClient.post(`/sessions/${sessionId}/answers/${answerId}/facial`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+export const submitAnswerFacialVideo = async (sessionId, answerId, videoBlob) => {
+  const formData = new FormData();
+  const ext = videoBlob?.type?.includes('webm') ? 'webm' : 'mp4';
+  formData.append('file', videoBlob, `interview_video.${ext}`);
+
+  const response = await apiClient.post(`/sessions/${sessionId}/answers/${answerId}/facial/video`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+export const getAnswerMultimodalAnalysis = async (sessionId, answerId) => {
+  const response = await apiClient.get(`/sessions/${sessionId}/answers/${answerId}/multimodal`);
+  return response.data;
+};
+
+export const getSessionMultimodalAnalysis = async (sessionId) => {
+  const response = await apiClient.get(`/sessions/${sessionId}/multimodal`);
+  return response.data;
+};
+
+export const getSessionAnalytics = async (sessionId) => {
+  const response = await apiClient.get(`/sessions/${sessionId}/analytics`);
+  return response.data;
+};
+
 export const getSessionAnswers = async (sessionId) => {
   const response = await apiClient.get(`/sessions/${sessionId}/answers`);
   return response.data;

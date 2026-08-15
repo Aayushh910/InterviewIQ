@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Form
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.api.deps import get_current_user
@@ -8,6 +8,9 @@ from app.schemas.answer import AnswerCreate, AnswerResponse, AnswerSubmitRespons
 from app.models.user import User
 import app.services.session_service as session_service
 import app.services.answer_service as answer_service
+import app.services.speech_service as speech_service
+import app.services.facial_analysis_service as facial_analysis_service
+import app.services.temporal_facial_analysis_service as temporal_facial_analysis_service
 
 router = APIRouter()
 
@@ -97,6 +100,154 @@ def submit_answer(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Session not found"
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+@router.post("/sessions/{session_id}/answers/audio", response_model=AnswerSubmitResponse, status_code=status.HTTP_201_CREATED)
+async def submit_audio_answer(
+    session_id: str,
+    question_id: str = Form(...),
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Submit candidate audio recording for a question during an active session.
+    Transcribes audio to text, saves/updates Answer record, runs Phase 2 evaluation, and returns next question info.
+    """
+    try:
+        contents = await file.read()
+        filename = file.filename or ""
+        content_type = file.content_type or ""
+
+        if filename and (not content_type or content_type == "application/octet-stream"):
+            lower_name = filename.lower()
+            if lower_name.endswith(".webm"):
+                content_type = "audio/webm"
+            elif lower_name.endswith(".wav"):
+                content_type = "audio/wav"
+            elif lower_name.endswith(".mp3"):
+                content_type = "audio/mp3"
+            elif lower_name.endswith(".m4a"):
+                content_type = "audio/m4a"
+
+        result = speech_service.submit_audio_answer(
+            db,
+            session_id=session_id,
+            question_id=question_id,
+            user_id=current_user.id,
+            audio_bytes=contents,
+            filename=filename,
+            content_type=content_type
+        )
+        return result
+    except KeyError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Session or question not found or unauthorized"
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+@router.post("/sessions/{session_id}/answers/{answer_id}/facial", response_model=AnswerResponse, status_code=status.HTTP_200_OK)
+async def submit_answer_facial_frame(
+    session_id: str,
+    answer_id: str,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Attach single-frame facial analysis metrics to an owned candidate answer.
+    Processes facial geometry, position quality, head pose, and camera alignment.
+    """
+    try:
+        contents = await file.read()
+        filename = file.filename or ""
+        content_type = file.content_type or ""
+
+        if filename and (not content_type or content_type == "application/octet-stream"):
+            lower_name = filename.lower()
+            if lower_name.endswith(".jpg") or lower_name.endswith(".jpeg"):
+                content_type = "image/jpeg"
+            elif lower_name.endswith(".png"):
+                content_type = "image/png"
+            elif lower_name.endswith(".webp"):
+                content_type = "image/webp"
+
+        result = facial_analysis_service.attach_facial_frame_to_answer(
+            db,
+            session_id=session_id,
+            answer_id=answer_id,
+            user_id=current_user.id,
+            image_bytes=contents,
+            filename=filename,
+            content_type=content_type
+        )
+        return result
+    except KeyError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Answer or session not found or unauthorized access"
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+@router.post("/sessions/{session_id}/answers/{answer_id}/facial/video", response_model=AnswerResponse, status_code=status.HTTP_200_OK)
+async def submit_answer_facial_video(
+    session_id: str,
+    answer_id: str,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Attach temporal facial video analysis metrics to an owned candidate answer.
+    Samples video frames across answer duration, computing face presence ratio, average head pose, and alignment.
+    """
+    try:
+        contents = await file.read()
+        filename = file.filename or ""
+        content_type = file.content_type or ""
+
+        if filename and (not content_type or content_type == "application/octet-stream"):
+            lower_name = filename.lower()
+            if lower_name.endswith(".mp4"):
+                content_type = "video/mp4"
+            elif lower_name.endswith(".webm"):
+                content_type = "video/webm"
+            elif lower_name.endswith(".mov"):
+                content_type = "video/quicktime"
+            elif lower_name.endswith(".avi"):
+                content_type = "video/x-msvideo"
+
+        result = temporal_facial_analysis_service.attach_facial_video_to_answer(
+            db,
+            session_id=session_id,
+            answer_id=answer_id,
+            user_id=current_user.id,
+            video_bytes=contents,
+            filename=filename,
+            content_type=content_type
+        )
+        return result
+    except KeyError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Answer or session not found or unauthorized access"
         )
     except ValueError as e:
         raise HTTPException(
