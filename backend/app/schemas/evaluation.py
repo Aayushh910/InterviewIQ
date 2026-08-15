@@ -4,12 +4,37 @@ from pydantic import BaseModel, ConfigDict, model_validator
 
 
 class AnswerEvaluationRequest(BaseModel):
-    answer_id: str
+    """
+    Validated request schema supporting either:
+    1. Direct question & answer evaluation with optional context metadata.
+    2. Database-backed evaluation via answer_id.
+    """
+    answer_id: Optional[str] = None
+    question: Optional[str] = None
+    answer: Optional[str] = None
+    interview_type: Optional[str] = "Technical"
+    difficulty: Optional[str] = "Medium"
+    domain: Optional[str] = "Software Engineering"
+    job_role: Optional[str] = None
+    expected_topics: Optional[List[str]] = None
+    provider: Optional[str] = None
+    mock_mode: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_request_payload(self) -> "AnswerEvaluationRequest":
+        if not self.answer_id and (not self.question or not self.answer):
+            raise ValueError("Evaluation request must provide either 'answer_id' or both 'question' and 'answer'.")
+        return self
 
 
 class AnswerEvaluationResponse(BaseModel):
-    id: str
-    answer_id: str
+    """
+    Structured AI Answer Evaluation Response containing 5-dimension scores,
+    communication/confidence metrics, weighted overall score, strengths, improvements,
+    summary, and evaluator provider information.
+    """
+    id: Optional[str] = None
+    answer_id: Optional[str] = None
     relevance: float = 0.0
     correctness: float = 0.0
     completeness: float = 0.0
@@ -20,12 +45,14 @@ class AnswerEvaluationResponse(BaseModel):
     completeness_score: float = 0.0
     clarity_score: float = 0.0
     technical_depth_score: float = 0.0
+    communication_score: float = 0.0
+    confidence_score: float = 0.85
     overall_score: float = 0.0
     strengths: List[str] = []
     improvements: List[str] = []
     summary: str = ""
     evaluator_provider: str = "heuristic"
-    created_at: datetime
+    created_at: Optional[datetime] = None
 
     @model_validator(mode="before")
     @classmethod
@@ -36,6 +63,8 @@ class AnswerEvaluationResponse(BaseModel):
             comp = data.get("completeness", data.get("completeness_score", 0.0))
             cla = data.get("clarity", data.get("clarity_score", 0.0))
             tech = data.get("technical_depth", data.get("technical_depth_score", 0.0))
+            comm = data.get("communication_score", (cla + comp) / 2.0)
+            conf = data.get("confidence_score", 0.85)
 
             data["relevance"] = rel
             data["relevance_score"] = rel
@@ -47,18 +76,24 @@ class AnswerEvaluationResponse(BaseModel):
             data["clarity_score"] = cla
             data["technical_depth"] = tech
             data["technical_depth_score"] = tech
+            data["communication_score"] = comm
+            data["confidence_score"] = conf
         elif hasattr(data, "relevance_score"):
             rel = getattr(data, "relevance_score", 0.0)
             corr = getattr(data, "correctness_score", 0.0)
             comp = getattr(data, "completeness_score", 0.0)
             cla = getattr(data, "clarity_score", 0.0)
             tech = getattr(data, "technical_depth_score", 0.0)
+            comm = getattr(data, "communication_score", (cla + comp) / 2.0)
+            conf = getattr(data, "confidence_score", 0.85)
 
             setattr(data, "relevance", rel)
             setattr(data, "correctness", corr)
             setattr(data, "completeness", comp)
             setattr(data, "clarity", cla)
             setattr(data, "technical_depth", tech)
+            setattr(data, "communication_score", comm)
+            setattr(data, "confidence_score", conf)
         return data
 
     model_config = ConfigDict(from_attributes=True)

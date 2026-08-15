@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -53,6 +53,12 @@ class Settings(BaseSettings):
     EVALUATION_WEIGHT_CLARITY: float = 0.15
     EVALUATION_WEIGHT_TECHNICAL_DEPTH: float = 0.15
     EVALUATION_PROVIDER: str = "heuristic"
+
+    # AI Provider Core Configuration
+    AI_PROVIDER: str = "heuristic"
+    AI_API_KEY: Optional[str] = None
+    AI_MODEL: str = "gpt-4o-mini"
+    AI_TIMEOUT_SECONDS: float = 10.0
 
     model_config = SettingsConfigDict(
         env_file=".env",
