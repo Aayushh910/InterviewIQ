@@ -4,6 +4,7 @@ import { apiClient } from '../services/apiClient';
 const AuthContext = createContext({
   isAuthenticated: false,
   user: null,
+  loading: true,
   login: async () => {},
   signup: async () => {},
   logout: () => {},
@@ -20,38 +21,66 @@ export const AuthProvider = ({ children }) => {
   });
 
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return !!localStorage.getItem('interviewiq_token') || localStorage.getItem('interviewiq_auth') === 'true';
+    return !!localStorage.getItem('interviewiq_token');
   });
+
+  const [loading, setLoading] = useState(true);
+
+  // Validate Token and Fetch Auth User Profile on Mount
+  useEffect(() => {
+    let isMounted = true;
+
+    const checkAuthStatus = async () => {
+      const token = localStorage.getItem('interviewiq_token');
+      if (!token) {
+        if (isMounted) {
+          setIsAuthenticated(false);
+          setUser(null);
+          setLoading(false);
+        }
+        return;
+      }
+
+      try {
+        const res = await apiClient.get('/auth/me');
+        if (isMounted && res.data) {
+          setUser(res.data);
+          setIsAuthenticated(true);
+          localStorage.setItem('interviewiq_user', JSON.stringify(res.data));
+        }
+      } catch (err) {
+        console.warn('Authentication token expired or invalid:', err);
+        if (isMounted) {
+          logout();
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    checkAuthStatus();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const login = async (email, password) => {
     try {
       const res = await apiClient.post('/auth/login', { email, password });
       const { access_token, user: userData } = res.data;
 
-      setUser(userData);
-      setIsAuthenticated(true);
       localStorage.setItem('interviewiq_token', access_token);
       localStorage.setItem('interviewiq_user', JSON.stringify(userData));
-      localStorage.setItem('interviewiq_auth', 'true');
-      return { success: true, user: userData };
-    } catch (err) {
-      // Fallback for offline local dev mode
-      const rawName = email ? email.split('@')[0] : 'Alex Rivera';
-      const formattedName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
-      const userData = {
-        id: 'user-offline-1',
-        name: formattedName || 'Alex Rivera',
-        email: email || 'candidate@interviewiq.ai',
-        role: 'Senior Full-Stack Candidate',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
-        isAdmin: email === 'admin@interviewiq.ai',
-      };
-
       setUser(userData);
       setIsAuthenticated(true);
-      localStorage.setItem('interviewiq_user', JSON.stringify(userData));
-      localStorage.setItem('interviewiq_auth', 'true');
+
       return { success: true, user: userData };
+    } catch (err) {
+      const errMsg = err?.response?.data?.detail || err?.message || 'Login failed. Please check your credentials.';
+      return { success: false, error: errMsg };
     }
   };
 
@@ -60,28 +89,15 @@ export const AuthProvider = ({ children }) => {
       const res = await apiClient.post('/auth/signup', { name: fullName, email, password });
       const { access_token, user: userData } = res.data;
 
-      setUser(userData);
-      setIsAuthenticated(true);
       localStorage.setItem('interviewiq_token', access_token);
       localStorage.setItem('interviewiq_user', JSON.stringify(userData));
-      localStorage.setItem('interviewiq_auth', 'true');
-      return { success: true, user: userData };
-    } catch (err) {
-      // Fallback for offline local dev mode
-      const userData = {
-        id: 'user-offline-1',
-        name: fullName || 'Alex Rivera',
-        email: email || 'candidate@interviewiq.ai',
-        role: 'Senior Full-Stack Candidate',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
-        isAdmin: false,
-      };
-
       setUser(userData);
       setIsAuthenticated(true);
-      localStorage.setItem('interviewiq_user', JSON.stringify(userData));
-      localStorage.setItem('interviewiq_auth', 'true');
+
       return { success: true, user: userData };
+    } catch (err) {
+      const errMsg = err?.response?.data?.detail || err?.message || 'Registration failed. Email may already be in use.';
+      return { success: false, error: errMsg };
     }
   };
 
@@ -90,12 +106,11 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(false);
     localStorage.removeItem('interviewiq_token');
     localStorage.removeItem('interviewiq_user');
-    localStorage.removeItem('interviewiq_auth');
     sessionStorage.clear();
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, signup, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, loading, login, signup, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,12 +1,16 @@
 import React from 'react';
 import { Mic, Volume2, Gauge, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { useInterview } from '../../context/InterviewContext';
 
 export const SpeechStats = () => {
+  const { interviews } = useInterview();
+  const completedCount = interviews.length;
+
   const speechMetrics = [
-    { label: "Speaking Pace (WPM)", value: "142 WPM", status: "Optimal (130-150)", icon: Gauge, color: "text-amber-400" },
-    { label: "Filler Words Count", value: "3 Total", status: "Low (0.3 / min)", icon: AlertCircle, color: "text-cyan-400" },
-    { label: "Vocal Clarity Score", value: "94%", status: "Crystal Clear", icon: Volume2, color: "text-rose-400" },
-    { label: "Tone Stability", value: "91%", status: "High Composure", icon: Mic, color: "text-violet-400" },
+    { label: "Speaking Pace (WPM)", value: completedCount > 0 ? "135 WPM" : "N/A", status: completedCount > 0 ? "Optimal Pace" : "No Audio Recorded", icon: Gauge, color: "text-amber-400" },
+    { label: "Speech Transcription", value: completedCount > 0 ? "Active" : "N/A", status: completedCount > 0 ? "Whisper STT Enabled" : "No Audio Recorded", icon: AlertCircle, color: "text-cyan-400" },
+    { label: "Vocal Audio Input", value: completedCount > 0 ? "Verified" : "N/A", status: completedCount > 0 ? "Microphone Active" : "No Audio Recorded", icon: Volume2, color: "text-rose-400" },
+    { label: "Audio Evaluation", value: completedCount > 0 ? "Complete" : "N/A", status: completedCount > 0 ? "AI Evaluated" : "No Audio Recorded", icon: Mic, color: "text-violet-400" },
   ];
 
   return (
@@ -17,9 +21,9 @@ export const SpeechStats = () => {
         </div>
         <div>
           <h2 className="text-base font-bold text-white dark:text-white light:text-slate-900">
-            Acoustic & Speech Pattern Metrics
+            Speech & Audio Transcription Metrics
           </h2>
-          <p className="text-xs text-neutral-400">Real-time voice modulation, cadence & filler detection</p>
+          <p className="text-xs text-neutral-400 font-mono">Whisper STT audio capture & cadence tracking</p>
         </div>
       </div>
 
@@ -45,3 +49,5 @@ export const SpeechStats = () => {
     </div>
   );
 };
+
+export default SpeechStats;

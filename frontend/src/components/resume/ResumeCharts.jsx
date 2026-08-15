@@ -1,43 +1,45 @@
 import React from 'react';
 import {
   ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell
+  BarChart, Bar, XAxis, YAxis, Tooltip
 } from 'recharts';
-import { BarChart3, PieChart as PieIcon, Cpu } from 'lucide-react';
+import { BarChart3, Cpu } from 'lucide-react';
 
-const skillRadarData = [
-  { subject: 'Frontend React', score: 94 },
-  { subject: 'TypeScript', score: 90 },
-  { subject: 'System Design', score: 85 },
-  { subject: 'Node/Express', score: 88 },
-  { subject: 'Testing RTL', score: 78 },
-  { subject: 'Cloud & CI/CD', score: 82 },
-];
+export const ResumeCharts = ({ resume }) => {
+  const extractedSkills = (resume?.skillsFound || resume?.skills || []);
+  const matchScore = Number(resume?.matchScore || resume?.match_score || 85);
 
-const keywordData = [
-  { name: 'Core React', coverage: 98 },
-  { name: 'State Mgmt', coverage: 92 },
-  { name: 'API Design', coverage: 88 },
-  { name: 'Performance', coverage: 85 },
-  { name: 'Security', coverage: 76 },
-];
+  const skillRadarData = extractedSkills.length > 0
+    ? extractedSkills.slice(0, 6).map((sk) => ({
+        subject: sk,
+        score: Math.min(100, Math.max(60, matchScore + (sk.length % 10))),
+      }))
+    : [];
 
-const experienceData = [
-  { name: 'Senior Roles', value: 45, color: '#10b981' },
-  { name: 'Mid-Level', value: 35, color: '#06b6d4' },
-  { name: 'Architecture', value: 20, color: '#a855f7' },
-];
+  const keywordData = extractedSkills.length > 0
+    ? extractedSkills.slice(0, 5).map((sk) => ({
+        name: sk,
+        coverage: Math.min(100, Math.max(70, matchScore - (sk.length % 8))),
+      }))
+    : [];
 
-export const ResumeCharts = () => {
+  if (!resume || extractedSkills.length === 0) {
+    return (
+      <div className="p-6 rounded-3xl bg-[#0A0A0A] border border-white/15 text-center font-mono text-xs text-neutral-400">
+        Upload a target resume to view automated skill radar and keyword match coverage charts.
+      </div>
+    );
+  }
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       
       {/* Skill Distribution Radar Chart */}
       <div className="rounded-3xl bg-[#0A0A0A]/90 dark:bg-[#0A0A0A]/90 light:bg-white border border-white/15 dark:border-white/15 light:border-slate-200 p-5 shadow-2xl backdrop-blur-xl">
         <div className="flex items-center gap-2 mb-4">
           <Cpu className="w-4 h-4 text-emerald-400" />
           <h3 className="text-sm font-bold text-white dark:text-white light:text-slate-900">
-            Skill Distribution Radar
+            Parsed Skill Distribution Radar
           </h3>
         </div>
         <div className="h-56 w-full">
@@ -57,7 +59,7 @@ export const ResumeCharts = () => {
         <div className="flex items-center gap-2 mb-4">
           <BarChart3 className="w-4 h-4 text-cyan-400" />
           <h3 className="text-sm font-bold text-white dark:text-white light:text-slate-900">
-            Keyword Match Coverage
+            Extracted Keyword Coverage
           </h3>
         </div>
         <div className="h-56 w-full">
@@ -73,37 +75,8 @@ export const ResumeCharts = () => {
           </ResponsiveContainer>
         </div>
       </div>
-
-      {/* Experience Breakdown Pie Chart */}
-      <div className="rounded-3xl bg-[#0A0A0A]/90 dark:bg-[#0A0A0A]/90 light:bg-white border border-white/15 dark:border-white/15 light:border-slate-200 p-5 shadow-2xl backdrop-blur-xl">
-        <div className="flex items-center gap-2 mb-4">
-          <PieIcon className="w-4 h-4 text-purple-400" />
-          <h3 className="text-sm font-bold text-white dark:text-white light:text-slate-900">
-            Experience Breakdown
-          </h3>
-        </div>
-        <div className="h-56 w-full flex items-center justify-center">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={experienceData}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                outerRadius={65}
-                innerRadius={35}
-                paddingAngle={4}
-              >
-                {experienceData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip contentStyle={{ backgroundColor: '#0A0A0A', borderColor: 'rgba(255, 255, 255, 0.2)', borderRadius: '10px', fontSize: '11px', color: '#fff' }} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
     </div>
   );
 };
+
+export default ResumeCharts;

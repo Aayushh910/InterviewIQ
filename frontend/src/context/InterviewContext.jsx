@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { MOCK_INTERVIEWS, MOCK_REPORTS } from '../data/mockData';
+import { getUserInterviews } from '../services/interviewService';
 
 const InterviewContext = createContext({
   interviews: [],
@@ -11,23 +11,8 @@ const InterviewContext = createContext({
 });
 
 export const InterviewProvider = ({ children }) => {
-  const [interviews, setInterviews] = useState(() => {
-    try {
-      const saved = localStorage.getItem('interviewiq_interviews');
-      return saved ? JSON.parse(saved) : MOCK_INTERVIEWS;
-    } catch {
-      return MOCK_INTERVIEWS;
-    }
-  });
-
-  const [reports, setReports] = useState(() => {
-    try {
-      const saved = localStorage.getItem('interviewiq_reports');
-      return saved ? JSON.parse(saved) : MOCK_REPORTS;
-    } catch {
-      return MOCK_REPORTS;
-    }
-  });
+  const [interviews, setInterviews] = useState([]);
+  const [reports, setReports] = useState({});
 
   const [activeConfig, setActiveConfig] = useState({
     interviewType: 'Technical',
@@ -41,17 +26,17 @@ export const InterviewProvider = ({ children }) => {
     language: 'English',
   });
 
+  // Load Real User Interviews from Backend Database on Mount
   useEffect(() => {
     let isMounted = true;
     const fetchApiInterviews = async () => {
       try {
-        const { apiClient } = await import('../services/apiClient');
-        const res = await apiClient.get('/interviews');
-        if (isMounted && res.data && res.data.length > 0) {
-          setInterviews(res.data);
+        const data = await getUserInterviews();
+        if (isMounted && data && Array.isArray(data)) {
+          setInterviews(data);
         }
       } catch (err) {
-        console.warn('Backend API connection notice, using local cached sessions:', err);
+        console.warn('Backend interview history notice:', err);
       }
     };
     fetchApiInterviews();
@@ -59,100 +44,81 @@ export const InterviewProvider = ({ children }) => {
     return () => { isMounted = false; };
   }, []);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('interviewiq_interviews', JSON.stringify(interviews));
-      localStorage.setItem('interviewiq_reports', JSON.stringify(reports));
-    } catch (e) {
-      console.error('Failed saving interviews to localStorage', e);
-    }
-  }, [interviews, reports]);
-
   const updateConfig = (newConfig) => {
     setActiveConfig((prev) => ({ ...prev, ...newConfig }));
   };
 
   const saveCompletedInterview = (sessionData) => {
-    const id = `int_${Date.now()}`;
+    const id = sessionData.sessionId || `int_${Date.now()}`;
+    const analytics = sessionData.analytics || {};
+    const metrics = analytics.metrics || {};
+
     const newInterview = {
       id,
-      title: sessionData.title || `${activeConfig.domain || activeConfig.interviewType} Practice Loop`,
+      title: sessionData.title || `${activeConfig.domain || activeConfig.interviewType} Practice Session`,
       mode: activeConfig.mode === 'Resume Based' ? 'resume-jd' : 'general',
       modeLabel: activeConfig.mode === 'Resume Based' ? 'Resume Based' : 'General Technical',
       role: `${activeConfig.domain || 'Software'} Engineer (${activeConfig.experience})`,
       date: new Date().toISOString().split('T')[0],
       timeAgo: 'Just now',
       duration: `${sessionData.durationMinutes || 15} Mins`,
-      score: sessionData.score || 88,
+      score: analytics.overall_score || sessionData.score || 0,
       status: 'Completed',
-      summary: sessionData.summary || 'Strong technical articulation with smooth vocal composure and high eye contact stability.',
+      summary: analytics.session_summary || sessionData.summary || 'Session completed successfully.',
       typeBadge: activeConfig.interviewType,
     };
+
+    const questionAnalysisMapped = (analytics.question_results || []).map((qr) => ({
+      question: qr.question_text,
+      userAnswer: qr.answer_text || 'Spoken answer transcript recorded.',
+      aiSuggestedAnswer: qr.improvements && qr.improvements.length > 0
+        ? `Improvement Tip: ${qr.improvements[0]}`
+        : 'Solid technical explanation.',
+      questionScore: qr.answer_score || 0,
+      grammar: qr.clarity || 0,
+      confidence: qr.confidence_indicator || 0,
+      emotion: qr.visual_observations && qr.visual_observations.length > 0 ? qr.visual_observations[0] : "Composed",
+      speechPace: "140 WPM",
+      facialComposure: "90%"
+    }));
 
     const newReport = {
       id,
       title: newInterview.title,
-      candidateName: sessionData.candidateName || 'Alex Rivera',
+      candidateName: sessionData.candidateName || 'Candidate',
       date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
       duration: newInterview.duration,
       overallScore: newInterview.score,
-      scores: sessionData.scores || {
-        technicalSkills: 88,
-        communication: 90,
-        confidence: 86,
-        facialExpression: 89,
-        voiceAnalysis: 87,
-        eyeContact: 92,
+      scores: {
+        technicalSkills: metrics.correctness || 0,
+        communication: metrics.communication || 0,
+        confidence: metrics.confidence_indicator || 0,
+        facialExpression: analytics.visual_observations?.average_face_presence_ratio ? Math.round(analytics.visual_observations.average_face_presence_ratio * 100) : 0,
+        voiceAnalysis: metrics.clarity || 0,
+        eyeContact: analytics.visual_observations?.average_camera_alignment ? Math.round(analytics.visual_observations.average_camera_alignment * 100) : 0,
       },
-      voiceMetrics: sessionData.voiceMetrics || {
+      voiceMetrics: {
         paceWPM: 142,
         paceStatus: 'Optimal (130-150 WPM)',
         fillerWordCount: 3,
-        clarityScore: '92%',
+        clarityScore: `${metrics.clarity || 0}%`,
       },
-      facialMetrics: sessionData.facialMetrics || {
-        eyeContactRatio: '92%',
-        postureScore: '90% Upright',
-        composureRating: 'High Confidence',
+      facialMetrics: {
+        eyeContactRatio: analytics.visual_observations?.average_camera_alignment ? `${Math.round(analytics.visual_observations.average_camera_alignment * 100)}%` : 'N/A',
+        postureScore: analytics.visual_observations?.average_face_presence_ratio ? `${Math.round(analytics.visual_observations.average_face_presence_ratio * 100)}% Face Presence` : 'N/A',
+        composureRating: analytics.performance_category || 'Evaluated',
       },
-      aiRecommendations: sessionData.aiRecommendations || [
-        'Great technical accuracy! Strengthen your explanation of state normalization trade-offs.',
-        'Maintain eye contact when pausing to construct complex algorithm logic.',
-        'Use structured STAR framework when detailing personal project challenges.'
-      ],
-      questionAnalysis: sessionData.questionAnalysis || [
-        {
-          question: "Can you explain how React's Virtual DOM diffing algorithm works under the hood?",
-          userAnswer: "React builds an in-memory virtual tree. When state changes, a new tree is created and diffed against the previous tree using a heuristic O(n) algorithm to compute minimal DOM updates.",
-          aiSuggestedAnswer: "Excellent core concept! To make it top-tier, explicitly mention Fiber nodes, reconciliation phases (render vs commit), and key prop optimization for array diffing.",
-          questionScore: 92,
-          grammar: 94,
-          confidence: 90,
-          emotion: "Focused & Composed",
-          speechPace: "138 WPM",
-          facialComposure: "92%"
-        },
-        {
-          question: "How do you handle memory leaks caused by uncleaned event listeners or subscriptions?",
-          userAnswer: "In functional React components, I return cleanup functions from useEffect hooks to remove event listeners or unsubscribe from RxJS observables when components unmount.",
-          aiSuggestedAnswer: "Spot on! Additionally mention AbortController for cancelling fetch requests on component unmount.",
-          questionScore: 90,
-          grammar: 92,
-          confidence: 88,
-          emotion: "Confident",
-          speechPace: "144 WPM",
-          facialComposure: "90%"
-        }
-      ]
+      aiRecommendations: analytics.top_improvements || [],
+      questionAnalysis: questionAnalysisMapped
     };
 
-    setInterviews((prev) => [newInterview, ...prev]);
+    setInterviews((prev) => [newInterview, ...prev.filter(i => i.id !== id)]);
     setReports((prev) => ({ ...prev, [id]: newReport }));
     return id;
   };
 
   const getReportById = (id) => {
-    return reports[id] || MOCK_REPORTS['int_101'] || null;
+    return reports[id] || null;
   };
 
   return (

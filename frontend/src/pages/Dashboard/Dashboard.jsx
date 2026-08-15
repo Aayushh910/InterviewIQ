@@ -16,27 +16,32 @@ export const Dashboard = () => {
   const { interviews } = useInterview();
   const { resumes } = useResumes();
 
-  // Compute real dynamic statistics from backend database state
+  // Compute real dynamic statistics strictly from database state
   const totalSessions = interviews.length;
-  const readinessScore = totalSessions > 0
-    ? (interviews.reduce((sum, item) => sum + Number(item.score || 88), 0) / totalSessions).toFixed(1)
-    : 88.5;
-  const avgConfidence = totalSessions > 0
-    ? (interviews.reduce((sum, item) => sum + Number(item.confidence || 90), 0) / totalSessions).toFixed(1)
-    : 91.2;
+  const evaluatedInterviews = interviews.filter(i => i.score !== undefined && i.score !== null && Number(i.score) > 0);
+  
+  const readinessScore = evaluatedInterviews.length > 0
+    ? (evaluatedInterviews.reduce((sum, item) => sum + Number(item.score), 0) / evaluatedInterviews.length).toFixed(1)
+    : 'N/A';
+
+  const avgConfidence = evaluatedInterviews.length > 0
+    ? (evaluatedInterviews.reduce((sum, item) => sum + Number(item.confidence || item.score), 0) / evaluatedInterviews.length).toFixed(1)
+    : 'N/A';
+
   const atsScore = resumes.length > 0
-    ? Number(resumes[0].match_score || resumes[0].matchScore || 94)
-    : 94;
+    ? `${resumes[0].match_score || resumes[0].matchScore || 85}%`
+    : 'N/A';
+
   const totalHours = totalSessions > 0
-    ? (interviews.reduce((sum, item) => sum + Number(item.duration_minutes || 25), 0) / 60).toFixed(1)
-    : 12.5;
+    ? (interviews.reduce((sum, item) => sum + Number(item.duration_minutes || 15), 0) / 60).toFixed(1)
+    : '0.0';
 
   const realStats = {
-    readinessScore: Number(readinessScore),
+    readinessScore,
     totalSessions,
-    avgConfidence: Number(avgConfidence),
+    avgConfidence,
     atsScore,
-    totalHours: Number(totalHours),
+    totalHours,
   };
 
   return (
@@ -61,10 +66,10 @@ export const Dashboard = () => {
       {/* Performance Trend & Suggestions Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <PerformanceTrend />
+          <PerformanceTrend interviews={interviews} />
         </div>
         <div>
-          <AISuggestions />
+          <AISuggestions interviews={interviews} />
         </div>
       </div>
 
@@ -74,7 +79,7 @@ export const Dashboard = () => {
           <RecentInterviews interviews={interviews} />
         </div>
         <div>
-          <WeeklyGoals />
+          <WeeklyGoals interviews={interviews} />
         </div>
       </div>
     </motion.div>

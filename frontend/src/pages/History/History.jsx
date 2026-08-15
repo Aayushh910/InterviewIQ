@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { History as HistoryIcon, Search, Calendar, Clock, Video, RotateCcw, FileText, BarChart3, ChevronDown } from 'lucide-react';
+import { History as HistoryIcon, Search, Calendar, Clock, Video, RotateCcw, FileText, BarChart3 } from 'lucide-react';
 import { useInterview } from '../../context/InterviewContext';
 import { Badge } from '../../components/common/Badge';
 
@@ -14,16 +14,18 @@ export const History = () => {
 
   const filteredHistory = interviews
     .filter((item) => {
-      const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            item.role.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesMode = filterMode === 'All' || item.typeBadge === filterMode;
+      const titleStr = item.title || item.job_role || 'Practice Session';
+      const roleStr = item.role || item.job_role || 'Software Candidate';
+      const matchesSearch = titleStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            roleStr.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesMode = filterMode === 'All' || item.typeBadge === filterMode || item.interview_type === filterMode;
       return matchesSearch && matchesMode;
     })
     .sort((a, b) => {
-      if (sortOrder === 'newest') return new Date(b.date) - new Date(a.date);
-      if (sortOrder === 'oldest') return new Date(a.date) - new Date(b.date);
-      if (sortOrder === 'score_high') return b.score - a.score;
-      if (sortOrder === 'score_low') return a.score - b.score;
+      if (sortOrder === 'newest') return new Date(b.date || b.created_at || Date.now()) - new Date(a.date || a.created_at || Date.now());
+      if (sortOrder === 'oldest') return new Date(a.date || a.created_at || Date.now()) - new Date(b.date || b.created_at || Date.now());
+      if (sortOrder === 'score_high') return (b.score || 0) - (a.score || 0);
+      if (sortOrder === 'score_low') return (a.score || 0) - (b.score || 0);
       return 0;
     });
 
@@ -113,68 +115,90 @@ export const History = () => {
           </h2>
           <p className="text-xs text-neutral-400">Click any session to view complete Q&A transcripts, audio analysis, or retake the interview</p>
         </div>
-        {filteredHistory.map((item, index) => {
-          const colorList = [
-            { text: "text-cyan-400", bg: "bg-cyan-500/10 border-cyan-500/20" },
-            { text: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
-            { text: "text-violet-400", bg: "bg-violet-500/10 border-violet-500/20" },
-            { text: "text-rose-400", bg: "bg-rose-500/10 border-rose-500/20" }
-          ];
-          const color = colorList[index % colorList.length];
 
-          return (
-            <div
-              key={item.id}
-              className="p-5 rounded-3xl bg-[#0A0A0A]/90 dark:bg-[#0A0A0A]/90 light:bg-white border border-white/15 dark:border-white/15 light:border-slate-200 shadow-2xl backdrop-blur-xl flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:border-white/30 transition-all"
-            >
-              <div className="flex items-start gap-4">
-                <div className={`w-12 h-12 rounded-2xl border flex items-center justify-center shrink-0 ${color.bg} ${color.text}`}>
-                  <Video className="w-6 h-6" />
-                </div>
-
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-bold text-white dark:text-white light:text-slate-900">
-                      {item.title}
-                    </h3>
-                    <Badge variant="emerald" size="sm" className="bg-[#141414] border-white/20 text-neutral-200 font-mono text-[10px]">{item.typeBadge || 'Technical'}</Badge>
-                  </div>
-                  <p className="text-xs text-neutral-400">{item.role}</p>
-
-                  <div className="flex items-center gap-4 text-xs text-neutral-400 font-mono pt-1">
-                    <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-neutral-500" /> {item.date}</span>
-                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-neutral-500" /> {item.duration}</span>
-                    <span className={`font-bold ${color.text}`}>{item.score}% AI Score</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Actions: View Report, View Analytics, Retake */}
-              <div className="flex flex-wrap items-center gap-2 shrink-0 pt-3 lg:pt-0 border-t lg:border-0 border-white/10 justify-end">
-                <Link
-                  to={`/reports?id=${item.id}`}
-                  className="px-3.5 py-2 rounded-xl bg-[#141414] hover:bg-[#1f1f1f] text-neutral-200 text-xs font-semibold flex items-center gap-1.5 border border-white/15 transition-colors"
-                >
-                  <FileText className="w-3.5 h-3.5 text-amber-400" /> View Report
-                </Link>
-
-                <Link
-                  to="/analytics"
-                  className="px-3.5 py-2 rounded-xl bg-[#141414] hover:bg-[#1f1f1f] text-neutral-200 text-xs font-semibold flex items-center gap-1.5 border border-white/15 transition-colors"
-                >
-                  <BarChart3 className="w-3.5 h-3.5 text-cyan-400" /> View Analytics
-                </Link>
-
+        {filteredHistory.length === 0 ? (
+          <div className="p-8 rounded-3xl bg-[#0A0A0A]/90 border border-white/15 text-center space-y-3 shadow-2xl backdrop-blur-xl">
+            <HistoryIcon className="w-10 h-10 text-neutral-500 mx-auto" />
+            <h3 className="text-base font-bold text-white">No Interview History Found</h3>
+            <p className="text-xs text-neutral-400 font-mono max-w-sm mx-auto">
+              {searchTerm || filterMode !== 'All'
+                ? "No sessions match your filter criteria. Try adjusting your search term or domain filter."
+                : "You haven't completed any AI mock interviews yet. Start your first practice session now!"}
+            </p>
+            {!searchTerm && filterMode === 'All' && (
+              <div className="pt-2">
                 <Link
                   to="/interview"
-                  className="px-3.5 py-2 rounded-xl bg-[#141414] hover:bg-[#1f1f1f] border border-white/20 text-cyan-400 text-xs font-bold flex items-center gap-1.5 transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-black font-bold font-mono text-xs hover:bg-neutral-200 transition-colors shadow-lg"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" /> Retake
+                  Start Mock Interview
                 </Link>
               </div>
-            </div>
-          );
-        })}
+            )}
+          </div>
+        ) : (
+          filteredHistory.map((item, index) => {
+            const colorList = [
+              { text: "text-cyan-400", bg: "bg-cyan-500/10 border-cyan-500/20" },
+              { text: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
+              { text: "text-violet-400", bg: "bg-violet-500/10 border-violet-500/20" },
+              { text: "text-rose-400", bg: "bg-rose-500/10 border-rose-500/20" }
+            ];
+            const color = colorList[index % colorList.length];
+
+            return (
+              <div
+                key={item.id}
+                className="p-5 rounded-3xl bg-[#0A0A0A]/90 dark:bg-[#0A0A0A]/90 light:bg-white border border-white/15 dark:border-white/15 light:border-slate-200 shadow-2xl backdrop-blur-xl flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:border-white/30 transition-all"
+              >
+                <div className="flex items-start gap-4">
+                  <div className={`w-12 h-12 rounded-2xl border flex items-center justify-center shrink-0 ${color.bg} ${color.text}`}>
+                    <Video className="w-6 h-6" />
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-bold text-white dark:text-white light:text-slate-900">
+                        {item.title || item.job_role || 'Practice Session'}
+                      </h3>
+                      <Badge variant="emerald" size="sm" className="bg-[#141414] border-white/20 text-neutral-200 font-mono text-[10px]">{item.typeBadge || item.interview_type || 'Technical'}</Badge>
+                    </div>
+                    <p className="text-xs text-neutral-400">{item.role || item.job_role}</p>
+
+                    <div className="flex items-center gap-4 text-xs text-neutral-400 font-mono pt-1">
+                      <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-neutral-500" /> {item.date || 'Today'}</span>
+                      <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-neutral-500" /> {item.duration || '15 Mins'}</span>
+                      <span className={`font-bold ${color.text}`}>{item.score ? `${item.score}%` : 'Pending'} AI Score</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 shrink-0 pt-3 lg:pt-0 border-t lg:border-0 border-white/10 justify-end">
+                  <Link
+                    to={`/reports?id=${item.id}`}
+                    className="px-3.5 py-2 rounded-xl bg-[#141414] hover:bg-[#1f1f1f] text-neutral-200 text-xs font-semibold flex items-center gap-1.5 border border-white/15 transition-colors"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-amber-400" /> View Report
+                  </Link>
+
+                  <Link
+                    to="/analytics"
+                    className="px-3.5 py-2 rounded-xl bg-[#141414] hover:bg-[#1f1f1f] text-neutral-200 text-xs font-semibold flex items-center gap-1.5 border border-white/15 transition-colors"
+                  >
+                    <BarChart3 className="w-3.5 h-3.5 text-cyan-400" /> View Analytics
+                  </Link>
+
+                  <Link
+                    to="/interview"
+                    className="px-3.5 py-2 rounded-xl bg-[#141414] hover:bg-[#1f1f1f] border border-white/20 text-cyan-400 text-xs font-bold flex items-center gap-1.5 transition-colors"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" /> Retake
+                  </Link>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
     </motion.div>
   );

@@ -1,16 +1,26 @@
 import React from 'react';
-import { Target, CheckCircle2, Award } from 'lucide-react';
+import { Target, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-export const WeeklyGoals = () => {
-  const goals = [
-    { title: "Complete 3 Technical Interviews", current: 3, target: 3, completed: true, colorClass: "text-cyan-400" },
-    { title: "Achieve 90%+ Voice Clarity Score", current: 92, target: 90, completed: true, colorClass: "text-emerald-400" },
-    { title: "Practice 2 HR & Behavioral Loops", current: 1, target: 2, completed: false, colorClass: "text-violet-400" },
-    { title: "Maintain 7-Day Practice Streak", current: 5, target: 7, completed: false, colorClass: "text-amber-400" },
-  ];
+export const WeeklyGoals = ({ interviews = [] }) => {
+  const completedCount = interviews.length;
+  const targetGoal = 3;
+  const progressPercent = Math.min(Math.round((completedCount / targetGoal) * 100), 100);
 
-  const overallProgress = Math.round((goals.filter(g => g.completed).length / goals.length) * 100);
+  // Calculate practice streak from unique session dates
+  const uniqueDates = Array.from(new Set(
+    interviews.map(i => {
+      const d = new Date(i.date || i.created_at || Date.now());
+      return d.toISOString().split('T')[0];
+    })
+  ));
+  const streak = uniqueDates.length;
+
+  const goals = [
+    { title: "Complete 3 Technical Mock Interviews", current: completedCount, target: targetGoal, completed: completedCount >= targetGoal, colorClass: "text-cyan-400" },
+    { title: "Achieve 80%+ Evaluation Score", current: interviews.filter(i => Number(i.score) >= 80).length, target: 1, completed: interviews.some(i => Number(i.score) >= 80), colorClass: "text-emerald-400" },
+    { title: "Attach Voice Audio & Facial Analysis", current: Math.min(completedCount, 1), target: 1, completed: completedCount >= 1, colorClass: "text-violet-400" },
+  ];
 
   return (
     <section className="surface-container p-6 sm:p-7 space-y-4 h-full flex flex-col justify-between">
@@ -24,12 +34,12 @@ export const WeeklyGoals = () => {
               <h2 className="text-base font-bold text-white">
                 Weekly Practice Goals & Milestones
               </h2>
-              <p className="text-xs text-neutral-400 font-mono mt-0.5">{overallProgress}% of target milestone reached</p>
+              <p className="text-xs text-neutral-400 font-mono mt-0.5">{progressPercent}% of target milestone reached</p>
             </div>
           </div>
 
           <span className="text-xs font-mono font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20 shadow-sm">
-            5 Day Streak 🔥
+            {streak} Day Streak 🔥
           </span>
         </div>
 
@@ -37,7 +47,7 @@ export const WeeklyGoals = () => {
         <div className="w-full bg-[#1A1A1A] rounded-full h-2.5 overflow-hidden mb-4 border border-white/10">
           <motion.div
             initial={{ width: 0 }}
-            animate={{ width: `${overallProgress}%` }}
+            animate={{ width: `${progressPercent}%` }}
             transition={{ duration: 1 }}
             className="h-full bg-gradient-to-r from-amber-400 via-emerald-400 to-cyan-400 rounded-full"
           />
@@ -62,3 +72,5 @@ export const WeeklyGoals = () => {
     </section>
   );
 };
+
+export default WeeklyGoals;

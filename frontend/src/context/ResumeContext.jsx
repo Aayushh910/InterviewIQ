@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { MOCK_RESUMES } from '../data/mockData';
 
 const ResumeContext = createContext({
   resumes: [],
@@ -11,18 +10,8 @@ const ResumeContext = createContext({
 });
 
 export const ResumeProvider = ({ children }) => {
-  const [resumes, setResumes] = useState(() => {
-    try {
-      const saved = localStorage.getItem('interviewiq_resumes');
-      return saved ? JSON.parse(saved) : MOCK_RESUMES;
-    } catch {
-      return MOCK_RESUMES;
-    }
-  });
-
-  const [activeResumeId, setActiveResumeId] = useState(() => {
-    return resumes[0]?.id || null;
-  });
+  const [resumes, setResumes] = useState([]);
+  const [activeResumeId, setActiveResumeId] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -30,28 +19,23 @@ export const ResumeProvider = ({ children }) => {
       try {
         const { apiClient } = await import('../services/apiClient');
         const res = await apiClient.get('/resumes');
-        if (isMounted && res.data && res.data.length > 0) {
+        if (isMounted && res.data && Array.isArray(res.data)) {
           setResumes(res.data);
-          if (!activeResumeId) {
+          if (res.data.length > 0) {
             setActiveResumeId(res.data[0].id);
           }
         }
       } catch (err) {
-        console.warn('Backend API connection notice, using local cached resumes:', err);
+        // Backend endpoint not active yet or empty database
+        if (isMounted) {
+          setResumes([]);
+        }
       }
     };
     fetchApiResumes();
 
     return () => { isMounted = false; };
   }, []);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('interviewiq_resumes', JSON.stringify(resumes));
-    } catch (e) {
-      console.error('Failed saving resumes to localStorage', e);
-    }
-  }, [resumes]);
 
   const addResume = (newResume) => {
     const resumeObj = {
@@ -60,10 +44,10 @@ export const ResumeProvider = ({ children }) => {
       uploadDate: new Date().toISOString().split('T')[0],
       fileSize: newResume.fileSize || '250 KB',
       targetRole: newResume.targetRole || 'Full-Stack Candidate',
-      matchScore: Math.floor(Math.random() * 15) + 80,
-      skillsFound: newResume.skillsFound || ['React', 'TypeScript', 'Node.js', 'PostgreSQL', 'Tailwind CSS'],
+      matchScore: 85,
+      skillsFound: newResume.skillsFound || ['React', 'TypeScript', 'Node.js', 'PostgreSQL'],
       improvementSuggestions: [
-        'Quantify achievements in your recent role (e.g. boosted performance by 35%).',
+        'Quantify achievements in your recent role.',
         'Add certifications or cloud deployment credentials.'
       ]
     };

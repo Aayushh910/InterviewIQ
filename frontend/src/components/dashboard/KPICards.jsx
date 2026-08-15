@@ -6,45 +6,45 @@ export const KPICards = ({ stats }) => {
   const kpis = [
     {
       title: "Overall AI Score",
-      value: stats?.readinessScore || 88.5,
-      suffix: "/100",
-      change: "+4.2%",
+      value: stats?.readinessScore ?? 'N/A',
+      suffix: stats?.readinessScore !== 'N/A' ? "/100" : "",
+      change: stats?.totalSessions > 0 ? "Evaluated" : "No evaluations",
       positive: true,
       icon: Award,
       colorClass: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
     },
     {
       title: "Interviews Completed",
-      value: stats?.totalSessions || 18,
+      value: stats?.totalSessions ?? 0,
       suffix: " Sessions",
-      change: "+3 this week",
+      change: stats?.totalSessions > 0 ? "Active Candidate" : "0 this week",
       positive: true,
       icon: Video,
       colorClass: "text-amber-400 bg-amber-500/10 border-amber-500/20",
     },
     {
       title: "Average Confidence",
-      value: stats?.avgConfidence || 91.2,
-      suffix: "%",
-      change: "+2.5%",
+      value: stats?.avgConfidence ?? 'N/A',
+      suffix: stats?.avgConfidence !== 'N/A' ? "%" : "",
+      change: stats?.avgConfidence !== 'N/A' ? "Voice & Visual" : "Pending",
       positive: true,
       icon: Zap,
       colorClass: "text-violet-400 bg-violet-500/10 border-violet-500/20",
     },
     {
-      title: "Resume ATS Score",
-      value: stats?.atsScore || 94,
-      suffix: "% Match",
-      change: "Optimal",
+      title: "Resume Match Score",
+      value: stats?.atsScore ?? 'N/A',
+      suffix: stats?.atsScore !== 'N/A' ? "" : "",
+      change: stats?.atsScore !== 'N/A' ? "Parsed" : "No resume",
       positive: true,
       icon: FileCheck,
       colorClass: "text-rose-400 bg-rose-500/10 border-rose-500/20",
     },
     {
       title: "Practice Hours",
-      value: stats?.totalHours || 12.5,
+      value: stats?.totalHours ?? '0.0',
       suffix: " Hours",
-      change: "+1.5 hrs",
+      change: stats?.totalHours > 0 ? "Recorded" : "0.0 hrs",
       positive: true,
       icon: Clock,
       colorClass: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
@@ -62,7 +62,7 @@ export const KPICards = ({ stats }) => {
             Real-Time AI Competency Matrix
           </h2>
           <p className="text-xs text-neutral-400 font-mono mt-0.5">
-            Track your overall score, completed mock loops, voice confidence, and ATS resume match benchmarks.
+            Track your overall score, completed mock loops, voice confidence, and resume match benchmarks.
           </p>
         </div>
       </div>
@@ -106,3 +106,5 @@ export const KPICards = ({ stats }) => {
     </section>
   );
 };
+
+export default KPICards;

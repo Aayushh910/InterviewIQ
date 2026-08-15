@@ -1,42 +1,43 @@
 import React from 'react';
-import { Compass, CheckCircle2, Circle, ArrowRight } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Compass, CheckCircle2, Circle } from 'lucide-react';
+import { useInterview } from '../../context/InterviewContext';
 
 export const AIRoadmap = () => {
+  const { interviews } = useInterview();
+  const completedCount = interviews.length;
+
   const steps = [
     {
       step: 1,
-      title: "Mastering Technical Foundations",
-      desc: "Deep dive into Virtual DOM, state normalization & memory management.",
-      status: "Mastered",
-      progress: 100,
-      color: "border-emerald-500 bg-emerald-500/10 text-emerald-400",
+      title: "First AI Practice Loop",
+      desc: "Complete your initial mock session with audio STT & camera feed.",
+      status: completedCount >= 1 ? "Completed" : "Active",
+      progress: completedCount >= 1 ? 100 : 0,
     },
     {
       step: 2,
-      title: "STAR Behavioral & Leadership Fluency",
-      desc: "Structuring Situation-Task-Action-Result responses for executive loops.",
-      status: "In Progress",
-      progress: 85,
-      color: "border-cyan-500 bg-cyan-500/10 text-cyan-400",
+      title: "STAR Method & Behavioral Mastery",
+      desc: "Practice Situation-Task-Action-Result responses across loops.",
+      status: completedCount >= 2 ? "Completed" : completedCount === 1 ? "Active" : "Upcoming",
+      progress: completedCount >= 2 ? 100 : completedCount === 1 ? 50 : 0,
     },
     {
       step: 3,
-      title: "Live High-Pressure AI Mock Loops",
-      desc: "Adaptive counter-questioning under 30-minute timed conditions.",
-      status: "Active",
-      progress: 60,
-      color: "border-amber-500 bg-amber-500/10 text-amber-400",
+      title: "High-Pressure Adaptive Loops",
+      desc: "Complete 3+ interview sessions with adaptive counter-questions.",
+      status: completedCount >= 3 ? "Completed" : completedCount >= 2 ? "Active" : "Upcoming",
+      progress: completedCount >= 3 ? 100 : Math.round((completedCount / 3) * 100),
     },
     {
       step: 4,
-      title: "Executive Composure & Offer Negotiation",
-      desc: "Refining vocal pitch, compensation negotiation & closing strategies.",
-      status: "Upcoming",
-      progress: 0,
-      color: "border-slate-800 bg-slate-950 text-slate-500",
+      title: "Staff Level Competency",
+      desc: "Maintain 85%+ AI evaluation score across multiple interview domains.",
+      status: completedCount >= 5 ? "Completed" : "Upcoming",
+      progress: completedCount >= 5 ? 100 : 0,
     },
   ];
+
+  const overallProgress = Math.min(100, Math.round((completedCount / 5) * 100));
 
   return (
     <div className="rounded-3xl bg-[#0A0A0A]/90 dark:bg-[#0A0A0A]/90 light:bg-white border border-white/15 dark:border-white/15 light:border-slate-200 p-6 shadow-2xl backdrop-blur-xl space-y-6">
@@ -49,12 +50,12 @@ export const AIRoadmap = () => {
             <h2 className="text-base font-bold text-white dark:text-white light:text-slate-900">
               Personalized AI Career Roadmap
             </h2>
-            <p className="text-xs text-neutral-400">Targeted step-by-step path to Staff Engineer / Lead offer readiness</p>
+            <p className="text-xs text-neutral-400">Targeted step-by-step path to offer readiness</p>
           </div>
         </div>
 
         <span className="text-xs font-mono text-emerald-400 font-bold bg-[#141414] px-3 py-1 rounded-full border border-white/20 shadow-sm">
-          65% Roadmap Completed
+          {overallProgress}% Roadmap Completed
         </span>
       </div>
 
@@ -91,3 +92,5 @@ export const AIRoadmap = () => {
     </div>
   );
 };
+
+export default AIRoadmap;

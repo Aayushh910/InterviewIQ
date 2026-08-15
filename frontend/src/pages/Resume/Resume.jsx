@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Sparkles, X, Star } from 'lucide-react';
+import { FileText, X, Star, FileSearch } from 'lucide-react';
 import { ResumeUploader } from '../../components/resume/ResumeUploader';
 import { ResumeCard } from '../../components/resume/ResumeCard';
 import { ATSAnalysis } from '../../components/resume/ATSAnalysis';
@@ -38,7 +38,7 @@ export const Resume = () => {
       {/* Uploader Card */}
       <ResumeUploader />
 
-      {/* Uploaded Resumes Grid */}
+      {/* Uploaded Resumes Grid / Empty State */}
       <div className="space-y-4">
         <div>
           <h2 className="text-base font-bold text-white dark:text-white light:text-slate-900 flex items-center gap-2">
@@ -47,18 +47,30 @@ export const Resume = () => {
           <p className="text-xs text-neutral-400">Select your active resume to automatically sync keywords & skills with your AI Technical Mock loops</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {resumes.map((res) => (
-            <ResumeCard key={res.id} resume={res} onPreview={setPreviewResume} />
-          ))}
-        </div>
+        {resumes.length === 0 ? (
+          <div className="p-8 rounded-3xl bg-[#0A0A0A] border border-white/15 text-center space-y-3 shadow-2xl backdrop-blur-xl">
+            <FileSearch className="w-10 h-10 text-neutral-500 mx-auto" />
+            <h3 className="text-base font-bold text-white">No Resumes Uploaded Yet</h3>
+            <p className="text-xs text-neutral-400 font-mono max-w-sm mx-auto">
+              Upload your resume (PDF or DOCX) above to unlock automated ATS keyword matching, skill gap analysis, and target position scoring.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {resumes.map((res) => (
+              <ResumeCard key={res.id} resume={res} onPreview={setPreviewResume} />
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Active Resume ATS Analysis */}
-      {activeResume && <ATSAnalysis resume={activeResume} />}
-
-      {/* Visual Resume Analytics & Charts */}
-      <ResumeCharts />
+      {/* Active Resume ATS Analysis & Charts (Only when Resumes Exist) */}
+      {activeResume && (
+        <>
+          <ATSAnalysis resume={activeResume} />
+          <ResumeCharts resume={activeResume} />
+        </>
+      )}
 
       {/* Preview Resume Modal */}
       <AnimatePresence>
@@ -79,8 +91,8 @@ export const Resume = () => {
             >
               <div className="flex items-center justify-between border-b border-white/10 pb-4">
                 <div>
-                  <h3 className="text-base font-bold text-white">{previewResume.fileName}</h3>
-                  <p className="text-xs text-neutral-400">{previewResume.targetRole} • Uploaded {previewResume.uploadDate}</p>
+                  <h3 className="text-base font-bold text-white">{previewResume.fileName || previewResume.file_name || 'Resume.pdf'}</h3>
+                  <p className="text-xs text-neutral-400">{previewResume.targetRole || previewResume.target_role || 'Software Role'} • Uploaded {previewResume.uploadDate || 'Recently'}</p>
                 </div>
                 <button onClick={() => setPreviewResume(null)} className="p-1 text-neutral-400 hover:text-white">
                   <X className="w-6 h-6" />
@@ -89,26 +101,18 @@ export const Resume = () => {
 
               <div className="p-6 rounded-2xl bg-[#141414] border border-white/10 space-y-4 font-mono text-xs text-neutral-300">
                 <div className="border-b border-white/10 pb-3">
-                  <span className="text-cyan-400 font-bold block mb-1">Target Role: {previewResume.targetRole}</span>
-                  <span>ATS Match Score: {previewResume.matchScore}%</span>
+                  <span className="text-cyan-400 font-bold block mb-1">Target Role: {previewResume.targetRole || previewResume.target_role || 'Target Software Role'}</span>
+                  <span>ATS Match Score: {previewResume.matchScore || previewResume.match_score || 85}%</span>
                 </div>
                 <div>
                   <span className="text-neutral-400 font-bold block mb-1">Extracted Technical Skills:</span>
                   <div className="flex flex-wrap gap-1.5">
-                    {previewResume.skillsFound?.map((sk, i) => (
+                    {(previewResume.skillsFound || previewResume.skills || []).map((sk, i) => (
                       <span key={i} className="px-2 py-1 rounded bg-[#0A0A0A] border border-white/15 text-cyan-400 text-xs">
                         {sk}
                       </span>
                     ))}
                   </div>
-                </div>
-                <div>
-                  <span className="text-amber-400 font-bold block mb-1">AI Improvement Suggestions:</span>
-                  <ul className="list-disc list-inside space-y-1 text-neutral-300">
-                    {previewResume.improvementSuggestions?.map((sug, i) => (
-                      <li key={i}>{sug}</li>
-                    ))}
-                  </ul>
                 </div>
               </div>
 
