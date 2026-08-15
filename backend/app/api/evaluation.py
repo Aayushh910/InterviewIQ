@@ -4,7 +4,7 @@ from app.core.database import get_db
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.schemas.evaluation import AnswerEvaluationRequest, AnswerEvaluationResponse
-from app.services.answer_evaluation_service import evaluate_answer
+from app.services.answer_evaluation_service import evaluate_answer, evaluate_direct_answer
 
 router = APIRouter()
 
@@ -20,7 +20,10 @@ def evaluate_candidate_answer(
     strengths, improvements, and feedback summary. Requires JWT authentication.
     """
     try:
-        res = evaluate_answer(db, answer_id=req.answer_id, user_id=current_user.id)
+        if req.answer_id:
+            res = evaluate_answer(db, answer_id=req.answer_id, user_id=current_user.id, override_provider=req.provider)
+        else:
+            res = evaluate_direct_answer(req, user_id=current_user.id, db=db)
         return res
     except KeyError:
         raise HTTPException(
