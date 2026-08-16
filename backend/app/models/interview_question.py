@@ -16,6 +16,7 @@ class InterviewQuestion(Base):
     question_text = Column(Text, nullable=False)
     question_order = Column(Integer, nullable=False)
     question_type = Column(String(100), nullable=False, default="technical")
+    generation_provider = Column(String(100), nullable=True, default="ai")
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     interview = relationship("Interview", back_populates="questions")

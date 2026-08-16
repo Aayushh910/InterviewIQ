@@ -55,6 +55,25 @@ export const addInterviewQuestion = async (interviewId, questionData) => {
   return response.data;
 };
 
+export const generateAIQuestions = async (interviewId, numberOfQuestions = 5) => {
+  const response = await apiClient.post('/ai/questions/generate', {
+    interview_id: interviewId,
+    number_of_questions: numberOfQuestions,
+  });
+  return response.data;
+};
+
+export const requestFollowUp = async (interviewId, questionId, answerId) => {
+  const response = await apiClient.post('/ai/follow-up/generate', {
+    interview_id: interviewId,
+    question_id: questionId,
+    answer_id: answerId,
+  });
+  return response.data;
+};
+
+
+
 export const submitAnswer = async (sessionId, answerData) => {
   const response = await apiClient.post(`/sessions/${sessionId}/answers`, {
     question_id: answerData.question_id,

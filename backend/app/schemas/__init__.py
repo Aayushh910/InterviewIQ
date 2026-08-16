@@ -23,6 +23,15 @@ from app.schemas.evaluation import (
     AnswerEvaluationRequest,
     AnswerEvaluationResponse,
 )
+from app.schemas.question_generation import (
+    QuestionGenerationRequest,
+    QuestionGenerationResponse,
+)
+from app.schemas.follow_up import (
+    FollowUpRequest,
+    FollowUpItem,
+    FollowUpResponse,
+)
 
 __all__ = [
     "UserCreate",
@@ -51,4 +60,11 @@ __all__ = [
     "SpeechTranscriptionResponse",
     "AnswerEvaluationRequest",
     "AnswerEvaluationResponse",
+    "QuestionGenerationRequest",
+    "QuestionGenerationResponse",
+    "FollowUpRequest",
+    "FollowUpItem",
+    "FollowUpResponse",
 ]
+
+

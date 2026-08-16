@@ -13,6 +13,7 @@ import {
   completeSession,
   getInterviewQuestions,
   addInterviewQuestion,
+  generateAIQuestions,
   submitAudioAnswer,
   submitAnswerFacialFrame,
   getSessionAnalytics,
@@ -144,17 +145,31 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
           questionsCount: totalQuestions,
         });
 
-        const domainTexts = DOMAIN_QUESTION_BANK[selectedDomain] || DOMAIN_QUESTION_BANK[config.interviewType] || DOMAIN_QUESTION_BANK.Frontend;
-        const countToCreate = Math.min(totalQuestions, domainTexts.length);
-        const qList = [];
+        let qList = [];
 
-        for (let i = 0; i < countToCreate; i++) {
-          const createdQ = await addInterviewQuestion(activeInterview.id, {
-            question_text: domainTexts[i],
-            question_order: i + 1,
-            question_type: (config.interviewType || 'Technical').toLowerCase(),
-          });
-          qList.push(createdQ);
+        try {
+          // Primary Flow: Call backend AI Question Generation API
+          const aiGenRes = await generateAIQuestions(activeInterview.id, totalQuestions);
+          if (aiGenRes && aiGenRes.questions && aiGenRes.questions.length > 0) {
+            qList = aiGenRes.questions;
+          }
+        } catch (aiErr) {
+          console.warn('[InterviewIQ] AI Question Generation API notice (falling back to initial bank):', aiErr);
+        }
+
+        // Fallback Flow: If AI endpoint unavailable or returns 0 questions, use default domain questions
+        if (!qList || qList.length === 0) {
+          const domainTexts = DOMAIN_QUESTION_BANK[selectedDomain] || DOMAIN_QUESTION_BANK[config.interviewType] || DOMAIN_QUESTION_BANK.Frontend;
+          const countToCreate = Math.min(totalQuestions, domainTexts.length);
+
+          for (let i = 0; i < countToCreate; i++) {
+            const createdQ = await addInterviewQuestion(activeInterview.id, {
+              question_text: domainTexts[i],
+              question_order: i + 1,
+              question_type: (config.interviewType || 'Technical').toLowerCase(),
+            });
+            qList.push(createdQ);
+          }
         }
 
         if (isMounted) {

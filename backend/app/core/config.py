@@ -55,10 +55,10 @@ class Settings(BaseSettings):
     EVALUATION_PROVIDER: str = "heuristic"
 
     # AI Provider Core Configuration
-    AI_PROVIDER: str = "heuristic"
+    AI_PROVIDER: str = "groq"
     AI_API_KEY: Optional[str] = None
-    AI_MODEL: str = "gpt-4o-mini"
-    AI_TIMEOUT_SECONDS: float = 10.0
+    AI_MODEL: str = "llama-3.3-70b-versatile"
+    AI_TIMEOUT_SECONDS: float = 15.0
 
     model_config = SettingsConfigDict(
         env_file=".env",
