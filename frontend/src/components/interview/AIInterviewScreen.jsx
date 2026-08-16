@@ -726,45 +726,48 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
   if (screenState === 'PREPARING') {
     return (
       <div className="min-h-[calc(100vh-5rem)] w-full flex items-center justify-center p-4">
-        <div className="max-w-2xl w-full bg-[#0A0A0A]/95 border border-white/15 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl backdrop-blur-2xl text-center">
-          <div className="space-y-2">
-            <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-widest bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-              Ready for your AI Interview
+        <div className="max-w-2xl w-full bg-[#0D0D0E]/90 border border-white/15 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl backdrop-blur-2xl text-center relative overflow-hidden">
+          <div className="absolute -top-24 -left-24 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="space-y-2 relative z-10">
+            <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-widest bg-emerald-500/10 px-3.5 py-1.5 rounded-full border border-emerald-500/20 shadow-inner">
+              AI Interview Preparation
             </span>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight pt-2">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight pt-3">
               {selectedDomain} Technical Interview
             </h1>
-            <p className="text-sm text-neutral-400 font-mono">
-              Review your interview parameters below and click Start Interview when ready.
+            <p className="text-xs sm:text-sm text-neutral-400 font-sans max-w-lg mx-auto">
+              Review your interview configuration below. Click <strong className="text-emerald-400 font-mono">Start Interview</strong> when you are ready to speak with the AI evaluator.
             </p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-left">
-            <div className="bg-[#141414] p-3.5 rounded-2xl border border-white/10">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-left relative z-10">
+            <div className="bg-[#141416]/80 p-3.5 rounded-2xl border border-white/10 shadow-lg">
               <span className="text-[10px] font-mono text-neutral-500 uppercase block mb-1">Target Role</span>
               <span className="text-xs font-bold text-white font-mono truncate block">{config.job_role || `${selectedDomain} Specialist`}</span>
             </div>
-            <div className="bg-[#141414] p-3.5 rounded-2xl border border-white/10">
+            <div className="bg-[#141416]/80 p-3.5 rounded-2xl border border-white/10 shadow-lg">
               <span className="text-[10px] font-mono text-neutral-500 uppercase block mb-1">Domain</span>
               <span className="text-xs font-bold text-emerald-400 font-mono block">{selectedDomain}</span>
             </div>
-            <div className="bg-[#141414] p-3.5 rounded-2xl border border-white/10">
+            <div className="bg-[#141416]/80 p-3.5 rounded-2xl border border-white/10 shadow-lg">
               <span className="text-[10px] font-mono text-neutral-500 uppercase block mb-1">Difficulty</span>
               <span className="text-xs font-bold text-cyan-400 font-mono block">{config.difficulty || 'Medium'}</span>
             </div>
-            <div className="bg-[#141414] p-3.5 rounded-2xl border border-white/10">
-              <span className="text-[10px] font-mono text-neutral-500 uppercase block mb-1">Duration</span>
+            <div className="bg-[#141416]/80 p-3.5 rounded-2xl border border-white/10 shadow-lg">
+              <span className="text-[10px] font-mono text-neutral-500 uppercase block mb-1">Time Limit</span>
               <span className="text-xs font-bold text-amber-400 font-mono block">4 Minutes (240s)</span>
             </div>
           </div>
 
-          <div className="bg-[#121212] p-4 rounded-2xl border border-white/10 text-xs text-neutral-300 font-mono text-left space-y-2">
+          <div className="bg-[#141416]/80 p-4 rounded-2xl border border-white/10 text-xs text-neutral-300 font-mono text-left space-y-2 relative z-10">
             <div className="flex items-center gap-2 font-bold text-emerald-400">
               <Mic className="w-4 h-4 text-emerald-400" />
-              <span>Voice & Text Answer Enabled</span>
+              <span>Voice & Text Interview Output Active</span>
             </div>
-            <p className="text-neutral-400 text-[11px] leading-relaxed">
-              Questions will be spoken via Text-to-Speech audio. You can answer by speaking into your microphone or typing.
+            <p className="text-neutral-400 text-[11px] font-sans leading-relaxed">
+              Questions will be spoken automatically by the AI. You can answer out loud using your microphone or type your response.
             </p>
           </div>
 
@@ -772,7 +775,7 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
             onClick={handleStartInterview}
             size="lg"
             variant="primary"
-            className="w-full font-mono font-bold text-base py-4 shadow-xl hover:scale-[1.01] transition-transform"
+            className="w-full font-mono font-bold text-base py-4 shadow-2xl hover:scale-[1.01] transition-transform bg-gradient-to-r from-emerald-500 to-cyan-500 text-black border-none"
           >
             <Play className="w-5 h-5 mr-2 fill-current" />
             Start Interview
@@ -785,32 +788,32 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
   if (screenState === 'COMPLETED') {
     return (
       <div className="min-h-[calc(100vh-5rem)] w-full flex items-center justify-center p-4">
-        <div className="max-w-xl w-full bg-[#0A0A0A]/95 border border-white/15 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl backdrop-blur-2xl text-center">
-          <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto">
+        <div className="max-w-xl w-full bg-[#0D0D0E]/90 border border-white/15 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl backdrop-blur-2xl text-center relative overflow-hidden">
+          <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto shadow-lg">
             <CheckCircle2 className="w-8 h-8" />
           </div>
 
           <div className="space-y-2">
             <h1 className="text-2xl font-extrabold text-white tracking-tight">
-              Interview Complete!
+              Interview Completed!
             </h1>
-            <p className="text-sm text-neutral-400 font-mono">
-              Your 4-minute interview time limit has ended. All your answers have been saved.
+            <p className="text-xs sm:text-sm text-neutral-400 font-sans">
+              Your interview responses have been recorded and saved successfully.
             </p>
           </div>
 
-          <div className="bg-[#141414] p-4 rounded-2xl border border-white/10 text-xs font-mono space-y-2 text-left">
-            <div className="flex justify-between">
+          <div className="bg-[#141416]/80 p-4 rounded-2xl border border-white/10 text-xs font-mono space-y-2.5 text-left">
+            <div className="flex justify-between border-b border-white/5 pb-2">
               <span className="text-neutral-400">Domain</span>
               <span className="text-emerald-400 font-bold">{selectedDomain}</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between border-b border-white/5 pb-2">
               <span className="text-neutral-400">Total Questions</span>
               <span className="text-white font-bold">{currentQIndex + 1} Questions</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-neutral-400">Status</span>
-              <span className="text-cyan-400 font-bold">Successfully Recorded</span>
+              <span className="text-neutral-400">Recording Status</span>
+              <span className="text-cyan-400 font-bold">Session Analyzed</span>
             </div>
           </div>
 
@@ -818,7 +821,7 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
             onClick={() => onFinish({ durationMinutes: 4, score: 90, sessionId })}
             size="lg"
             variant="primary"
-            className="w-full font-mono font-bold text-sm py-3"
+            className="w-full font-mono font-bold text-sm py-3.5 bg-gradient-to-r from-emerald-500 to-cyan-500 text-black border-none shadow-xl"
           >
             Return to Dashboard
           </Button>
@@ -828,15 +831,102 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
   }
 
   return (
+    <div className="h-[calc(100vh-4.5rem)] w-full bg-transparent flex flex-col justify-between overflow-hidden text-white p-2.5 sm:p-4 gap-3 font-sans">
 
-    <div className="h-[calc(100vh-4rem)] w-full bg-transparent flex flex-col justify-between overflow-hidden text-white p-3 sm:p-4 gap-4 font-sans">
+      {/* TOP STUDIO TOOLBAR HEADER */}
+      <div className="bg-[#0D0D0E]/90 border border-white/15 rounded-2xl px-4 py-2.5 flex items-center justify-between shadow-xl backdrop-blur-xl shrink-0 font-mono">
+        {/* Left: Studio Identity & Domain */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+            <span className="text-xs font-extrabold text-white uppercase tracking-wider">InterviewIQ Studio</span>
+          </div>
+          <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20 font-bold">
+            {selectedDomain} Domain
+          </span>
+        </div>
 
-      {/* MAIN SCREEN GRID (Camera on Left, Big AI Square & Question/Script on Right) */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-0">
+        {/* Center: Live AI State Badge */}
+        <div className="hidden sm:flex items-center gap-2">
+          <span className={`px-3 py-1 rounded-full border font-bold text-xs flex items-center gap-2 transition-all ${
+            aiState === 'speaking'
+              ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.2)]'
+              : aiState === 'thinking'
+                ? 'bg-amber-500/10 border-amber-500/40 text-amber-400 animate-pulse'
+                : 'bg-cyan-500/10 border-cyan-500/40 text-cyan-400'
+          }`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${
+              aiState === 'speaking' ? 'bg-emerald-400 animate-ping' : aiState === 'thinking' ? 'bg-amber-400' : 'bg-cyan-400'
+            }`} />
+            <span>
+              {aiState === 'speaking' ? 'AI Evaluator Speaking...' : aiState === 'thinking' ? 'Transcribing & Evaluating...' : isRecording ? 'Recording Live Candidate Audio...' : 'Listening to Candidate'}
+            </span>
+          </span>
+        </div>
 
-        {/* LEFT 60%: USER CAMERA */}
-        <div className="lg:col-span-7 bg-[#0A0A0A]/90 border border-white/15 rounded-3xl p-3 flex flex-col justify-between relative overflow-hidden backdrop-blur-xl shadow-2xl">
-          <div className="relative flex-1 rounded-2xl bg-black border border-white/10 overflow-hidden flex items-center justify-center">
+        {/* Right: Timer & Session Controls */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 bg-[#141416] px-3 py-1 rounded-xl border border-white/10 text-xs">
+            {timerSeconds <= 60 && (
+              <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30 animate-pulse mr-1">
+                &lt;60s
+              </span>
+            )}
+            <span className="text-neutral-400">Timer:</span>
+            <strong className={`font-mono text-sm ${timerSeconds <= 60 ? 'text-amber-400 font-bold' : 'text-cyan-400'}`}>
+              {formatTimer(timerSeconds)}
+            </strong>
+          </div>
+
+          <div className="h-4 w-px bg-white/10 hidden sm:block" />
+
+          <button
+            onClick={() => setIsPaused(!isPaused)}
+            className="px-2.5 py-1 rounded-xl bg-[#141416] hover:bg-[#1E1E22] border border-white/10 text-white text-xs font-bold flex items-center gap-1 transition-colors"
+            title="Pause / Resume Interview Timer"
+          >
+            {isPaused ? <Play className="w-3.5 h-3.5 text-emerald-400" /> : <Pause className="w-3.5 h-3.5 text-amber-400" />}
+            <span className="hidden md:inline">{isPaused ? 'Resume' : 'Pause'}</span>
+          </button>
+
+          <button
+            onClick={handleRestartSession}
+            className="px-2.5 py-1 rounded-xl bg-[#141416] hover:bg-[#1E1E22] border border-white/10 text-neutral-300 text-xs font-bold flex items-center gap-1 transition-colors"
+            title="Restart Interview Session"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="hidden md:inline">Restart</span>
+          </button>
+
+          <button
+            onClick={() => {
+              resetRecorder();
+              if (recognitionRef.current) {
+                try { recognitionRef.current.stop(); } catch (e) {}
+              }
+              if (webcamStream) {
+                webcamStream.getTracks().forEach((track) => track.stop());
+                setWebcamStream(null);
+              }
+              onFinish({ durationMinutes: Math.ceil(timerSeconds / 60) || 5, score: 88, sessionId });
+            }}
+            className="px-2.5 py-1 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-400 text-xs font-bold flex items-center gap-1 transition-colors"
+            title="End Session Immediately"
+          >
+            <XCircle className="w-3.5 h-3.5 text-red-400" />
+            <span className="hidden md:inline">End</span>
+          </button>
+        </div>
+      </div>
+
+      {/* MAIN SCREEN WORKSPACE GRID (Camera + Transcript on Left, AI Core & Questions on Right) */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3 min-h-0">
+
+        {/* LEFT 60%: CANDIDATE VIDEO FEED & INTEGRATED LIVE SPEECH TRANSCRIPT */}
+        <div className="lg:col-span-7 bg-[#0D0D0E]/90 border border-white/15 rounded-3xl p-3 flex flex-col justify-between relative overflow-hidden backdrop-blur-xl shadow-2xl gap-3">
+
+          {/* VIDEO FEED CONTAINER */}
+          <div className="relative flex-1 rounded-2xl bg-black border border-white/10 overflow-hidden flex items-center justify-center min-h-0">
             {cameraEnabled ? (
               <div className="w-full h-full relative flex items-center justify-center bg-black rounded-2xl">
                 <video
@@ -850,8 +940,9 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
                   autoPlay
                   playsInline
                   muted
-                  className={`w-full h-full object-cover rounded-2xl transition-transform duration-300 ${isMirrored ? '-scale-x-100' : 'scale-x-100'
-                    }`}
+                  className={`w-full h-full object-cover rounded-2xl transition-transform duration-300 ${
+                    isMirrored ? '-scale-x-100' : 'scale-x-100'
+                  }`}
                 />
 
                 {!webcamStream && (
@@ -874,122 +965,110 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center text-neutral-500 space-y-2">
-                <CameraOff className="w-12 h-12" />
+                <CameraOff className="w-12 h-12 text-neutral-600" />
                 <span className="text-xs font-mono font-semibold">Candidate Camera Feed Paused</span>
               </div>
             )}
 
-            {/* Mic, Camera & Mirror Flip Controls at Bottom-Left */}
-            <div className="absolute bottom-4 left-4 z-20 flex items-center gap-2 font-mono">
-              <button
-                onClick={() => setMicEnabled(!micEnabled)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 backdrop-blur-md border shadow-lg transition-colors ${micEnabled
-                    ? 'bg-black/80 text-emerald-400 border-white/20 hover:bg-black'
-                    : 'bg-red-500/90 text-white border-red-400'
-                  }`}
-              >
-                {micEnabled ? <Mic className="w-4 h-4 text-emerald-400" /> : <MicOff className="w-4 h-4" />}
-                <span>{micEnabled ? 'MIC ON' : 'MIC MUTED'}</span>
-              </button>
+            {/* Live Camera Status Badge at Top Left */}
+            <div className="absolute top-3 left-3 z-20 flex items-center gap-2 font-mono text-[10px]">
+              <span className="px-2.5 py-1 rounded-lg bg-black/75 backdrop-blur-md border border-white/15 text-emerald-400 font-bold flex items-center gap-1.5 shadow-md">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                {cameraEnabled && webcamStream ? 'CAMERA ONLINE' : 'CAMERA STANDBY'}
+              </span>
+            </div>
 
-              <button
-                onClick={() => setCameraEnabled(!cameraEnabled)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 backdrop-blur-md border shadow-lg transition-colors ${cameraEnabled
-                    ? 'bg-black/80 text-cyan-400 border-white/20 hover:bg-black'
-                    : 'bg-red-500/90 text-white border-red-400'
+            {/* Mic, Camera & Mirror Flip Controls at Bottom Overlay */}
+            <div className="absolute bottom-3 left-3 right-3 z-20 flex items-center justify-between font-mono">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setMicEnabled(!micEnabled)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 backdrop-blur-md border shadow-lg transition-all ${
+                    micEnabled
+                      ? 'bg-black/80 text-emerald-400 border-emerald-500/30 hover:bg-black'
+                      : 'bg-red-500/90 text-white border-red-400'
                   }`}
-              >
-                {cameraEnabled ? <Camera className="w-4 h-4 text-cyan-400" /> : <CameraOff className="w-4 h-4" />}
-                <span>{cameraEnabled ? 'CAMERA ON' : 'CAMERA OFF'}</span>
-              </button>
+                >
+                  {micEnabled ? <Mic className="w-3.5 h-3.5 text-emerald-400" /> : <MicOff className="w-3.5 h-3.5" />}
+                  <span>{micEnabled ? 'MIC ON' : 'MIC MUTED'}</span>
+                </button>
+
+                <button
+                  onClick={() => setCameraEnabled(!cameraEnabled)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 backdrop-blur-md border shadow-lg transition-all ${
+                    cameraEnabled
+                      ? 'bg-black/80 text-cyan-400 border-cyan-500/30 hover:bg-black'
+                      : 'bg-red-500/90 text-white border-red-400'
+                  }`}
+                >
+                  {cameraEnabled ? <Camera className="w-3.5 h-3.5 text-cyan-400" /> : <CameraOff className="w-3.5 h-3.5" />}
+                  <span>{cameraEnabled ? 'CAMERA ON' : 'CAMERA OFF'}</span>
+                </button>
+              </div>
 
               <button
                 onClick={() => setIsMirrored(!isMirrored)}
-                className="px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 backdrop-blur-md border border-white/20 bg-black/80 text-neutral-300 hover:text-white hover:bg-black shadow-lg transition-colors"
+                className="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 backdrop-blur-md border border-white/20 bg-black/80 text-neutral-300 hover:text-white hover:bg-black shadow-lg transition-colors"
                 title="Flip Horizontal Mirror View"
               >
-                <FlipHorizontal className="w-4 h-4 text-emerald-400" />
+                <FlipHorizontal className="w-3.5 h-3.5 text-emerald-400" />
                 <span>{isMirrored ? 'MIRRORED' : 'ORIGINAL'}</span>
               </button>
             </div>
           </div>
+
+          {/* DOCKED CANDIDATE LIVE TRANSCRIPT BOX INSIDE CAMERA PANEL */}
+          <div className="bg-[#141416] border border-white/10 rounded-2xl p-3 flex items-start gap-2.5 shadow-inner shrink-0 max-h-24 overflow-y-auto">
+            <MessageSquareText className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+            <div className="flex-1 text-xs sm:text-sm font-sans font-medium text-neutral-200 leading-relaxed">
+              {transcript ? (
+                <span><strong className="text-emerald-400 font-mono text-[11px] uppercase block mb-0.5">Authoritative Whisper STT Transcript:</strong> "{transcript}"</span>
+              ) : liveTranscript ? (
+                <span><strong className="text-cyan-400 font-mono text-[11px] uppercase block mb-0.5">Live Speech Transcript (Streaming):</strong> "{liveTranscript}"</span>
+              ) : aiState === 'thinking' ? (
+                <span className="text-amber-400 italic text-xs font-mono animate-pulse">Transcribing microphone audio with Whisper STT & evaluating...</span>
+              ) : isRecording ? (
+                <span className="text-cyan-400 italic text-xs font-mono">Microphone active — speak your answer clearly, then click 'Submit Spoken Answer'.</span>
+              ) : (
+                <span className="text-neutral-400 italic text-xs font-mono">Click 'Submit Spoken Answer' when finished speaking.</span>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* RIGHT 40%: BIG LIVE ANIMATED AI SQUARE & QUESTION + CANDIDATE AUDIO TRANSCRIPT */}
-        <div className="lg:col-span-5 flex flex-col gap-4 min-h-0">
+        {/* RIGHT 40%: FUTURISTIC AI CORE & QUESTION + ACTION WORKSPACE */}
+        <div className="lg:col-span-5 flex flex-col gap-3 min-h-0">
 
-          {/* BIG LIVE ANIMATED AI SQUARE CARD */}
-          <div className="bg-[#0A0A0A]/90 border border-white/15 rounded-3xl p-5 flex flex-col justify-between shadow-2xl backdrop-blur-xl relative overflow-hidden h-64 sm:h-72 shrink-0">
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-cyan-500/10 pointer-events-none" />
+          {/* COMPACT AI ENGINE VISUALIZER CARD */}
+          <div className="bg-[#0D0D0E]/90 border border-white/15 rounded-3xl p-3.5 flex flex-col justify-between shadow-2xl backdrop-blur-xl relative overflow-hidden h-40 shrink-0">
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-cyan-500/5 pointer-events-none" />
 
-            <div className="flex items-center justify-between z-10 font-mono">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-                <span className="text-xs font-bold text-white uppercase tracking-wider">InterviewIQ AI System</span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setIsPaused(!isPaused)}
-                  className="px-2.5 py-1 rounded-xl bg-[#1A1A1A] hover:bg-[#252525] border border-white/10 text-white text-xs font-bold flex items-center gap-1 transition-colors"
-                >
-                  {isPaused ? <Play className="w-3.5 h-3.5 text-emerald-400" /> : <Pause className="w-3.5 h-3.5 text-amber-400" />}
-                  <span>{isPaused ? 'Resume' : 'Pause'}</span>
-                </button>
-
-                <button
-                  onClick={handleRestartSession}
-                  className="px-2.5 py-1 rounded-xl bg-[#1A1A1A] hover:bg-[#252525] border border-white/10 text-neutral-300 text-xs font-bold flex items-center gap-1 transition-colors"
-                >
-                  <RotateCcw className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Restart</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    resetRecorder();
-                    if (recognitionRef.current) {
-                      try { recognitionRef.current.stop(); } catch (e) {}
-                    }
-                    if (webcamStream) {
-                      webcamStream.getTracks().forEach((track) => track.stop());
-                      setWebcamStream(null);
-                    }
-                    onFinish({ durationMinutes: Math.ceil(timerSeconds / 60) || 5, score: 88, sessionId });
-                  }}
-                  className="px-2.5 py-1 rounded-xl bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 text-xs font-bold flex items-center gap-1 transition-colors"
-                >
-                  <XCircle className="w-3.5 h-3.5 text-red-400" />
-                  <span>End</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Central Live Animated AI Visualizer */}
-            <div className="flex-1 flex flex-col items-center justify-center relative py-2 z-10">
-              <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-white/20 via-neutral-700 to-white/30 p-1 shadow-2xl flex items-center justify-center">
+            {/* Central Live Animated AI Visualizer Orb */}
+            <div className="flex-1 flex flex-col items-center justify-center relative z-10">
+              <div className="relative w-20 h-20 sm:w-22 sm:h-22 rounded-full bg-gradient-to-tr from-emerald-500/20 via-neutral-800 to-cyan-500/20 p-1 shadow-2xl flex items-center justify-center">
                 {aiState === 'speaking' && (
                   <>
                     <motion.div
-                      animate={{ scale: [1, 1.5, 1], opacity: [0.7, 0.1, 0.7] }}
+                      animate={{ scale: [1, 1.4, 1], opacity: [0.7, 0.1, 0.7] }}
                       transition={{ repeat: Infinity, duration: 1.6, ease: 'easeInOut' }}
                       className="absolute inset-0 rounded-full border-2 border-emerald-400 pointer-events-none"
                     />
                     <motion.div
-                      animate={{ scale: [1, 1.3, 1], opacity: [0.9, 0.2, 0.9] }}
+                      animate={{ scale: [1, 1.2, 1], opacity: [0.9, 0.2, 0.9] }}
                       transition={{ repeat: Infinity, duration: 1.2, delay: 0.3 }}
                       className="absolute inset-0 rounded-full border border-cyan-400 pointer-events-none"
                     />
                   </>
                 )}
 
-                <div className="w-full h-full rounded-full bg-[#0A0A0A] flex flex-col items-center justify-center p-2 relative overflow-hidden border border-white/15">
-                  <Sparkles className="w-10 h-10 text-emerald-400 animate-pulse" />
-                  <span className="text-[10px] font-mono font-bold text-white mt-1">IQ AI Engine</span>
+                <div className="w-full h-full rounded-full bg-[#0A0A0A] flex flex-col items-center justify-center p-1.5 relative overflow-hidden border border-white/15 shadow-inner">
+                  <Sparkles className="w-6 h-6 text-emerald-400 animate-pulse" />
+                  <span className="text-[9px] font-mono font-bold text-white mt-0.5">IQ AI Core</span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 h-5 mt-3">
+              {/* Dynamic Equalizer Frequency Bars */}
+              <div className="flex items-center gap-1.5 h-3.5 mt-1.5">
                 {[30, 70, 100, 50, 85, 40, 95, 65, 80, 45].map((h, i) => (
                   <motion.div
                     key={i}
@@ -1001,31 +1080,16 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
               </div>
             </div>
 
-            <div className="flex items-center justify-between z-10 pt-2 border-t border-white/10 font-mono text-xs">
-              <span className={`px-2.5 py-0.5 rounded-full border font-bold text-[11px] ${aiState === 'speaking'
-                  ? 'bg-[#141414] border-emerald-500/40 text-emerald-400'
-                  : aiState === 'thinking'
-                    ? 'bg-[#141414] border-amber-500/40 text-amber-400 animate-pulse'
-                    : 'bg-[#141414] border-cyan-500/40 text-cyan-400'
-                }`}>
-                {aiState === 'speaking' ? 'Speaking Question...' : aiState === 'thinking' ? 'Transcribing & Evaluating...' : isRecording ? 'Recording Live Audio...' : 'Listening to Candidate'}
+            <div className="flex items-center justify-center z-10 pt-1.5 border-t border-white/10 font-mono text-[10px]">
+              <span className="font-semibold text-neutral-400">
+                {aiState === 'speaking' ? 'AI Evaluator Speaking Question...' : aiState === 'thinking' ? 'Transcribing & Evaluating...' : isRecording ? 'Microphone Active — Speak Clearly' : 'Waiting for Candidate Output'}
               </span>
-
-              <span className="text-neutral-400 flex items-center gap-1.5">
-                {timerSeconds <= 60 && (
-                  <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30 flex items-center gap-1 animate-pulse">
-                    <AlertTriangle className="w-3 h-3 text-amber-400" /> &lt;60s Remaining
-                  </span>
-                )}
-                Timer: <strong className={timerSeconds <= 60 ? 'text-amber-400 font-bold' : 'text-cyan-400'}>{formatTimer(timerSeconds)}</strong>
-              </span>
-
             </div>
           </div>
 
-          {/* QUESTION CARD & CANDIDATE TRANSCRIPT */}
-          <div className="flex-1 bg-[#0A0A0A]/90 border border-white/15 rounded-3xl p-5 flex flex-col justify-between overflow-y-auto shadow-2xl backdrop-blur-xl space-y-4">
-            <div className="space-y-2.5">
+          {/* QUESTION CARD & DIRECT ACTION WORKSPACE */}
+          <div className="flex-1 bg-[#0D0D0E]/90 border border-white/15 rounded-3xl p-4 flex flex-col justify-between shadow-2xl backdrop-blur-xl space-y-3 min-h-0">
+            <div className="space-y-2 overflow-y-auto">
               <div className="flex items-center justify-between border-b border-white/10 pb-2">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-1.5">
@@ -1037,41 +1101,35 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleToggleReplayQuestion}
-                    disabled={ttsState === 'loading'}
-                    className="px-2.5 py-1 rounded-full bg-[#1A1A1A] hover:bg-[#252525] border border-white/10 text-xs font-mono font-bold text-emerald-400 flex items-center gap-1.5 transition-colors disabled:opacity-50"
-                    title="Play / Pause / Replay Question Spoken Audio"
-                  >
-                    <Volume2 className={`w-3.5 h-3.5 ${ttsState === 'playing' ? 'animate-bounce text-emerald-400' : 'text-emerald-400'}`} />
-                    <span>{ttsState === 'loading' ? 'Synthesizing Audio...' : ttsState === 'playing' ? 'Pause Audio' : ttsState === 'paused' ? 'Resume Audio' : 'Replay Audio'}</span>
-                  </button>
 
-                  <span className="text-[10px] font-mono text-neutral-400 bg-[#1A1A1A] px-2.5 py-1 rounded-full border border-white/10">
-                    {selectedDomain} Domain
-                  </span>
-                </div>
-
+                <button
+                  type="button"
+                  onClick={handleToggleReplayQuestion}
+                  disabled={ttsState === 'loading'}
+                  className="px-2.5 py-1 rounded-full bg-[#1A1A1E] hover:bg-[#25252A] border border-white/10 text-xs font-mono font-bold text-emerald-400 flex items-center gap-1.5 transition-all disabled:opacity-50"
+                  title="Play / Pause / Replay Question Spoken Audio"
+                >
+                  <Volume2 className={`w-3.5 h-3.5 ${ttsState === 'playing' ? 'animate-bounce text-emerald-400' : 'text-emerald-400'}`} />
+                  <span>{ttsState === 'loading' ? 'Synthesizing...' : ttsState === 'playing' ? 'Pause Audio' : ttsState === 'paused' ? 'Resume Audio' : 'Replay Audio'}</span>
+                </button>
               </div>
 
-              <h2 className="text-base sm:text-lg font-sans font-extrabold text-white leading-relaxed tracking-tight">
+              <h2 className="text-sm sm:text-base font-sans font-extrabold text-white leading-relaxed tracking-tight bg-[#141416]/50 p-3 rounded-2xl border border-white/5">
                 "{activeQuestion.text}"
               </h2>
             </div>
 
-            {/* Candidate Answer Mode Selector & Input Panels */}
-            <div className="space-y-3 pt-3 border-t border-white/10">
+            {/* Candidate Answer Mode Selector & ALWAYS VISIBLE Submit Action */}
+            <div className="space-y-3 pt-2 border-t border-white/10 shrink-0">
               <div className="flex items-center justify-between font-mono text-xs">
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setInputMode('voice')}
-                    className={`px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition-colors border ${
+                    className={`px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition-all border ${
                       inputMode === 'voice'
-                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-                        : 'bg-[#141414] text-neutral-400 border-white/10 hover:text-white'
+                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-[0_0_12px_rgba(52,211,153,0.15)]'
+                        : 'bg-[#141416] text-neutral-400 border-white/10 hover:text-white'
                     }`}
                   >
                     <Mic className="w-3.5 h-3.5" />
@@ -1081,10 +1139,10 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
                   <button
                     type="button"
                     onClick={() => setInputMode('text')}
-                    className={`px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition-colors border ${
+                    className={`px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition-all border ${
                       inputMode === 'text'
-                        ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40'
-                        : 'bg-[#141414] text-neutral-400 border-white/10 hover:text-white'
+                        ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40 shadow-[0_0_12px_rgba(6,182,212,0.15)]'
+                        : 'bg-[#141416] text-neutral-400 border-white/10 hover:text-white'
                     }`}
                   >
                     <MessageSquareText className="w-3.5 h-3.5" />
@@ -1094,20 +1152,20 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
               </div>
 
               {audioError && (
-                <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-3 flex items-start gap-2 text-xs font-mono text-red-400">
+                <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-2.5 flex items-start gap-2 text-xs font-mono text-red-400 shadow-lg">
                   <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
                   <span>{audioError}</span>
                 </div>
               )}
 
               {inputMode === 'text' ? (
-                <div className="space-y-3 pt-1">
+                <div className="space-y-2.5">
                   <textarea
                     value={textAnswer}
                     onChange={(e) => setTextAnswer(e.target.value)}
                     placeholder="Type your interview answer in detail here..."
-                    rows={4}
-                    className="w-full bg-[#141414] border border-white/15 rounded-2xl p-3.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 font-sans focus:outline-none focus:border-cyan-400 transition-colors resize-none"
+                    rows={3}
+                    className="w-full bg-[#141416] border border-white/15 rounded-2xl p-3 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 font-sans focus:outline-none focus:border-cyan-400 transition-colors resize-none shadow-inner"
                   />
                   <Button
                     type="button"
@@ -1117,45 +1175,26 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
                     disabled={aiState === 'thinking' || isSubmitting || !textAnswer.trim()}
                     icon={Send}
                     iconPosition="right"
-                    className="w-full bg-cyan-400 text-black hover:bg-cyan-300 font-bold border border-cyan-400/20 text-xs sm:text-sm py-3 shadow-xl font-mono disabled:opacity-50"
+                    className="w-full bg-gradient-to-r from-cyan-400 to-emerald-400 text-black hover:from-cyan-300 hover:to-emerald-300 font-bold border-none text-xs sm:text-sm py-3 shadow-xl font-mono disabled:opacity-50"
                   >
                     {isSubmitting ? 'Submitting Written Answer...' : activeQuestion.type === 'main' && currentQIndex + 1 === totalQuestions ? 'Submit Written Answer & Complete Session' : 'Submit Written Answer / Next Question'}
                   </Button>
                 </div>
               ) : (
-                <>
-                  <div className="bg-[#141414] border border-white/10 rounded-2xl p-3.5 flex items-start gap-3">
-                    <MessageSquareText className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                    <div className="flex-1 max-h-[100px] overflow-y-auto text-xs sm:text-sm font-sans font-medium text-neutral-200 leading-relaxed">
-                      {transcript ? (
-                        <span><strong className="text-emerald-400 font-mono text-xs uppercase block mb-0.5">Authoritative Whisper STT Transcript:</strong> "{transcript}"</span>
-                      ) : liveTranscript ? (
-                        <span><strong className="text-cyan-400 font-mono text-xs uppercase block mb-0.5">Live Speech Transcript (Streaming):</strong> "{liveTranscript}"</span>
-                      ) : aiState === 'thinking' ? (
-                        <span className="text-amber-400 italic text-xs font-mono animate-pulse">Transcribing microphone audio with Whisper STT & evaluating...</span>
-                      ) : isRecording ? (
-                        <span className="text-cyan-400 italic text-xs font-mono">Microphone active — speak your answer clearly, then click 'Submit Spoken Answer'.</span>
-                      ) : (
-                        <span className="text-neutral-400 italic text-xs font-mono">Click 'Submit Spoken Answer' when finished speaking.</span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end pt-1">
-                    <Button
-                      type="button"
-                      variant="primary"
-                      size="md"
-                      onClick={handleFinishUserAnswer}
-                      disabled={aiState === 'thinking' || isSubmitting}
-                      icon={Send}
-                      iconPosition="right"
-                      className="w-full bg-white text-black hover:bg-neutral-200 font-bold border border-white/20 text-xs sm:text-sm py-3 shadow-xl font-mono disabled:opacity-50"
-                    >
-                      {isSubmitting ? 'Processing Audio & STT...' : activeQuestion.type === 'main' && currentQIndex + 1 === totalQuestions ? 'Submit Spoken Answer & Complete Session' : 'Submit Spoken Answer / Next Question'}
-                    </Button>
-                  </div>
-                </>
+                <div className="pt-1">
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="md"
+                    onClick={handleFinishUserAnswer}
+                    disabled={aiState === 'thinking' || isSubmitting}
+                    icon={Send}
+                    iconPosition="right"
+                    className="w-full bg-gradient-to-r from-emerald-400 to-cyan-400 text-black hover:from-emerald-300 hover:to-cyan-300 font-bold border-none text-xs sm:text-sm py-3.5 shadow-xl font-mono disabled:opacity-50"
+                  >
+                    {isSubmitting ? 'Processing Audio & STT...' : activeQuestion.type === 'main' && currentQIndex + 1 === totalQuestions ? 'Submit Spoken Answer & Complete Session' : 'Submit Spoken Answer / Next Question'}
+                  </Button>
+                </div>
               )}
             </div>
 
@@ -1167,3 +1206,7 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
 };
 
 export default AIInterviewScreen;
+
+
+
+
