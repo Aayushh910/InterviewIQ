@@ -9,8 +9,10 @@ api_router.include_router(interviews.router, prefix="/interviews", tags=["interv
 api_router.include_router(answers.router, tags=["answers"])
 api_router.include_router(analysis.router, prefix="/analysis", tags=["analysis"])
 api_router.include_router(speech.router, prefix="/analysis/speech", tags=["speech"])
+api_router.include_router(speech.router, prefix="/ai/speech", tags=["Speech Recognition"])
 api_router.include_router(evaluation.router, prefix="/analysis/evaluation", tags=["evaluation"])
 api_router.include_router(ai.router, prefix="/ai", tags=["AI Foundation"])
+
 api_router.include_router(multimodal.router, tags=["Multimodal Intelligence"])
 api_router.include_router(analytics.router, tags=["Interview Analytics"])
 

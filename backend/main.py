@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.router import api_router
-from app.api import ai
+from app.api import ai, speech
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -25,6 +25,8 @@ app.add_middleware(
 
 app.include_router(api_router)
 app.include_router(ai.router, prefix="/api/ai", tags=["AI Foundation Direct Alias"])
+app.include_router(speech.router, prefix="/api/ai/speech", tags=["Speech Recognition Direct Alias"])
+
 
 
 @app.get("/")

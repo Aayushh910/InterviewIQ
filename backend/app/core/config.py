@@ -35,12 +35,28 @@ class Settings(BaseSettings):
     MAX_VIDEO_DURATION_SECONDS: int = 300
 
     # Speech-to-Text Analysis Settings
+    STT_PROVIDER: str = "groq"
+    STT_API_KEY: Optional[str] = None
+    STT_MODEL: str = "whisper-large-v3-turbo"
+    STT_TIMEOUT_SECONDS: float = 30.0
     STT_MODEL_SIZE: str = "tiny"
     STT_DEVICE: str = "cpu"
     STT_COMPUTE_TYPE: str = "int8"
     STT_LANGUAGE: str = "en"
     MAX_AUDIO_SIZE_MB: int = 25
     MAX_AUDIO_DURATION_SECONDS: int = 300
+
+    # Text-to-Speech Analysis Settings
+    TTS_PROVIDER: str = "mock"
+    TTS_API_KEY: Optional[str] = None
+    TTS_MODEL: str = "default"
+    TTS_VOICE: str = "default"
+    TTS_LANGUAGE: str = "en"
+    TTS_TIMEOUT_SECONDS: float = 30.0
+
+
+
+
 
     # Adaptive Counter-Question Settings
     MAX_FOLLOW_UPS_PER_QUESTION: int = 2

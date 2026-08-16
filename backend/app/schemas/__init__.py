@@ -32,6 +32,10 @@ from app.schemas.follow_up import (
     FollowUpItem,
     FollowUpResponse,
 )
+from app.schemas.speech_synthesis import (
+    SpeechSynthesisRequest,
+    SpeechSynthesisResponse,
+)
 
 __all__ = [
     "UserCreate",
@@ -65,6 +69,9 @@ __all__ = [
     "FollowUpRequest",
     "FollowUpItem",
     "FollowUpResponse",
+    "SpeechSynthesisRequest",
+    "SpeechSynthesisResponse",
 ]
+
 
 

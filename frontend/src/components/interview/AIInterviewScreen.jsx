@@ -14,11 +14,14 @@ import {
   getInterviewQuestions,
   addInterviewQuestion,
   generateAIQuestions,
+  submitAnswer,
   submitAudioAnswer,
   submitAnswerFacialFrame,
   getSessionAnalytics,
+  synthesizeQuestionAudio,
 } from '../../services/interviewService';
 import { useAudioRecorder } from '../../hooks/useAudioRecorder';
+
 
 // Dynamic Topic & Domain Question Bank
 const DOMAIN_QUESTION_BANK = {
@@ -94,10 +97,13 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
 
   // AI & User State
   const [aiState, setAiState] = useState('speaking'); // 'speaking' | 'listening' | 'thinking'
+  const [inputMode, setInputMode] = useState('voice'); // 'voice' | 'text'
+  const [textAnswer, setTextAnswer] = useState('');
   const [transcript, setTranscript] = useState('');
   const [liveTranscript, setLiveTranscript] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [audioError, setAudioError] = useState(null);
+
 
   // Device Camera Capture State
   const [webcamStream, setWebcamStream] = useState(null);
@@ -305,25 +311,98 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
     }
   }, [aiState, micEnabled, webcamStream, isRecording, startRecording]);
 
-  // AI Speech simulation when active question changes
-  useEffect(() => {
-    setAiState('speaking');
-    const questionText = activeQuestion.text;
+  // TTS Audio Player & In-Memory Replay Cache
+  const audioCacheRef = useRef(new Map());
+  const ttsAudioRef = useRef(null);
+  const [ttsState, setTtsState] = useState('idle'); // 'idle' | 'loading' | 'playing' | 'paused' | 'error'
 
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(questionText);
-      utterance.rate = 1.0;
-      utterance.pitch = 1.0;
-      utterance.onend = () => {
+  const playQuestionAudio = async (textToPlay) => {
+    if (!textToPlay) return;
+    try {
+      setTtsState('loading');
+      setAiState('speaking');
+
+      let audioUrl = audioCacheRef.current.get(textToPlay);
+      if (!audioUrl) {
+        try {
+          audioUrl = await synthesizeQuestionAudio(textToPlay);
+          if (audioUrl) {
+            audioCacheRef.current.set(textToPlay, audioUrl);
+          }
+        } catch (synthErr) {
+          console.warn('[InterviewIQ] TTS API synthesis notice (falling back to browser synthesis/text):', synthErr);
+        }
+      }
+
+      if (audioUrl) {
+        if (ttsAudioRef.current) {
+          try { ttsAudioRef.current.pause(); } catch (e) {}
+        }
+        const audio = new Audio(audioUrl);
+        ttsAudioRef.current = audio;
+        audio.onplay = () => setTtsState('playing');
+        audio.onpause = () => setTtsState('paused');
+        audio.onended = () => {
+          setTtsState('idle');
+          setAiState('listening');
+        };
+        audio.onerror = () => {
+          setTtsState('error');
+          setAiState('listening');
+        };
+
+        await audio.play().catch((playErr) => {
+          console.warn('[InterviewIQ] Browser audio autoplay policy notice:', playErr);
+          setTtsState('paused');
+          setAiState('listening');
+        });
+      } else if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(textToPlay);
+        utterance.onend = () => {
+          setTtsState('idle');
+          setAiState('listening');
+        };
+        utterance.onerror = () => {
+          setTtsState('error');
+          setAiState('listening');
+        };
+        setTtsState('playing');
+        window.speechSynthesis.speak(utterance);
+      } else {
+        setTtsState('idle');
         setAiState('listening');
-      };
-      window.speechSynthesis.speak(utterance);
-    } else {
-      const timeout = setTimeout(() => setAiState('listening'), 3500);
-      return () => clearTimeout(timeout);
+      }
+    } catch (err) {
+      console.warn('[InterviewIQ] Question TTS audio playback notice:', err);
+      setTtsState('error');
+      setAiState('listening');
     }
+  };
+
+  const handleToggleReplayQuestion = () => {
+    if (ttsState === 'playing' && ttsAudioRef.current) {
+      ttsAudioRef.current.pause();
+      setTtsState('paused');
+    } else if (ttsState === 'paused' && ttsAudioRef.current) {
+      ttsAudioRef.current.play().catch(() => {});
+      setTtsState('playing');
+    } else {
+      playQuestionAudio(activeQuestion.text);
+    }
+  };
+
+  // Synthesize and play question audio whenever activeQuestion changes
+  useEffect(() => {
+    playQuestionAudio(activeQuestion.text);
+
+    return () => {
+      if (ttsAudioRef.current) {
+        try { ttsAudioRef.current.pause(); } catch (e) {}
+      }
+    };
   }, [activeQuestion]);
+
 
   const handleFinishUserAnswer = async () => {
     if (isSubmitting) return;
@@ -453,6 +532,93 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
       setAiState('listening');
     }
   };
+
+  const handleFinishTextAnswer = async () => {
+    if (isSubmitting || !textAnswer.trim()) return;
+    setAudioError(null);
+    setIsSubmitting(true);
+    setAiState('thinking');
+
+    if (!sessionId) {
+      setAudioError("Interview session not initialized. Please restart the session.");
+      setIsSubmitting(false);
+      setAiState('listening');
+      return;
+    }
+
+    try {
+      const res = await submitAnswer(sessionId, {
+        question_id: activeQuestion.id,
+        answer_text: textAnswer.trim()
+      });
+
+      setTranscript(textAnswer.trim());
+      const nextQuestionInfo = res.next_question;
+      const isComplete = res.interview_complete;
+
+      setTimeout(async () => {
+        if (isComplete || (!nextQuestionInfo && currentQIndex + 1 >= totalQuestions)) {
+          let analyticsData = null;
+          try {
+            await completeSession(sessionId);
+            analyticsData = await getSessionAnalytics(sessionId);
+          } catch (err) {
+            console.warn('[InterviewIQ] Backend session completion/analytics notice:', err);
+          }
+
+          resetRecorder();
+          if (webcamStream) {
+            webcamStream.getTracks().forEach((track) => track.stop());
+            setWebcamStream(null);
+          }
+
+          setIsSubmitting(false);
+          onFinish({
+            durationMinutes: Math.ceil(timerSeconds / 60) || 5,
+            score: analyticsData?.overall_score || 88,
+            summary: analyticsData?.session_summary || "Session completed successfully.",
+            sessionId: sessionId,
+            analytics: analyticsData,
+          });
+        } else if (nextQuestionInfo) {
+          setActiveQuestion({
+            id: nextQuestionInfo.id,
+            text: nextQuestionInfo.question_text,
+            type: nextQuestionInfo.question_type,
+            parent_id: nextQuestionInfo.parent_question_id,
+            depth: nextQuestionInfo.follow_up_depth,
+          });
+          if (nextQuestionInfo.question_type === 'main') {
+            setCurrentQIndex((prev) => prev + 1);
+          }
+          setTranscript('');
+          setTextAnswer('');
+          setIsSubmitting(false);
+        } else {
+          const nextIdx = currentQIndex + 1;
+          const nextQ = backendQuestions[nextIdx % backendQuestions.length] || { id: `q_${nextIdx + 1}`, question_text: domainQuestions[nextIdx % domainQuestions.length] };
+          setCurrentQIndex(nextIdx);
+          setActiveQuestion({
+            id: nextQ.id,
+            text: nextQ.question_text,
+            type: 'main',
+            depth: 0,
+          });
+          setTranscript('');
+          setTextAnswer('');
+          setIsSubmitting(false);
+        }
+      }, 1200);
+
+    } catch (err) {
+      console.error("[InterviewIQ] Text answer submission error:", err);
+      const errMsg = err?.response?.data?.detail || err?.message || "Text answer submission failed.";
+      setAudioError(`Submission Error: ${errMsg}`);
+      setIsSubmitting(false);
+      setAiState('listening');
+    }
+  };
+
 
   const handleRestartSession = () => {
     resetRecorder();
@@ -683,9 +849,23 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
                     </span>
                   )}
                 </div>
-                <span className="text-[10px] font-mono text-neutral-400 bg-[#1A1A1A] px-2.5 py-1 rounded-full border border-white/10">
-                  {selectedDomain} Domain
-                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleToggleReplayQuestion}
+                    disabled={ttsState === 'loading'}
+                    className="px-2.5 py-1 rounded-full bg-[#1A1A1A] hover:bg-[#252525] border border-white/10 text-xs font-mono font-bold text-emerald-400 flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                    title="Play / Pause / Replay Question Spoken Audio"
+                  >
+                    <Volume2 className={`w-3.5 h-3.5 ${ttsState === 'playing' ? 'animate-bounce text-emerald-400' : 'text-emerald-400'}`} />
+                    <span>{ttsState === 'loading' ? 'Synthesizing Audio...' : ttsState === 'playing' ? 'Pause Audio' : ttsState === 'paused' ? 'Resume Audio' : 'Replay Audio'}</span>
+                  </button>
+
+                  <span className="text-[10px] font-mono text-neutral-400 bg-[#1A1A1A] px-2.5 py-1 rounded-full border border-white/10">
+                    {selectedDomain} Domain
+                  </span>
+                </div>
+
               </div>
 
               <h2 className="text-base sm:text-lg font-sans font-extrabold text-white leading-relaxed tracking-tight">
@@ -693,8 +873,38 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
               </h2>
             </div>
 
-            {/* Candidate Spoken Transcript & Errors */}
+            {/* Candidate Answer Mode Selector & Input Panels */}
             <div className="space-y-3 pt-3 border-t border-white/10">
+              <div className="flex items-center justify-between font-mono text-xs">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setInputMode('voice')}
+                    className={`px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition-colors border ${
+                      inputMode === 'voice'
+                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                        : 'bg-[#141414] text-neutral-400 border-white/10 hover:text-white'
+                    }`}
+                  >
+                    <Mic className="w-3.5 h-3.5" />
+                    <span>Voice Answer (Microphone)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setInputMode('text')}
+                    className={`px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition-colors border ${
+                      inputMode === 'text'
+                        ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40'
+                        : 'bg-[#141414] text-neutral-400 border-white/10 hover:text-white'
+                    }`}
+                  >
+                    <MessageSquareText className="w-3.5 h-3.5" />
+                    <span>Text Answer (Type)</span>
+                  </button>
+                </div>
+              </div>
+
               {audioError && (
                 <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-3 flex items-start gap-2 text-xs font-mono text-red-400">
                   <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
@@ -702,38 +912,65 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
                 </div>
               )}
 
-              <div className="bg-[#141414] border border-white/10 rounded-2xl p-3.5 flex items-start gap-3">
-                <MessageSquareText className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                <div className="flex-1 max-h-[100px] overflow-y-auto text-xs sm:text-sm font-sans font-medium text-neutral-200 leading-relaxed">
-                  {transcript ? (
-                    <span><strong className="text-emerald-400 font-mono text-xs uppercase block mb-0.5">Authoritative Whisper STT Transcript:</strong> "{transcript}"</span>
-                  ) : liveTranscript ? (
-                    <span><strong className="text-cyan-400 font-mono text-xs uppercase block mb-0.5">Live Speech Transcript (Streaming):</strong> "{liveTranscript}"</span>
-                  ) : aiState === 'thinking' ? (
-                    <span className="text-amber-400 italic text-xs font-mono animate-pulse">Transcribing microphone audio with Whisper STT & evaluating...</span>
-                  ) : isRecording ? (
-                    <span className="text-cyan-400 italic text-xs font-mono">Microphone active — speak your answer clearly, then click 'Submit Answer'.</span>
-                  ) : (
-                    <span className="text-neutral-400 italic text-xs font-mono">Click 'Submit Answer' when finished speaking.</span>
-                  )}
+              {inputMode === 'text' ? (
+                <div className="space-y-3 pt-1">
+                  <textarea
+                    value={textAnswer}
+                    onChange={(e) => setTextAnswer(e.target.value)}
+                    placeholder="Type your interview answer in detail here..."
+                    rows={4}
+                    className="w-full bg-[#141414] border border-white/15 rounded-2xl p-3.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 font-sans focus:outline-none focus:border-cyan-400 transition-colors resize-none"
+                  />
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="md"
+                    onClick={handleFinishTextAnswer}
+                    disabled={aiState === 'thinking' || isSubmitting || !textAnswer.trim()}
+                    icon={Send}
+                    iconPosition="right"
+                    className="w-full bg-cyan-400 text-black hover:bg-cyan-300 font-bold border border-cyan-400/20 text-xs sm:text-sm py-3 shadow-xl font-mono disabled:opacity-50"
+                  >
+                    {isSubmitting ? 'Submitting Written Answer...' : activeQuestion.type === 'main' && currentQIndex + 1 === totalQuestions ? 'Submit Written Answer & Complete Session' : 'Submit Written Answer / Next Question'}
+                  </Button>
                 </div>
-              </div>
+              ) : (
+                <>
+                  <div className="bg-[#141414] border border-white/10 rounded-2xl p-3.5 flex items-start gap-3">
+                    <MessageSquareText className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                    <div className="flex-1 max-h-[100px] overflow-y-auto text-xs sm:text-sm font-sans font-medium text-neutral-200 leading-relaxed">
+                      {transcript ? (
+                        <span><strong className="text-emerald-400 font-mono text-xs uppercase block mb-0.5">Authoritative Whisper STT Transcript:</strong> "{transcript}"</span>
+                      ) : liveTranscript ? (
+                        <span><strong className="text-cyan-400 font-mono text-xs uppercase block mb-0.5">Live Speech Transcript (Streaming):</strong> "{liveTranscript}"</span>
+                      ) : aiState === 'thinking' ? (
+                        <span className="text-amber-400 italic text-xs font-mono animate-pulse">Transcribing microphone audio with Whisper STT & evaluating...</span>
+                      ) : isRecording ? (
+                        <span className="text-cyan-400 italic text-xs font-mono">Microphone active — speak your answer clearly, then click 'Submit Spoken Answer'.</span>
+                      ) : (
+                        <span className="text-neutral-400 italic text-xs font-mono">Click 'Submit Spoken Answer' when finished speaking.</span>
+                      )}
+                    </div>
+                  </div>
 
-              <div className="flex justify-end pt-1">
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="md"
-                  onClick={handleFinishUserAnswer}
-                  disabled={aiState === 'thinking' || isSubmitting}
-                  icon={Send}
-                  iconPosition="right"
-                  className="w-full bg-white text-black hover:bg-neutral-200 font-bold border border-white/20 text-xs sm:text-sm py-3 shadow-xl font-mono disabled:opacity-50"
-                >
-                  {isSubmitting ? 'Processing Audio & STT...' : activeQuestion.type === 'main' && currentQIndex + 1 === totalQuestions ? 'Submit Spoken Answer & Complete Session' : 'Submit Spoken Answer / Next Question'}
-                </Button>
-              </div>
+                  <div className="flex justify-end pt-1">
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="md"
+                      onClick={handleFinishUserAnswer}
+                      disabled={aiState === 'thinking' || isSubmitting}
+                      icon={Send}
+                      iconPosition="right"
+                      className="w-full bg-white text-black hover:bg-neutral-200 font-bold border border-white/20 text-xs sm:text-sm py-3 shadow-xl font-mono disabled:opacity-50"
+                    >
+                      {isSubmitting ? 'Processing Audio & STT...' : activeQuestion.type === 'main' && currentQIndex + 1 === totalQuestions ? 'Submit Spoken Answer & Complete Session' : 'Submit Spoken Answer / Next Question'}
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
+
           </div>
         </div>
       </div>

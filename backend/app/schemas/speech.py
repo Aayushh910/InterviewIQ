@@ -12,8 +12,11 @@ class TranscriptionSegment(BaseModel):
 
 class SpeechTranscriptionResponse(BaseModel):
     text: str
+    transcript: Optional[str] = None
     language: str
     duration_seconds: float
+    provider: Optional[str] = "groq"
     segments: Optional[List[TranscriptionSegment]] = None
 
     model_config = ConfigDict(from_attributes=True)
+

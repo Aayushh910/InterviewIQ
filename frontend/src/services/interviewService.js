@@ -72,6 +72,32 @@ export const requestFollowUp = async (interviewId, questionId, answerId) => {
   return response.data;
 };
 
+export const transcribeInterviewAudio = async (audioBlob, interviewId = null, questionId = null) => {
+  const formData = new FormData();
+  const ext = audioBlob?.type?.includes('mp4') ? 'mp4' : audioBlob?.type?.includes('wav') ? 'wav' : 'webm';
+  formData.append('file', audioBlob, `speech_recording.${ext}`);
+  if (interviewId) formData.append('interview_id', interviewId);
+  if (questionId) formData.append('question_id', questionId);
+
+  const response = await apiClient.post('/ai/speech/transcribe', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+export const synthesizeQuestionAudio = async (text, voice = 'default', language = 'en') => {
+  const response = await apiClient.post(
+    '/ai/speech/synthesize',
+    { text, voice, language },
+    { responseType: 'blob' }
+  );
+  return URL.createObjectURL(response.data);
+};
+
+
+
 
 
 export const submitAnswer = async (sessionId, answerData) => {
