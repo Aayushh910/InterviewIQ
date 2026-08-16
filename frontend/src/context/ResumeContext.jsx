@@ -15,6 +15,9 @@ export const ResumeProvider = ({ children }) => {
 
   useEffect(() => {
     let isMounted = true;
+    const token = localStorage.getItem('interviewiq_token');
+    if (!token) return;
+
     const fetchApiResumes = async () => {
       try {
         const { apiClient } = await import('../services/apiClient');
@@ -36,6 +39,7 @@ export const ResumeProvider = ({ children }) => {
 
     return () => { isMounted = false; };
   }, []);
+
 
   const addResume = (newResume) => {
     const resumeObj = {

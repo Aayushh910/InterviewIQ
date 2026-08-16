@@ -26,9 +26,12 @@ export const InterviewProvider = ({ children }) => {
     language: 'English',
   });
 
-  // Load Real User Interviews from Backend Database on Mount
+  // Load Real User Interviews from Backend Database on Mount (only if authenticated)
   useEffect(() => {
     let isMounted = true;
+    const token = localStorage.getItem('interviewiq_token');
+    if (!token) return;
+
     const fetchApiInterviews = async () => {
       try {
         const data = await getUserInterviews();
@@ -43,6 +46,7 @@ export const InterviewProvider = ({ children }) => {
 
     return () => { isMounted = false; };
   }, []);
+
 
   const updateConfig = (newConfig) => {
     setActiveConfig((prev) => ({ ...prev, ...newConfig }));

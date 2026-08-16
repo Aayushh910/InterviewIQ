@@ -53,8 +53,9 @@ def build_follow_up_prompt(
         "1. Do NOT always generate a follow-up question. If the answer is complete, clear, and thoroughly addresses the question, set should_follow_up = false.\n"
         "2. Set should_follow_up = true ONLY if the candidate made vague claims, omitted critical technical mechanisms (e.g. invalidation, edge cases, tradeoffs), or presented an opportunity for deeper probing.\n"
         "3. The follow-up question MUST directly connect to the candidate's actual answer and current question.\n"
-        "4. Ask exactly ONE clear, concise question. Do NOT ask multiple sub-questions in one prompt.\n"
-        "5. Do NOT repeat the original question."
+        f"4. CRITICAL DOMAIN CONSTRAINT: The interview domain is '{domain}'. The follow-up question MUST remain strictly within the '{domain}' domain. Do NOT switch to unrelated technologies under any circumstances.\n"
+        "5. Ask exactly ONE clear, concise question. Do NOT ask multiple sub-questions in one prompt.\n"
+        "6. Do NOT repeat the original question."
     )
 
     prev_text = ""
@@ -67,6 +68,7 @@ def build_follow_up_prompt(
 INTERVIEW CONTEXT:
 - Role: {job_role}
 - Type: {interview_type}
+- Hard Domain Constraint: MUST BE STRICTLY {domain.upper()}
 - Domain: {domain}
 - Difficulty: {difficulty}
 - Experience Level: {experience_level} Years
@@ -79,7 +81,8 @@ CURRENT QUESTION:
 CANDIDATE ANSWER:
 "{answer_text}"
 
-Analyze the answer and produce structured JSON:
+Analyze the answer and produce structured JSON with follow_up_question strictly inside the {domain} domain:
 """
+
 
     return system_prompt, user_prompt

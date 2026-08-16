@@ -21,8 +21,7 @@ def helper_register_user(prefix: str = "stt_user"):
     return resp.json()["access_token"]
 
 
-def helper_create_interview(token: str):
-    headers = {"Authorization": f"Bearer {token}"}
+def helper_create_interview(client, headers):
     interview = client.post(
         "/api/v1/interviews",
         headers=headers,
@@ -49,7 +48,7 @@ def helper_create_interview(token: str):
     return interview["id"], question["id"], session["id"]
 
 
-def test_transcribe_unauthenticated():
+def test_transcribe_unauthenticated(client):
     """Verify unauthenticated transcription request returns 401."""
     audio_file = ("test_speech.webm", io.BytesIO(b"RIFF mock audio content"), "audio/webm")
     resp = client.post(
@@ -59,11 +58,10 @@ def test_transcribe_unauthenticated():
     assert resp.status_code == 401
 
 
-def test_transcribe_valid_audio():
+def test_transcribe_valid_audio(client, auth_headers):
     """Verify valid audio upload returns 200 with transcript metadata."""
-    token = helper_register_user()
-    interview_id, question_id, session_id = helper_create_interview(token)
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
+    interview_id, question_id, session_id = helper_create_interview(client, headers)
 
     audio_file = ("candidate_answer.webm", io.BytesIO(b"\x1a\x45\xdf\xa3 mock webm audio stream data"), "audio/webm")
     data = {
@@ -86,10 +84,9 @@ def test_transcribe_valid_audio():
     assert res_data["provider"] == "mock"
 
 
-def test_transcribe_direct_alias_endpoint():
+def test_transcribe_direct_alias_endpoint(client, auth_headers):
     """Verify direct alias endpoint POST /api/ai/speech/transcribe works identically."""
-    token = helper_register_user()
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
 
     audio_file = ("candidate_answer.webm", io.BytesIO(b"\x1a\x45\xdf\xa3 mock webm audio stream data"), "audio/webm")
     data = {"provider": "mock", "mock_mode": "success"}
@@ -104,13 +101,18 @@ def test_transcribe_direct_alias_endpoint():
     assert "text" in resp.json()
 
 
-def test_transcribe_unauthorized_interview():
+def test_transcribe_unauthorized_interview(client, auth_headers):
     """Verify User B cannot request audio transcription for User A's interview."""
-    token_a = helper_register_user("user_a")
-    token_b = helper_register_user("user_b")
-    interview_id_a, question_id_a, _ = helper_create_interview(token_a)
+    headers_a = auth_headers
+    interview_id_a, question_id_a, _ = helper_create_interview(client, headers_a)
 
-    headers_b = {"Authorization": f"Bearer {token_b}"}
+    # Register secondary user B for cross-user authorization check
+    reg_b = client.post(
+        "/api/v1/auth/register",
+        json={"name": "User B", "email": f"user_b_{uuid.uuid4().hex[:6]}@interviewiq.ai", "password": "Password123!"}
+    ).json()
+    headers_b = {"Authorization": f"Bearer {reg_b['access_token']}"}
+
     audio_file = ("candidate_answer.webm", io.BytesIO(b"\x1a\x45\xdf\xa3 mock webm audio data"), "audio/webm")
     data = {"interview_id": interview_id_a, "provider": "mock"}
 
@@ -123,10 +125,9 @@ def test_transcribe_unauthorized_interview():
     assert resp.status_code == 404
 
 
-def test_transcribe_invalid_audio_format():
+def test_transcribe_invalid_audio_format(client, auth_headers):
     """Verify unsupported file extension returns 400 validation error."""
-    token = helper_register_user()
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
 
     invalid_file = ("executable.exe", io.BytesIO(b"MZ binary data"), "application/octet-stream")
     data = {"provider": "mock"}
@@ -140,10 +141,9 @@ def test_transcribe_invalid_audio_format():
     assert resp.status_code == 400
 
 
-def test_transcribe_empty_file():
+def test_transcribe_empty_file(client, auth_headers):
     """Verify 0-byte audio buffer returns 400 validation error."""
-    token = helper_register_user()
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
 
     empty_file = ("empty.webm", io.BytesIO(b""), "audio/webm")
     data = {"provider": "mock"}
@@ -157,10 +157,9 @@ def test_transcribe_empty_file():
     assert resp.status_code == 400
 
 
-def test_transcribe_provider_failure():
+def test_transcribe_provider_failure(client, auth_headers):
     """Verify STT provider failure returns 502 Bad Gateway."""
-    token = helper_register_user()
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
 
     audio_file = ("candidate_answer.webm", io.BytesIO(b"\x1a\x45\xdf\xa3 mock webm audio data"), "audio/webm")
     data = {"provider": "mock", "mock_mode": "failure"}
@@ -174,10 +173,9 @@ def test_transcribe_provider_failure():
     assert resp.status_code == 502
 
 
-def test_transcribe_provider_timeout():
+def test_transcribe_provider_timeout(client, auth_headers):
     """Verify STT provider timeout returns 504 Gateway Timeout."""
-    token = helper_register_user()
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
 
     audio_file = ("candidate_answer.webm", io.BytesIO(b"\x1a\x45\xdf\xa3 mock webm audio data"), "audio/webm")
     data = {"provider": "mock", "mock_mode": "timeout"}
@@ -191,16 +189,15 @@ def test_transcribe_provider_timeout():
     assert resp.status_code == 504
 
 
-def test_voice_answer_pipeline_to_follow_up_engine():
+def test_voice_answer_pipeline_to_follow_up_engine(client, auth_headers):
     """
     End-to-End Voice Answer Integration Test:
     1. Transcribe voice audio.
     2. Persist transcript as candidate answer.
     3. Verify Phase 2 Adaptive Follow-Up Engine triggers on voice answer.
     """
-    token = helper_register_user()
-    interview_id, question_id, session_id = helper_create_interview(token)
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
+    interview_id, question_id, session_id = helper_create_interview(client, headers)
 
     # Transcribe audio to get transcript
     audio_file = ("candidate_voice.webm", io.BytesIO(b"\x1a\x45\xdf\xa3 mock candidate audio stream"), "audio/webm")
@@ -240,3 +237,4 @@ def test_voice_answer_pipeline_to_follow_up_engine():
     f_data = follow_up_resp.json()
     assert f_data["should_follow_up"] is True
     assert f_data["follow_up"]["parent_question_id"] == question_id
+

@@ -20,8 +20,7 @@ def helper_register_user():
     return resp.json()["access_token"]
 
 
-def create_test_interview_session_and_answer(token: str):
-    headers = {"Authorization": f"Bearer {token}"}
+def create_test_interview_session_and_answer(client, headers):
     interview = client.post(
         "/api/v1/interviews",
         headers=headers,
@@ -56,7 +55,7 @@ def create_test_interview_session_and_answer(token: str):
     return session, question, ans_resp["id"]
 
 
-def test_ai_foundation_unauthenticated_request():
+def test_ai_foundation_unauthenticated_request(client):
     """Verify unauthorized requests are rejected with HTTP 401."""
     resp = client.post(
         "/api/v1/ai/evaluate-answer",
@@ -68,10 +67,9 @@ def test_ai_foundation_unauthenticated_request():
     assert resp.status_code == 401
 
 
-def test_ai_foundation_valid_direct_question_answer_request():
+def test_ai_foundation_valid_direct_question_answer_request(client, auth_headers):
     """Verify valid Q&A request produces structured evaluation information."""
-    token = helper_register_user()
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
 
     payload = {
         "question": "What is object-oriented programming?",
@@ -95,10 +93,9 @@ def test_ai_foundation_valid_direct_question_answer_request():
     assert "evaluator_provider" in data
 
 
-def test_ai_foundation_direct_alias_endpoint():
+def test_ai_foundation_direct_alias_endpoint(client, auth_headers):
     """Verify direct alias endpoint POST /api/ai/evaluate-answer works identically."""
-    token = helper_register_user()
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
 
     payload = {
         "question": "Explain REST API design principles.",
@@ -111,20 +108,18 @@ def test_ai_foundation_direct_alias_endpoint():
     assert data["overall_score"] > 0.0
 
 
-def test_ai_foundation_invalid_payload_request():
+def test_ai_foundation_invalid_payload_request(client, auth_headers):
     """Verify missing/invalid payload fields are rejected with HTTP 400."""
-    token = helper_register_user()
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
 
     # Empty body missing all required fields
     resp = client.post("/api/v1/ai/evaluate-answer", headers=headers, json={})
     assert resp.status_code == 422 or resp.status_code == 400
 
 
-def test_ai_foundation_provider_failure_handling():
+def test_ai_foundation_provider_failure_handling(client, auth_headers):
     """Verify provider failure is handled safely returning controlled error."""
-    token = helper_register_user()
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
 
     payload = {
         "question": "Explain concurrency in Python.",
@@ -145,10 +140,9 @@ def test_ai_foundation_provider_failure_handling():
     assert resp.status_code in [502, 500]
 
 
-def test_ai_foundation_provider_timeout_handling():
+def test_ai_foundation_provider_timeout_handling(client, auth_headers):
     """Verify provider timeout is handled safely returning HTTP 504."""
-    token = helper_register_user()
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
 
     payload = {
         "question": "Explain distributed caching.",
@@ -169,10 +163,9 @@ def test_ai_foundation_provider_timeout_handling():
     assert resp.status_code in [504, 500]
 
 
-def test_ai_foundation_malformed_response_validation():
+def test_ai_foundation_malformed_response_validation(client, auth_headers):
     """Verify malformed AI provider response is caught by validation layer."""
-    token = helper_register_user()
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
 
     payload = {
         "question": "What is SQL indexing?",
@@ -192,12 +185,11 @@ def test_ai_foundation_malformed_response_validation():
     assert isinstance(res["strengths"], list)
 
 
-def test_ai_foundation_database_persistence_and_deduplication():
+def test_ai_foundation_database_persistence_and_deduplication(client, auth_headers):
     """Verify valid evaluation persists to AnswerEvaluation model and updates without duplicates."""
-    token = helper_register_user()
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
 
-    session, question, answer_id = create_test_interview_session_and_answer(token)
+    session, question, answer_id = create_test_interview_session_and_answer(client, headers)
 
     # First evaluation via POST /api/v1/ai/evaluate-answer
     resp1 = client.post(
@@ -220,3 +212,4 @@ def test_ai_foundation_database_persistence_and_deduplication():
     data2 = resp2.json()
     assert data2["answer_id"] == answer_id
     assert data2["id"] == eval_id_1  # Same primary key record updated, no duplicate created
+

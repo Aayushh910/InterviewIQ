@@ -67,6 +67,17 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
+  // Listen for global 401 Unauthorized events from apiClient
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      setUser(null);
+      setIsAuthenticated(false);
+    };
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
+  }, []);
+
+
   const login = async (email, password) => {
     try {
       const res = await apiClient.post('/auth/login', { email, password });

@@ -6,18 +6,7 @@ from main import app
 client = TestClient(app)
 
 
-def helper_register_user(prefix: str = "tts_user"):
-    email = f"{prefix}_{uuid.uuid4().hex[:8]}@interviewiq.ai"
-    password = "TestPassword123!"
-    resp = client.post(
-        "/api/v1/auth/register",
-        json={"name": "TTS Candidate", "email": email, "password": password}
-    )
-    assert resp.status_code == 201
-    return resp.json()["access_token"]
-
-
-def test_tts_unauthenticated():
+def test_tts_unauthenticated(client):
     """Verify unauthenticated TTS synthesis request returns 401."""
     resp = client.post(
         "/api/v1/ai/speech/synthesize",
@@ -26,10 +15,9 @@ def test_tts_unauthenticated():
     assert resp.status_code == 401
 
 
-def test_tts_valid_request():
+def test_tts_valid_request(client, auth_headers):
     """Verify valid question text returns 200 with audio binary payload."""
-    token = helper_register_user()
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
 
     payload = {
         "text": "How do you handle database indexing and connection pooling in PostgreSQL?",
@@ -46,10 +34,9 @@ def test_tts_valid_request():
     assert resp.headers.get("x-tts-provider") == "mock"
 
 
-def test_tts_direct_alias_endpoint():
+def test_tts_direct_alias_endpoint(client, auth_headers):
     """Verify direct alias endpoint POST /api/ai/speech/synthesize works identically."""
-    token = helper_register_user()
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
 
     payload = {
         "text": "Can you explain the bias-variance tradeoff in machine learning?",
@@ -62,10 +49,9 @@ def test_tts_direct_alias_endpoint():
     assert len(resp.content) > 40
 
 
-def test_tts_empty_text():
+def test_tts_empty_text(client, auth_headers):
     """Verify empty text string returns 400 Bad Request."""
-    token = helper_register_user()
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
 
     resp = client.post(
         "/api/v1/ai/speech/synthesize",
@@ -75,10 +61,9 @@ def test_tts_empty_text():
     assert resp.status_code in [400, 422]
 
 
-def test_tts_excessively_long_text():
+def test_tts_excessively_long_text(client, auth_headers):
     """Verify text exceeding 1000 characters returns 400 Bad Request."""
-    token = helper_register_user()
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
 
     long_text = "A" * 1050
     resp = client.post(
@@ -89,10 +74,9 @@ def test_tts_excessively_long_text():
     assert resp.status_code in [400, 422]
 
 
-def test_tts_provider_failure():
+def test_tts_provider_failure(client, auth_headers):
     """Verify TTS provider failure returns 502 Bad Gateway."""
-    token = helper_register_user()
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
 
     payload = {
         "text": "Explain Kubernetes pod lifecycle.",
@@ -104,10 +88,9 @@ def test_tts_provider_failure():
     assert resp.status_code == 502
 
 
-def test_tts_provider_timeout():
+def test_tts_provider_timeout(client, auth_headers):
     """Verify TTS provider timeout returns 504 Gateway Timeout."""
-    token = helper_register_user()
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
 
     payload = {
         "text": "Explain microservice rate limiting.",
@@ -119,10 +102,9 @@ def test_tts_provider_timeout():
     assert resp.status_code == 504
 
 
-def test_mock_tts_provider_deterministic_output():
+def test_mock_tts_provider_deterministic_output(client, auth_headers):
     """Verify MockTTSProvider produces valid deterministic audio binary content."""
-    token = helper_register_user()
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
 
     payload = {
         "text": "Describe your strategy for zero-downtime blue-green deployments.",
@@ -136,13 +118,12 @@ def test_mock_tts_provider_deterministic_output():
     assert b"WAVE" in resp.content[:16]
 
 
-def test_question_and_follow_up_tts_integration():
+def test_question_and_follow_up_tts_integration(client, auth_headers):
     """
     Integration Test:
     Verify TTS synthesis works for both main questions and Phase 2 follow-up questions.
     """
-    token = helper_register_user()
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
 
     # 1. Main Question TTS
     main_q_text = "How do you handle memory leak prevention in large-scale React apps?"
@@ -163,3 +144,4 @@ def test_question_and_follow_up_tts_integration():
     )
     assert resp_follow_up.status_code == 200
     assert len(resp_follow_up.content) > 40
+

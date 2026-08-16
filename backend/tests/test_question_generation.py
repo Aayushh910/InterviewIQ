@@ -19,8 +19,7 @@ def helper_register_user(prefix: str = "qgen_user"):
     return resp.json()["access_token"]
 
 
-def helper_create_interview(token: str, title: str = "Technical AI Interview"):
-    headers = {"Authorization": f"Bearer {token}"}
+def helper_create_interview(client, headers, title: str = "Technical AI Interview"):
     resp = client.post(
         "/api/v1/interviews",
         headers=headers,
@@ -38,7 +37,7 @@ def helper_create_interview(token: str, title: str = "Technical AI Interview"):
     return resp.json()["id"]
 
 
-def test_generate_questions_unauthenticated():
+def test_generate_questions_unauthenticated(client):
     """Verify unauthorized question generation request is rejected with HTTP 401."""
     resp = client.post(
         "/api/v1/ai/questions/generate",
@@ -47,11 +46,10 @@ def test_generate_questions_unauthenticated():
     assert resp.status_code == 401
 
 
-def test_generate_questions_valid_request():
+def test_generate_questions_valid_request(client, auth_headers):
     """Verify valid authenticated question generation request succeeds and persists questions."""
-    token = helper_register_user()
-    interview_id = helper_create_interview(token)
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
+    interview_id = helper_create_interview(client, headers)
 
     payload = {
         "interview_id": interview_id,
@@ -77,11 +75,10 @@ def test_generate_questions_valid_request():
     assert first_q["question_order"] == 1
 
 
-def test_generate_questions_direct_alias_endpoint():
+def test_generate_questions_direct_alias_endpoint(client, auth_headers):
     """Verify direct alias endpoint POST /api/ai/questions/generate works identically."""
-    token = helper_register_user()
-    interview_id = helper_create_interview(token)
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
+    interview_id = helper_create_interview(client, headers)
 
     payload = {
         "interview_id": interview_id,
@@ -96,10 +93,9 @@ def test_generate_questions_direct_alias_endpoint():
     assert data["count"] == 3
 
 
-def test_generate_questions_invalid_interview_id():
+def test_generate_questions_invalid_interview_id(client, auth_headers):
     """Verify non-existent interview ID returns HTTP 404."""
-    token = helper_register_user()
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
 
     payload = {
         "interview_id": "non_existent_interview_999",
@@ -111,14 +107,17 @@ def test_generate_questions_invalid_interview_id():
     assert resp.status_code == 404
 
 
-def test_generate_questions_unauthorized_user():
+def test_generate_questions_unauthorized_user(client, auth_headers):
     """Verify user A cannot generate questions for user B's interview."""
-    token_user_a = helper_register_user("user_a")
-    token_user_b = helper_register_user("user_b")
+    headers_a = auth_headers
+    interview_id_a = helper_create_interview(client, headers_a)
 
-    interview_id_a = helper_create_interview(token_user_a)
+    reg_b = client.post(
+        "/api/v1/auth/register",
+        json={"name": "User B", "email": f"user_b_{uuid.uuid4().hex[:6]}@interviewiq.ai", "password": "Password123!"}
+    ).json()
+    headers_b = {"Authorization": f"Bearer {reg_b['access_token']}"}
 
-    headers_b = {"Authorization": f"Bearer {token_user_b}"}
     payload = {
         "interview_id": interview_id_a,
         "number_of_questions": 5,
@@ -129,11 +128,10 @@ def test_generate_questions_unauthorized_user():
     assert resp.status_code == 404
 
 
-def test_generate_questions_invalid_question_count():
+def test_generate_questions_invalid_question_count(client, auth_headers):
     """Verify number_of_questions <= 0 or > 20 is rejected with validation error."""
-    token = helper_register_user()
-    interview_id = helper_create_interview(token)
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
+    interview_id = helper_create_interview(client, headers)
 
     # Count = 0
     resp1 = client.post(
@@ -152,11 +150,10 @@ def test_generate_questions_invalid_question_count():
     assert resp2.status_code == 422
 
 
-def test_generate_questions_provider_failure_handling():
+def test_generate_questions_provider_failure_handling(client, auth_headers):
     """Verify AI provider failure returns HTTP 502 Bad Gateway."""
-    token = helper_register_user()
-    interview_id = helper_create_interview(token)
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
+    interview_id = helper_create_interview(client, headers)
 
     payload = {
         "interview_id": interview_id,
@@ -169,11 +166,10 @@ def test_generate_questions_provider_failure_handling():
     assert resp.status_code in [502, 500]
 
 
-def test_generate_questions_provider_timeout_handling():
+def test_generate_questions_provider_timeout_handling(client, auth_headers):
     """Verify AI provider timeout returns HTTP 504 Gateway Timeout."""
-    token = helper_register_user()
-    interview_id = helper_create_interview(token)
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
+    interview_id = helper_create_interview(client, headers)
 
     payload = {
         "interview_id": interview_id,
@@ -186,11 +182,10 @@ def test_generate_questions_provider_timeout_handling():
     assert resp.status_code in [504, 500]
 
 
-def test_generate_questions_db_persistence():
+def test_generate_questions_db_persistence(client, auth_headers):
     """Verify generated questions are persisted into the database with generation_provider metadata."""
-    token = helper_register_user()
-    interview_id = helper_create_interview(token)
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
+    interview_id = helper_create_interview(client, headers)
 
     payload = {
         "interview_id": interview_id,
@@ -214,3 +209,4 @@ def test_generate_questions_db_persistence():
             assert len(q.question_text) > 10
     finally:
         db.close()
+

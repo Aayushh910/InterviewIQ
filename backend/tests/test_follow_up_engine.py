@@ -20,8 +20,7 @@ def helper_register_user(prefix: str = "followup_user"):
     return resp.json()["access_token"]
 
 
-def helper_create_interview_and_session(token: str):
-    headers = {"Authorization": f"Bearer {token}"}
+def helper_create_interview_and_session(client, headers):
     interview = client.post(
         "/api/v1/interviews",
         headers=headers,
@@ -57,7 +56,7 @@ def helper_create_interview_and_session(token: str):
     return interview["id"], question["id"], session["id"], ans_resp["id"]
 
 
-def test_follow_up_unauthenticated():
+def test_follow_up_unauthenticated(client):
     """Verify unauthenticated request is rejected with HTTP 401."""
     resp = client.post(
         "/api/v1/ai/follow-up/generate",
@@ -66,11 +65,10 @@ def test_follow_up_unauthenticated():
     assert resp.status_code == 401
 
 
-def test_generate_follow_up_valid_request():
+def test_generate_follow_up_valid_request(client, auth_headers):
     """Verify valid candidate answer triggers follow-up decision and returns persisted follow-up question."""
-    token = helper_register_user()
-    interview_id, question_id, session_id, answer_id = helper_create_interview_and_session(token)
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
+    interview_id, question_id, session_id, answer_id = helper_create_interview_and_session(client, headers)
 
     payload = {
         "interview_id": interview_id,
@@ -95,11 +93,10 @@ def test_generate_follow_up_valid_request():
     assert f_item["generation_provider"] == "mock"
 
 
-def test_generate_follow_up_direct_alias_endpoint():
+def test_generate_follow_up_direct_alias_endpoint(client, auth_headers):
     """Verify direct alias endpoint POST /api/ai/follow-up/generate works identically."""
-    token = helper_register_user()
-    interview_id, question_id, session_id, answer_id = helper_create_interview_and_session(token)
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
+    interview_id, question_id, session_id, answer_id = helper_create_interview_and_session(client, headers)
 
     payload = {
         "interview_id": interview_id,
@@ -115,11 +112,10 @@ def test_generate_follow_up_direct_alias_endpoint():
     assert data["should_follow_up"] is True
 
 
-def test_generate_follow_up_no_follow_up_needed():
+def test_generate_follow_up_no_follow_up_needed(client, auth_headers):
     """Verify mock mode 'no_follow_up' returns should_follow_up=false."""
-    token = helper_register_user()
-    interview_id, question_id, session_id, answer_id = helper_create_interview_and_session(token)
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
+    interview_id, question_id, session_id, answer_id = helper_create_interview_and_session(client, headers)
 
     payload = {
         "interview_id": interview_id,
@@ -136,14 +132,17 @@ def test_generate_follow_up_no_follow_up_needed():
     assert data["follow_up"] is None
 
 
-def test_generate_follow_up_unauthorized_user():
+def test_generate_follow_up_unauthorized_user(client, auth_headers):
     """Verify user B cannot request follow-up for user A's interview."""
-    token_user_a = helper_register_user("user_a")
-    token_user_b = helper_register_user("user_b")
+    headers_a = auth_headers
+    interview_id_a, question_id_a, session_id_a, answer_id_a = helper_create_interview_and_session(client, headers_a)
 
-    interview_id_a, question_id_a, session_id_a, answer_id_a = helper_create_interview_and_session(token_user_a)
+    reg_b = client.post(
+        "/api/v1/auth/register",
+        json={"name": "User B", "email": f"user_b_{uuid.uuid4().hex[:6]}@interviewiq.ai", "password": "Password123!"}
+    ).json()
+    headers_b = {"Authorization": f"Bearer {reg_b['access_token']}"}
 
-    headers_b = {"Authorization": f"Bearer {token_user_b}"}
     payload = {
         "interview_id": interview_id_a,
         "question_id": question_id_a,
@@ -155,10 +154,9 @@ def test_generate_follow_up_unauthorized_user():
     assert resp.status_code == 404
 
 
-def test_generate_follow_up_empty_answer():
+def test_generate_follow_up_empty_answer(client, auth_headers):
     """Verify short or empty candidate answer yields should_follow_up=false without provider errors."""
-    token = helper_register_user()
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
 
     interview = client.post(
         "/api/v1/interviews",
@@ -195,11 +193,10 @@ def test_generate_follow_up_empty_answer():
     assert "short" in data["reason"].lower() or "empty" in data["reason"].lower()
 
 
-def test_generate_follow_up_max_limit_reached():
+def test_generate_follow_up_max_limit_reached(client, auth_headers):
     """Verify follow-up depth limit (MAX_FOLLOW_UPS_PER_QUESTION=2) stops follow-up chain."""
-    token = helper_register_user()
-    interview_id, question_id, session_id, answer_id = helper_create_interview_and_session(token)
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
+    interview_id, question_id, session_id, answer_id = helper_create_interview_and_session(client, headers)
 
     # Depth 1 follow-up
     res1 = client.post(
@@ -244,11 +241,10 @@ def test_generate_follow_up_max_limit_reached():
     assert "limit" in res3["reason"].lower()
 
 
-def test_generate_follow_up_provider_failure_handling():
+def test_generate_follow_up_provider_failure_handling(client, auth_headers):
     """Verify AI provider failure returns HTTP 502 Bad Gateway."""
-    token = helper_register_user()
-    interview_id, question_id, session_id, answer_id = helper_create_interview_and_session(token)
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
+    interview_id, question_id, session_id, answer_id = helper_create_interview_and_session(client, headers)
 
     payload = {
         "interview_id": interview_id,
@@ -262,11 +258,10 @@ def test_generate_follow_up_provider_failure_handling():
     assert resp.status_code in [502, 500]
 
 
-def test_generate_follow_up_provider_timeout_handling():
+def test_generate_follow_up_provider_timeout_handling(client, auth_headers):
     """Verify AI provider timeout returns HTTP 504 Gateway Timeout."""
-    token = helper_register_user()
-    interview_id, question_id, session_id, answer_id = helper_create_interview_and_session(token)
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
+    interview_id, question_id, session_id, answer_id = helper_create_interview_and_session(client, headers)
 
     payload = {
         "interview_id": interview_id,
@@ -280,11 +275,10 @@ def test_generate_follow_up_provider_timeout_handling():
     assert resp.status_code in [504, 500]
 
 
-def test_generate_follow_up_db_persistence():
+def test_generate_follow_up_db_persistence(client, auth_headers):
     """Verify follow-up question is persisted to SessionQuestion with correct relationships."""
-    token = helper_register_user()
-    interview_id, question_id, session_id, answer_id = helper_create_interview_and_session(token)
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers
+    interview_id, question_id, session_id, answer_id = helper_create_interview_and_session(client, headers)
 
     payload = {
         "interview_id": interview_id,
@@ -309,3 +303,4 @@ def test_generate_follow_up_db_persistence():
         assert len(session_q.question_text) > 10
     finally:
         db.close()
+

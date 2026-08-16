@@ -29,24 +29,27 @@ def build_question_generation_prompt(interview_meta: Dict[str, Any], number_of_q
         "  ]\n"
         "}\n\n"
         "Generation Guidelines:\n"
-        "1. Match the candidate's job role, domain, difficulty, and experience level.\n"
-        "2. Avoid generic or trivial questions unless difficulty is Easy.\n"
-        "3. Do NOT include answers or solutions in the output.\n"
-        "4. Do NOT include offensive, inappropriate, or unsafe content.\n"
-        "5. Ensure each question is distinct and covers key technical or behavioral competencies."
+        f"1. CRITICAL DOMAIN CONSTRAINT: The selected domain is '{domain}'. ALL generated questions MUST remain strictly within the '{domain}' domain. Do NOT switch to unrelated programming languages, frameworks, or technologies under any circumstances.\n"
+        "2. Match the candidate's job role, difficulty, and experience level.\n"
+        "3. Avoid generic or trivial questions unless difficulty is Easy.\n"
+        "4. Do NOT include answers or solutions in the output.\n"
+        "5. Do NOT include offensive, inappropriate, or unsafe content.\n"
+        "6. Ensure each question is distinct and covers key technical or behavioral competencies."
     )
 
     user_prompt = f"""
 Candidate & Interview Context:
 - Target Job Role: {job_role}
 - Interview Type: {interview_type}
+- Hard Domain Constraint: MUST BE STRICTLY {domain.upper()}
 - Technical Domain: {domain}
 - Difficulty Level: {difficulty}
 - Target Experience Level: {experience_level} Years
 - Mode: {mode}
 - Number of Questions Requested: {number_of_questions}
 
-Generate exactly {number_of_questions} interview questions in the required JSON format:
+Generate exactly {number_of_questions} interview questions strictly within the {domain} domain in the required JSON format:
 """
+
 
     return system_prompt, user_prompt

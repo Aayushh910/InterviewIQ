@@ -81,3 +81,18 @@ def complete_session(db: Session, session_id: str, user_id: str) -> Optional[Int
     db.commit()
     db.refresh(session)
     return session
+
+
+def validate_session_active(session: InterviewSession, max_duration_minutes: float = 4.0) -> bool:
+    """
+    Validate whether an interview session is active and within allowed 4-minute duration.
+    """
+    if not session or session.status in ["completed", "abandoned", "expired"]:
+        return False
+    if session.started_at:
+        elapsed = (datetime.utcnow() - session.started_at).total_seconds()
+        allowed_seconds = (max_duration_minutes * 60) + 30.0
+        if elapsed > allowed_seconds:
+            return False
+    return True
+

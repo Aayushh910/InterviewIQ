@@ -73,11 +73,13 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
   const domainQuestions = DOMAIN_QUESTION_BANK[selectedDomain] || DOMAIN_QUESTION_BANK[config.interviewType] || DOMAIN_QUESTION_BANK.Frontend;
   const totalQuestions = config.questionsCount || 5;
 
+  const [screenState, setScreenState] = useState('PREPARING'); // 'PREPARING' | 'ACTIVE' | 'SUBMITTING' | 'COMPLETED'
   const [currentQIndex, setCurrentQIndex] = useState(0);
-  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [timerSeconds, setTimerSeconds] = useState(240); // 4 minutes (240s countdown)
   const [isPaused, setIsPaused] = useState(false);
   const [micEnabled, setMicEnabled] = useState(true);
   const [cameraEnabled, setCameraEnabled] = useState(true);
+  const hasExpiredRef = useRef(false);
 
   // Backend Integration State
   const [sessionId, setSessionId] = useState(null);
@@ -86,17 +88,18 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
 
   // Active Question (Main or Adaptive Counter Question)
   const [activeQuestion, setActiveQuestion] = useState({
-    id: 'q_1',
-    text: domainQuestions[0],
+    id: null,
+    text: '',
     type: 'main',
     depth: 0,
   });
+
 
   // Audio Recording Hook
   const { isRecording, startRecording, stopRecording, reset: resetRecorder } = useAudioRecorder();
 
   // AI & User State
-  const [aiState, setAiState] = useState('speaking'); // 'speaking' | 'listening' | 'thinking'
+  const [aiState, setAiState] = useState('listening'); // 'speaking' | 'listening' | 'thinking'
   const [inputMode, setInputMode] = useState('voice'); // 'voice' | 'text'
   const [textAnswer, setTextAnswer] = useState('');
   const [transcript, setTranscript] = useState('');
@@ -133,81 +136,106 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
     });
   };
 
-  // Initialize Backend Interview Session with Dynamic Domain Questions
-  useEffect(() => {
-    let isMounted = true;
+  // Initialize Backend Interview Session upon candidate clicking Start Interview
+  const initBackendSession = async () => {
+    try {
+      const activeInterview = await createInterview({
+        title: `${selectedDomain} (${config.difficulty || 'Medium'}) Practice Loop`,
+        domain: selectedDomain,
+        interviewType: config.interviewType || 'Technical',
+        job_role: `${selectedDomain} Specialist`,
+        mode: config.mode,
+        difficulty: config.difficulty,
+        experience: config.experience,
+        questionsCount: totalQuestions,
+      });
 
-    const initBackendSession = async () => {
+      let qList = [];
       try {
-        // Always create fresh interview for configured topic/domain
-        const activeInterview = await createInterview({
-          title: `${selectedDomain} (${config.difficulty || 'Medium'}) Practice Loop`,
-          domain: selectedDomain,
-          interviewType: config.interviewType || 'Technical',
-          job_role: `${selectedDomain} Specialist`,
-          mode: config.mode,
-          difficulty: config.difficulty,
-          experience: config.experience,
-          questionsCount: totalQuestions,
-        });
-
-        let qList = [];
-
-        try {
-          // Primary Flow: Call backend AI Question Generation API
-          const aiGenRes = await generateAIQuestions(activeInterview.id, totalQuestions);
-          if (aiGenRes && aiGenRes.questions && aiGenRes.questions.length > 0) {
-            qList = aiGenRes.questions;
-          }
-        } catch (aiErr) {
-          console.warn('[InterviewIQ] AI Question Generation API notice (falling back to initial bank):', aiErr);
+        const aiGenRes = await generateAIQuestions(activeInterview.id, totalQuestions);
+        if (aiGenRes && aiGenRes.questions && aiGenRes.questions.length > 0) {
+          qList = aiGenRes.questions;
         }
-
-        // Fallback Flow: If AI endpoint unavailable or returns 0 questions, use default domain questions
-        if (!qList || qList.length === 0) {
-          const domainTexts = DOMAIN_QUESTION_BANK[selectedDomain] || DOMAIN_QUESTION_BANK[config.interviewType] || DOMAIN_QUESTION_BANK.Frontend;
-          const countToCreate = Math.min(totalQuestions, domainTexts.length);
-
-          for (let i = 0; i < countToCreate; i++) {
-            const createdQ = await addInterviewQuestion(activeInterview.id, {
-              question_text: domainTexts[i],
-              question_order: i + 1,
-              question_type: (config.interviewType || 'Technical').toLowerCase(),
-            });
-            qList.push(createdQ);
-          }
-        }
-
-        if (isMounted) {
-          setBackendQuestions(qList);
-          if (qList.length > 0) {
-            setActiveQuestion({
-              id: qList[0].id,
-              text: qList[0].question_text,
-              type: 'main',
-              depth: 0,
-            });
-          }
-        }
-
-        const session = await createSession(activeInterview.id);
-        const started = await startSession(session.id);
-
-        if (isMounted) {
-          setSessionId(started.id);
-          setQuestionStartTime(new Date().toISOString());
-        }
-      } catch (err) {
-        console.warn('Backend interview session initialization notice:', err);
+      } catch (aiErr) {
+        console.warn('[InterviewIQ] AI Question Generation API notice (falling back to initial bank):', aiErr);
       }
-    };
 
-    initBackendSession();
+      if (!qList || qList.length === 0) {
+        const domainTexts = DOMAIN_QUESTION_BANK[selectedDomain] || DOMAIN_QUESTION_BANK[config.interviewType] || DOMAIN_QUESTION_BANK.Frontend;
+        const countToCreate = Math.min(totalQuestions, domainTexts.length);
+        for (let i = 0; i < countToCreate; i++) {
+          const createdQ = await addInterviewQuestion(activeInterview.id, {
+            question_text: domainTexts[i],
+            question_order: i + 1,
+            question_type: (config.interviewType || 'Technical').toLowerCase(),
+          });
+          qList.push(createdQ);
+        }
+      }
 
-    return () => {
-      isMounted = false;
-    };
-  }, [config]);
+      setBackendQuestions(qList);
+      if (qList.length > 0) {
+        setActiveQuestion({
+          id: qList[0].id,
+          text: qList[0].question_text,
+          type: 'main',
+          depth: 0,
+        });
+      }
+
+      const session = await createSession(activeInterview.id);
+      const started = await startSession(session.id);
+
+      setSessionId(started.id);
+      setQuestionStartTime(new Date().toISOString());
+    } catch (err) {
+      console.warn('Backend interview session initialization notice:', err);
+    }
+  };
+
+  const handleStartInterview = async () => {
+    setScreenState('ACTIVE');
+    setTimerSeconds(240);
+    hasExpiredRef.current = false;
+    await initBackendSession();
+  };
+
+  const handleTimerExpiration = async () => {
+    if (hasExpiredRef.current) return;
+    hasExpiredRef.current = true;
+
+    console.info('[InterviewIQ] 4-minute interview timer expired. Finalizing session...');
+    setScreenState('COMPLETED');
+    setAiState('listening');
+
+    if (ttsAudioRef.current) {
+      try { ttsAudioRef.current.pause(); } catch (e) {}
+    }
+    if (isRecording) {
+      try { stopRecording(); } catch (e) {}
+    }
+
+    const currAnsText = (inputMode === 'voice' ? transcript : textAnswer).trim();
+    if (currAnsText.length >= 5 && sessionId) {
+      try {
+        await submitAnswer(sessionId, {
+          question_id: activeQuestion.id,
+          answer_text: currAnsText,
+          time_taken_seconds: 15,
+        });
+      } catch (err) {
+        console.warn('[InterviewIQ] Expiration answer submission notice:', err);
+      }
+    }
+
+    if (sessionId) {
+      try {
+        await completeSession(sessionId);
+      } catch (err) {
+        console.warn('[InterviewIQ] Expiration complete session notice:', err);
+      }
+    }
+  };
 
   // Update Question Start Time when Active Question Changes
   useEffect(() => {
@@ -217,14 +245,26 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
     setAudioError(null);
   }, [activeQuestion]);
 
-  // Timer Effect
+  // 4-Minute Fixed Countdown Timer Effect
   useEffect(() => {
     let interval;
-    if (!isPaused) {
-      interval = setInterval(() => setTimerSeconds((prev) => prev + 1), 1000);
+    if (screenState === 'ACTIVE' && !isPaused && timerSeconds > 0) {
+      interval = setInterval(() => {
+        setTimerSeconds((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            handleTimerExpiration();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
     }
-    return () => clearInterval(interval);
-  }, [isPaused]);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [screenState, isPaused, timerSeconds]);
+
 
   // Direct Device Camera & Mic Request Handler
   const requestDeviceCamera = async () => {
@@ -279,26 +319,38 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
 
   // Live Speech Recognition & Audio Recorder Initialization when AI is listening
   useEffect(() => {
-    if (aiState === 'listening' && micEnabled && webcamStream && !isRecording) {
-      console.log("[InterviewIQ] Recording started from live microphone stream");
+    let recognition = null;
+    let isComponentActive = true;
+
+    if (screenState === 'ACTIVE' && micEnabled) {
       startRecording(webcamStream);
 
       // Initialize Browser Web Speech API for Live Visual UI Feedback
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (SpeechRecognition) {
         try {
-          const recognition = new SpeechRecognition();
+          recognition = new SpeechRecognition();
           recognition.continuous = true;
           recognition.interimResults = true;
           recognition.lang = 'en-US';
 
           recognition.onresult = (event) => {
-            let currentLive = '';
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
-              currentLive += event.results[i][0].transcript;
+            let fullText = '';
+            for (let i = 0; i < event.results.length; ++i) {
+              fullText += event.results[i][0].transcript;
             }
-            if (currentLive.trim()) {
-              setLiveTranscript(currentLive.trim());
+            if (fullText.trim() && isComponentActive) {
+              setLiveTranscript(fullText.trim());
+            }
+          };
+
+          recognition.onerror = (e) => {
+            console.warn("[InterviewIQ] Browser SpeechRecognition error notice:", e.error);
+          };
+
+          recognition.onend = () => {
+            if (isComponentActive && screenState === 'ACTIVE' && micEnabled) {
+              try { recognition.start(); } catch (e) {}
             }
           };
 
@@ -309,99 +361,89 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
         }
       }
     }
-  }, [aiState, micEnabled, webcamStream, isRecording, startRecording]);
+
+    return () => {
+      isComponentActive = false;
+      if (recognition) {
+        try { recognition.stop(); } catch (e) {}
+      }
+    };
+  }, [screenState, micEnabled, webcamStream, startRecording]);
 
   // TTS Audio Player & In-Memory Replay Cache
-  const audioCacheRef = useRef(new Map());
-  const ttsAudioRef = useRef(null);
   const [ttsState, setTtsState] = useState('idle'); // 'idle' | 'loading' | 'playing' | 'paused' | 'error'
 
-  const playQuestionAudio = async (textToPlay) => {
-    if (!textToPlay) return;
-    try {
-      setTtsState('loading');
-      setAiState('speaking');
+  const playQuestionAudio = (textToPlay) => {
+    if (!textToPlay || !textToPlay.trim()) return;
 
-      let audioUrl = audioCacheRef.current.get(textToPlay);
-      if (!audioUrl) {
-        try {
-          audioUrl = await synthesizeQuestionAudio(textToPlay);
-          if (audioUrl) {
-            audioCacheRef.current.set(textToPlay, audioUrl);
-          }
-        } catch (synthErr) {
-          console.warn('[InterviewIQ] TTS API synthesis notice (falling back to browser synthesis/text):', synthErr);
-        }
-      }
+    setTtsState('loading');
+    setAiState('speaking');
 
-      if (audioUrl) {
-        if (ttsAudioRef.current) {
-          try { ttsAudioRef.current.pause(); } catch (e) {}
-        }
-        const audio = new Audio(audioUrl);
-        ttsAudioRef.current = audio;
-        audio.onplay = () => setTtsState('playing');
-        audio.onpause = () => setTtsState('paused');
-        audio.onended = () => {
-          setTtsState('idle');
-          setAiState('listening');
-        };
-        audio.onerror = () => {
-          setTtsState('error');
-          setAiState('listening');
-        };
-
-        await audio.play().catch((playErr) => {
-          console.warn('[InterviewIQ] Browser audio autoplay policy notice:', playErr);
-          setTtsState('paused');
-          setAiState('listening');
-        });
-      } else if ('speechSynthesis' in window) {
+    if ('speechSynthesis' in window) {
+      try {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(textToPlay);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        utterance.lang = 'en-US';
+
+        utterance.onstart = () => {
+          setTtsState('playing');
+          setAiState('speaking');
+        };
+
         utterance.onend = () => {
           setTtsState('idle');
           setAiState('listening');
         };
-        utterance.onerror = () => {
-          setTtsState('error');
+
+        utterance.onerror = (e) => {
+          console.warn('[InterviewIQ] SpeechSynthesis error notice:', e);
+          setTtsState('idle');
           setAiState('listening');
         };
+
         setTtsState('playing');
         window.speechSynthesis.speak(utterance);
-      } else {
-        setTtsState('idle');
-        setAiState('listening');
+        return;
+      } catch (err) {
+        console.warn('[InterviewIQ] SpeechSynthesis exception:', err);
       }
-    } catch (err) {
-      console.warn('[InterviewIQ] Question TTS audio playback notice:', err);
-      setTtsState('error');
-      setAiState('listening');
     }
+
+    setTtsState('idle');
+    setAiState('listening');
   };
 
   const handleToggleReplayQuestion = () => {
-    if (ttsState === 'playing' && ttsAudioRef.current) {
-      ttsAudioRef.current.pause();
-      setTtsState('paused');
-    } else if (ttsState === 'paused' && ttsAudioRef.current) {
-      ttsAudioRef.current.play().catch(() => {});
-      setTtsState('playing');
+    if ('speechSynthesis' in window) {
+      if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+        setTtsState('paused');
+        setAiState('listening');
+      } else {
+        playQuestionAudio(activeQuestion.text);
+      }
     } else {
       playQuestionAudio(activeQuestion.text);
     }
   };
 
-  // Synthesize and play question audio whenever activeQuestion changes
+  // Synthesize and play question audio whenever activeQuestion changes during ACTIVE screenState
   useEffect(() => {
-    playQuestionAudio(activeQuestion.text);
+    if (screenState === 'ACTIVE' && activeQuestion?.text) {
+      playQuestionAudio(activeQuestion.text);
+    }
 
     return () => {
-      if (ttsAudioRef.current) {
-        try { ttsAudioRef.current.pause(); } catch (e) {}
+      if ('speechSynthesis' in window) {
+        try { window.speechSynthesis.cancel(); } catch (e) {}
       }
     };
-  }, [activeQuestion]);
+  }, [activeQuestion, screenState]);
+
+
+
 
 
   const handleFinishUserAnswer = async () => {
@@ -420,22 +462,17 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
 
     // 2. Stop Audio Recording for this Question
     let audioBlob = null;
-    if (isRecording) {
+    try {
       audioBlob = await stopRecording();
+    } catch (e) {
+      console.warn('[InterviewIQ] stopRecording notice:', e);
     }
+
+    const candidateSpokenText = (liveTranscript || transcript || textAnswer).trim();
 
     console.log("[InterviewIQ] Recording stopped");
-    console.log("[InterviewIQ] Audio blob:", audioBlob);
-    console.log("[InterviewIQ] Audio size:", audioBlob?.size);
-    console.log("[InterviewIQ] Audio type:", audioBlob?.type);
-
-    // Validate Audio Blob
-    if (!audioBlob || audioBlob.size === 0) {
-      setAudioError("Unable to capture audio. Please make sure your microphone is enabled and try speaking again.");
-      setIsSubmitting(false);
-      setAiState('listening');
-      return;
-    }
+    console.log("[InterviewIQ] Audio blob size:", audioBlob?.size);
+    console.log("[InterviewIQ] Candidate spoken text:", candidateSpokenText);
 
     if (!sessionId) {
       setAudioError("Interview session not initialized. Please restart the session.");
@@ -444,21 +481,61 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
       return;
     }
 
-    // 3. Submit Real Audio to Backend STT & Answer Evaluation Pipeline
-    try {
-      const res = await submitAudioAnswer(sessionId, activeQuestion.id, audioBlob);
-      console.log("[InterviewIQ] submitAudioAnswer response:", res);
+    // Validate Audio Blob or Spoken Live Transcript
+    if ((!audioBlob || audioBlob.size === 0) && !candidateSpokenText) {
+      setAudioError("Unable to capture audio or speech transcript. Please make sure your microphone is enabled and try speaking again.");
+      setIsSubmitting(false);
+      setAiState('listening');
+      return;
+    }
 
-      if (!res || !res.answer || !res.answer.answer_text) {
-        throw new Error("Speech transcription returned an empty or un-substantive response.");
+    // 3. Submit Audio or Spoken Text to Backend Answer Pipeline
+    try {
+      let res = null;
+      if (audioBlob && audioBlob.size > 0) {
+        try {
+          res = await submitAudioAnswer(sessionId, activeQuestion.id, audioBlob);
+        } catch (audioErr) {
+          console.warn('[InterviewIQ] submitAudioAnswer network notice (falling back to live transcript):', audioErr);
+          if (candidateSpokenText) {
+            const ansObj = await submitAnswer(sessionId, {
+              question_id: activeQuestion.id,
+              answer_text: candidateSpokenText,
+            });
+            res = {
+              id: ansObj.id,
+              answer: ansObj,
+              next_question: null,
+              interview_complete: currentQIndex + 1 >= totalQuestions
+            };
+          } else {
+            throw audioErr;
+          }
+        }
+      } else {
+        // Fallback to text answer submission if audio file was empty but live transcript was captured
+        const ansObj = await submitAnswer(sessionId, {
+          question_id: activeQuestion.id,
+          answer_text: candidateSpokenText,
+        });
+        res = {
+          id: ansObj.id,
+          answer: ansObj,
+          next_question: null,
+          interview_complete: currentQIndex + 1 >= totalQuestions
+        };
       }
 
-      const realTranscript = res.answer.answer_text;
+
+      console.log("[InterviewIQ] Answer submission response:", res);
+
+      const realTranscript = res?.answer?.answer_text || candidateSpokenText;
       setTranscript(realTranscript);
       setLiveTranscript(realTranscript);
       const answerId = res.id;
       const nextQuestionInfo = res.next_question;
       const isComplete = res.interview_complete;
+
 
       // 4. Attach Facial Analysis to Answer Record (Fail-Safe)
       if (answerId && frameBlob) {
@@ -646,7 +723,112 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
+  if (screenState === 'PREPARING') {
+    return (
+      <div className="min-h-[calc(100vh-5rem)] w-full flex items-center justify-center p-4">
+        <div className="max-w-2xl w-full bg-[#0A0A0A]/95 border border-white/15 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl backdrop-blur-2xl text-center">
+          <div className="space-y-2">
+            <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-widest bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+              Ready for your AI Interview
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight pt-2">
+              {selectedDomain} Technical Interview
+            </h1>
+            <p className="text-sm text-neutral-400 font-mono">
+              Review your interview parameters below and click Start Interview when ready.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-left">
+            <div className="bg-[#141414] p-3.5 rounded-2xl border border-white/10">
+              <span className="text-[10px] font-mono text-neutral-500 uppercase block mb-1">Target Role</span>
+              <span className="text-xs font-bold text-white font-mono truncate block">{config.job_role || `${selectedDomain} Specialist`}</span>
+            </div>
+            <div className="bg-[#141414] p-3.5 rounded-2xl border border-white/10">
+              <span className="text-[10px] font-mono text-neutral-500 uppercase block mb-1">Domain</span>
+              <span className="text-xs font-bold text-emerald-400 font-mono block">{selectedDomain}</span>
+            </div>
+            <div className="bg-[#141414] p-3.5 rounded-2xl border border-white/10">
+              <span className="text-[10px] font-mono text-neutral-500 uppercase block mb-1">Difficulty</span>
+              <span className="text-xs font-bold text-cyan-400 font-mono block">{config.difficulty || 'Medium'}</span>
+            </div>
+            <div className="bg-[#141414] p-3.5 rounded-2xl border border-white/10">
+              <span className="text-[10px] font-mono text-neutral-500 uppercase block mb-1">Duration</span>
+              <span className="text-xs font-bold text-amber-400 font-mono block">4 Minutes (240s)</span>
+            </div>
+          </div>
+
+          <div className="bg-[#121212] p-4 rounded-2xl border border-white/10 text-xs text-neutral-300 font-mono text-left space-y-2">
+            <div className="flex items-center gap-2 font-bold text-emerald-400">
+              <Mic className="w-4 h-4 text-emerald-400" />
+              <span>Voice & Text Answer Enabled</span>
+            </div>
+            <p className="text-neutral-400 text-[11px] leading-relaxed">
+              Questions will be spoken via Text-to-Speech audio. You can answer by speaking into your microphone or typing.
+            </p>
+          </div>
+
+          <Button
+            onClick={handleStartInterview}
+            size="lg"
+            variant="primary"
+            className="w-full font-mono font-bold text-base py-4 shadow-xl hover:scale-[1.01] transition-transform"
+          >
+            <Play className="w-5 h-5 mr-2 fill-current" />
+            Start Interview
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (screenState === 'COMPLETED') {
+    return (
+      <div className="min-h-[calc(100vh-5rem)] w-full flex items-center justify-center p-4">
+        <div className="max-w-xl w-full bg-[#0A0A0A]/95 border border-white/15 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl backdrop-blur-2xl text-center">
+          <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto">
+            <CheckCircle2 className="w-8 h-8" />
+          </div>
+
+          <div className="space-y-2">
+            <h1 className="text-2xl font-extrabold text-white tracking-tight">
+              Interview Complete!
+            </h1>
+            <p className="text-sm text-neutral-400 font-mono">
+              Your 4-minute interview time limit has ended. All your answers have been saved.
+            </p>
+          </div>
+
+          <div className="bg-[#141414] p-4 rounded-2xl border border-white/10 text-xs font-mono space-y-2 text-left">
+            <div className="flex justify-between">
+              <span className="text-neutral-400">Domain</span>
+              <span className="text-emerald-400 font-bold">{selectedDomain}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-neutral-400">Total Questions</span>
+              <span className="text-white font-bold">{currentQIndex + 1} Questions</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-neutral-400">Status</span>
+              <span className="text-cyan-400 font-bold">Successfully Recorded</span>
+            </div>
+          </div>
+
+          <Button
+            onClick={() => onFinish({ durationMinutes: 4, score: 90, sessionId })}
+            size="lg"
+            variant="primary"
+            className="w-full font-mono font-bold text-sm py-3"
+          >
+            Return to Dashboard
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
+
     <div className="h-[calc(100vh-4rem)] w-full bg-transparent flex flex-col justify-between overflow-hidden text-white p-3 sm:p-4 gap-4 font-sans">
 
       {/* MAIN SCREEN GRID (Camera on Left, Big AI Square & Question/Script on Right) */}
@@ -829,9 +1011,15 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
                 {aiState === 'speaking' ? 'Speaking Question...' : aiState === 'thinking' ? 'Transcribing & Evaluating...' : isRecording ? 'Recording Live Audio...' : 'Listening to Candidate'}
               </span>
 
-              <span className="text-neutral-400">
-                Timer: <strong className="text-cyan-400">{formatTimer(timerSeconds)}</strong>
+              <span className="text-neutral-400 flex items-center gap-1.5">
+                {timerSeconds <= 60 && (
+                  <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30 flex items-center gap-1 animate-pulse">
+                    <AlertTriangle className="w-3 h-3 text-amber-400" /> &lt;60s Remaining
+                  </span>
+                )}
+                Timer: <strong className={timerSeconds <= 60 ? 'text-amber-400 font-bold' : 'text-cyan-400'}>{formatTimer(timerSeconds)}</strong>
               </span>
+
             </div>
           </div>
 

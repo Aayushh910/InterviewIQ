@@ -22,8 +22,10 @@ class GroqProvider(BaseAIProvider):
         self,
         api_key: Optional[str] = None,
         model: Optional[str] = None,
-        timeout: Optional[float] = None
+        timeout: Optional[float] = None,
+        **kwargs
     ):
+
         self.api_key = api_key or settings.AI_API_KEY
         self.model = model or settings.AI_MODEL or "llama-3.3-70b-versatile"
         self.timeout = timeout or settings.AI_TIMEOUT_SECONDS or 15.0
