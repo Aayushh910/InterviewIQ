@@ -42,6 +42,7 @@ def generate_and_store_interview_questions(
         "domain": interview.domain or interview.interview_type or "General",
         "difficulty": interview.difficulty or "Medium",
         "experience_level": interview.experience_level or "2+",
+        "counter_questions": getattr(interview, "counter_questions", True),
         "question_count": number_of_questions
     }
 

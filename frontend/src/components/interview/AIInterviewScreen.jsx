@@ -21,56 +21,12 @@ import {
   synthesizeQuestionAudio,
 } from '../../services/interviewService';
 import { useAudioRecorder } from '../../hooks/useAudioRecorder';
+import { useFaceDetection } from '../../hooks/useFaceDetection';
+import { FaceDetectionOverlay } from './FaceDetectionOverlay';
 
-
-// Dynamic Topic & Domain Question Bank
-const DOMAIN_QUESTION_BANK = {
-  Frontend: [
-    "Can you explain how React's Virtual DOM diffing algorithm works under the hood?",
-    "How do you optimize state normalization and memory leak prevention in complex React applications?",
-    "What are the trade-offs between Client-Side Rendering (CSR), Server-Side Rendering (SSR), and Static Site Generation (SSG) in Next.js?",
-    "How does the JavaScript event loop handle macro-tasks versus micro-tasks when dealing with Promises and setTimeout?",
-    "Describe your strategy for optimizing Core Web Vitals (LCP, INP, CLS) in a high-traffic web application.",
-  ],
-  Backend: [
-    "How do you design a high-concurrency microservice with rate-limiting and circuit breaker resilience?",
-    "What are the trade-offs between REST APIs, gRPC, and GraphQL for microservice communication?",
-    "How do you handle database indexing, query optimization, and connection pooling in PostgreSQL when handling millions of records?",
-    "Can you explain Python's Global Interpreter Lock (GIL) and how async/await differs from multi-processing in FastAPI?",
-    "Describe your approach to implementing distributed caching using Redis and cache invalidation strategies.",
-  ],
-  'Data Science': [
-    "Can you explain the bias-variance trade-off and how regularization (L1/L2) helps prevent overfitting?",
-    "How do gradient descent optimization algorithms like Adam and SGD differ in convergence speed and local minima traps?",
-    "Describe your approach to feature selection and handling imbalanced datasets in classification models.",
-    "What are the key differences between Convolutional Neural Networks (CNNs) and Transformer architectures for sequential data?",
-    "How do you evaluate model drift and maintain continuous integration for machine learning models in production?",
-  ],
-  DevOps: [
-    "How do you design an automated CI/CD deployment pipeline with zero-downtime blue/green deployments?",
-    "Can you explain Kubernetes pod lifecycle, container resource limits, and Horizontal Pod Autoscaling (HPA)?",
-    "How do you enforce Infrastructure as Code (IaC) using Terraform while maintaining state file security?",
-    "Describe your strategy for monitoring, centralized logging, and incident alerting in a distributed cloud environment.",
-    "How do you handle secrets management and zero-trust IAM security policies across cloud infrastructure?",
-  ],
-  Behavioral: [
-    "Tell me about a time you had a technical disagreement with a teammate and how you resolved it using the STAR method.",
-    "Where do you see your technical leadership trajectory over the next 3 to 5 years?",
-    "Describe a project that failed or missed deadlines, and what key trade-offs you learned from it.",
-    "How do you prioritize competing requests from product managers vs technical debt refactoring?",
-    "Tell me about a time you took initiative to mentor a junior developer or improve team engineering practices.",
-  ],
-  HR: [
-    "Tell me about a time you had a technical disagreement with a teammate and how you resolved it using the STAR method.",
-    "Where do you see your technical leadership trajectory over the next 3 to 5 years?",
-    "Describe a project that failed or missed deadlines, and what key trade-offs you learned from it.",
-    "How do you prioritize competing requests from product managers vs technical debt refactoring?",
-  ]
-};
 
 export const AIInterviewScreen = ({ config, onFinish }) => {
   const selectedDomain = config.domain || config.interviewType || 'Frontend';
-  const domainQuestions = DOMAIN_QUESTION_BANK[selectedDomain] || DOMAIN_QUESTION_BANK[config.interviewType] || DOMAIN_QUESTION_BANK.Frontend;
   const totalQuestions = config.questionsCount || 5;
 
   const [screenState, setScreenState] = useState('PREPARING'); // 'PREPARING' | 'ACTIVE' | 'SUBMITTING' | 'COMPLETED'
@@ -79,6 +35,8 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
   const [isPaused, setIsPaused] = useState(false);
   const [micEnabled, setMicEnabled] = useState(true);
   const [cameraEnabled, setCameraEnabled] = useState(true);
+  const [isInitializingSession, setIsInitializingSession] = useState(false);
+  const [sessionInitError, setSessionInitError] = useState(null);
   const hasExpiredRef = useRef(false);
 
   // Backend Integration State
@@ -115,6 +73,13 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
   const videoRef = useRef(null);
   const recognitionRef = useRef(null);
 
+  // Real-Time In-Browser Face Detection Hook
+  const faceData = useFaceDetection(videoRef, {
+    isEnabled: cameraEnabled && !!webcamStream,
+    isMirrored,
+    intervalMs: 120,
+  });
+
   // Helper to capture a frame from the live video stream for Facial Analysis
   const captureCameraFrameBlob = () => {
     return new Promise((resolve) => {
@@ -138,65 +103,54 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
 
   // Initialize Backend Interview Session upon candidate clicking Start Interview
   const initBackendSession = async () => {
+    setIsInitializingSession(true);
+    setSessionInitError(null);
     try {
       const activeInterview = await createInterview({
         title: `${selectedDomain} (${config.difficulty || 'Medium'}) Practice Loop`,
         domain: selectedDomain,
         interviewType: config.interviewType || 'Technical',
-        job_role: `${selectedDomain} Specialist`,
-        mode: config.mode,
-        difficulty: config.difficulty,
-        experience: config.experience,
+        job_role: config.job_role || `${selectedDomain} Engineer`,
+        mode: config.mode || 'General',
+        difficulty: config.difficulty || 'Medium',
+        experience: config.experience || '2+',
         questionsCount: totalQuestions,
+        counterQuestions: config.counterQuestions !== false,
       });
 
-      let qList = [];
-      try {
-        const aiGenRes = await generateAIQuestions(activeInterview.id, totalQuestions);
-        if (aiGenRes && aiGenRes.questions && aiGenRes.questions.length > 0) {
-          qList = aiGenRes.questions;
-        }
-      } catch (aiErr) {
-        console.warn('[InterviewIQ] AI Question Generation API notice (falling back to initial bank):', aiErr);
-      }
+      const aiGenRes = await generateAIQuestions(activeInterview.id, totalQuestions);
+      const qList = aiGenRes?.questions || [];
 
       if (!qList || qList.length === 0) {
-        const domainTexts = DOMAIN_QUESTION_BANK[selectedDomain] || DOMAIN_QUESTION_BANK[config.interviewType] || DOMAIN_QUESTION_BANK.Frontend;
-        const countToCreate = Math.min(totalQuestions, domainTexts.length);
-        for (let i = 0; i < countToCreate; i++) {
-          const createdQ = await addInterviewQuestion(activeInterview.id, {
-            question_text: domainTexts[i],
-            question_order: i + 1,
-            question_type: (config.interviewType || 'Technical').toLowerCase(),
-          });
-          qList.push(createdQ);
-        }
+        throw new Error('AI Question Generator returned empty question set. Please retry.');
       }
 
       setBackendQuestions(qList);
-      if (qList.length > 0) {
-        setActiveQuestion({
-          id: qList[0].id,
-          text: qList[0].question_text,
-          type: 'main',
-          depth: 0,
-        });
-      }
+      setActiveQuestion({
+        id: qList[0].id,
+        text: qList[0].question_text,
+        type: 'main',
+        depth: 0,
+      });
 
       const session = await createSession(activeInterview.id);
       const started = await startSession(session.id);
 
       setSessionId(started.id);
       setQuestionStartTime(new Date().toISOString());
+      setScreenState('ACTIVE');
+      setTimerSeconds(240);
+      hasExpiredRef.current = false;
     } catch (err) {
-      console.warn('Backend interview session initialization notice:', err);
+      console.error('[InterviewIQ] Dynamic AI question generation failed:', err);
+      const errMsg = err?.response?.data?.detail || err?.message || 'Failed to initialize AI question generator.';
+      setSessionInitError(`Question Generation Notice: ${errMsg}`);
+    } finally {
+      setIsInitializingSession(false);
     }
   };
 
   const handleStartInterview = async () => {
-    setScreenState('ACTIVE');
-    setTimerSeconds(240);
-    hasExpiredRef.current = false;
     await initBackendSession();
   };
 
@@ -587,14 +541,16 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
           setIsSubmitting(false);
         } else {
           const nextIdx = currentQIndex + 1;
-          const nextQ = backendQuestions[nextIdx % backendQuestions.length] || { id: `q_${nextIdx + 1}`, question_text: domainQuestions[nextIdx % domainQuestions.length] };
-          setCurrentQIndex(nextIdx);
-          setActiveQuestion({
-            id: nextQ.id,
-            text: nextQ.question_text,
-            type: 'main',
-            depth: 0,
-          });
+          if (nextIdx < backendQuestions.length) {
+            const nextQ = backendQuestions[nextIdx];
+            setCurrentQIndex(nextIdx);
+            setActiveQuestion({
+              id: nextQ.id,
+              text: nextQ.question_text,
+              type: 'main',
+              depth: 0,
+            });
+          }
           setTranscript('');
           setLiveTranscript('');
           setIsSubmitting(false);
@@ -673,14 +629,16 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
           setIsSubmitting(false);
         } else {
           const nextIdx = currentQIndex + 1;
-          const nextQ = backendQuestions[nextIdx % backendQuestions.length] || { id: `q_${nextIdx + 1}`, question_text: domainQuestions[nextIdx % domainQuestions.length] };
-          setCurrentQIndex(nextIdx);
-          setActiveQuestion({
-            id: nextQ.id,
-            text: nextQ.question_text,
-            type: 'main',
-            depth: 0,
-          });
+          if (nextIdx < backendQuestions.length) {
+            const nextQ = backendQuestions[nextIdx];
+            setCurrentQIndex(nextIdx);
+            setActiveQuestion({
+              id: nextQ.id,
+              text: nextQ.question_text,
+              type: 'main',
+              depth: 0,
+            });
+          }
           setTranscript('');
           setTextAnswer('');
           setIsSubmitting(false);
@@ -707,13 +665,15 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
     setTranscript('');
     setLiveTranscript('');
     setAudioError(null);
-    const firstQ = backendQuestions[0] || { id: 'q_1', question_text: domainQuestions[0] };
-    setActiveQuestion({
-      id: firstQ.id,
-      text: firstQ.question_text,
-      type: 'main',
-      depth: 0,
-    });
+    if (backendQuestions.length > 0) {
+      const firstQ = backendQuestions[0];
+      setActiveQuestion({
+        id: firstQ.id,
+        text: firstQ.question_text,
+        type: 'main',
+        depth: 0,
+      });
+    }
     setAiState('speaking');
   };
 
@@ -738,7 +698,7 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
               {selectedDomain} Technical Interview
             </h1>
             <p className="text-xs sm:text-sm text-neutral-400 font-sans max-w-lg mx-auto">
-              Review your interview configuration below. Click <strong className="text-emerald-400 font-mono">Start Interview</strong> when you are ready to speak with the AI evaluator.
+              Review your interview configuration below. Click <strong className="text-emerald-400 font-mono">Start Interview</strong> to generate dynamic AI questions tailored to your domain and difficulty.
             </p>
           </div>
 
@@ -756,10 +716,16 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
               <span className="text-xs font-bold text-cyan-400 font-mono block">{config.difficulty || 'Medium'}</span>
             </div>
             <div className="bg-[#141416]/80 p-3.5 rounded-2xl border border-white/10 shadow-lg">
-              <span className="text-[10px] font-mono text-neutral-500 uppercase block mb-1">Time Limit</span>
-              <span className="text-xs font-bold text-amber-400 font-mono block">4 Minutes (240s)</span>
+              <span className="text-[10px] font-mono text-neutral-500 uppercase block mb-1">Experience</span>
+              <span className="text-xs font-bold text-amber-400 font-mono block">{config.experience || '2+'} Yrs</span>
             </div>
           </div>
+
+          {sessionInitError && (
+            <div className="p-3.5 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono text-left">
+              {sessionInitError}
+            </div>
+          )}
 
           <div className="bg-[#141416]/80 p-4 rounded-2xl border border-white/10 text-xs text-neutral-300 font-mono text-left space-y-2 relative z-10">
             <div className="flex items-center gap-2 font-bold text-emerald-400">
@@ -775,10 +741,12 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
             onClick={handleStartInterview}
             size="lg"
             variant="primary"
+            loading={isInitializingSession}
+            disabled={isInitializingSession}
             className="w-full font-mono font-bold text-base py-4 shadow-2xl hover:scale-[1.01] transition-transform bg-gradient-to-r from-emerald-500 to-cyan-500 text-black border-none"
           >
             <Play className="w-5 h-5 mr-2 fill-current" />
-            Start Interview
+            {isInitializingSession ? 'Generating Custom AI Questions via Groq...' : 'Start Interview'}
           </Button>
         </div>
       </div>
@@ -962,6 +930,14 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
                     </button>
                   </div>
                 )}
+
+                {/* Real-Time Facial HUD Detection & Proctoring Overlay */}
+                {cameraEnabled && webcamStream && (
+                  <FaceDetectionOverlay
+                    {...faceData}
+                    isCameraOn={cameraEnabled && !!webcamStream}
+                  />
+                )}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center text-neutral-500 space-y-2">
@@ -970,7 +946,7 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
               </div>
             )}
 
-            {/* Live Camera Status Badge at Top Left */}
+            {/* Live Camera & Face Status Badges at Top Left */}
             <div className="absolute top-3 left-3 z-20 flex items-center gap-2 font-mono text-[10px]">
               <span className="px-2.5 py-1 rounded-lg bg-black/75 backdrop-blur-md border border-white/15 text-emerald-400 font-bold flex items-center gap-1.5 shadow-md">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />

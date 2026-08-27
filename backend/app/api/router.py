@@ -1,11 +1,12 @@
 from fastapi import APIRouter
-from app.api import auth, interviews, answers, analysis, speech, evaluation, ai, multimodal, analytics
+from app.api import auth, interviews, answers, analysis, speech, evaluation, ai, multimodal, analytics, resumes
 
 api_router = APIRouter(prefix="/api/v1")
 
 # Mount API routers
 api_router.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 api_router.include_router(interviews.router, prefix="/interviews", tags=["interviews"])
+api_router.include_router(resumes.router, tags=["Resumes"])
 api_router.include_router(answers.router, tags=["answers"])
 api_router.include_router(analysis.router, prefix="/analysis", tags=["analysis"])
 api_router.include_router(speech.router, prefix="/analysis/speech", tags=["speech"])

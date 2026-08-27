@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.schemas.user import UserCreate, UserResponse
-from app.schemas.auth import LoginRequest, Token
-from app.services.auth_service import register_user, authenticate_user, build_token_response
+from app.schemas.auth import LoginRequest, Token, ResetPasswordRequest
+from app.services.auth_service import register_user, authenticate_user, build_token_response, reset_user_password
 from app.api.deps import get_current_user
 from app.models.user import User
 
@@ -34,6 +34,15 @@ def login(login_in: LoginRequest, db: Session = Depends(get_db)):
     Authenticate user credentials and return JWT access token.
     """
     user = authenticate_user(db, login_in.email, login_in.password)
+    return build_token_response(user)
+
+
+@router.post("/reset-password", response_model=Token)
+def reset_password(reset_in: ResetPasswordRequest, db: Session = Depends(get_db)):
+    """
+    Reset user password and return new JWT access token.
+    """
+    user = reset_user_password(db, reset_in.email, reset_in.password)
     return build_token_response(user)
 
 

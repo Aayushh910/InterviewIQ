@@ -49,54 +49,61 @@ class GroqProvider(BaseAIProvider):
             "Content-Type": "application/json"
         }
 
-        payload: Dict[str, Any] = {
-            "model": self.model,
-            "messages": [
-                {"role": "system", "content": sys_prompt},
-                {"role": "user", "content": prompt}
-            ],
-            "temperature": 0.3
-        }
+        candidate_models = [self.model, "openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"]
+        # Deduplicate preserving order
+        candidate_models = list(dict.fromkeys(candidate_models))
 
-        if json_mode:
-            payload["response_format"] = {"type": "json_object"}
-
-        try:
-            logger.info(f"Initiating Groq API completion request (model: '{self.model}', timeout: {self.timeout}s)")
-            with httpx.Client(timeout=self.timeout) as client:
-                resp = client.post(self.GROQ_API_URL, headers=headers, json=payload)
-
-            if resp.status_code == 401:
-                logger.error("Groq API authentication failure (HTTP 401)")
-                raise AIProviderError("Groq API authentication failed. Invalid API key.")
-
-            if resp.status_code == 429:
-                logger.error("Groq API rate limit exceeded (HTTP 429)")
-                raise AIProviderError("Groq API rate limit exceeded. Please try again shortly.")
-
-            if resp.status_code != 200:
-                logger.error(f"Groq API error HTTP {resp.status_code}: {resp.text}")
-                raise AIProviderError(f"Groq API returned HTTP status {resp.status_code}")
-
-            data = resp.json()
-            content = data["choices"][0]["message"]["content"]
+        last_error = None
+        for current_model in candidate_models:
+            payload: Dict[str, Any] = {
+                "model": current_model,
+                "messages": [
+                    {"role": "system", "content": sys_prompt},
+                    {"role": "user", "content": prompt}
+                ],
+                "temperature": 0.3
+            }
 
             if json_mode:
-                try:
-                    parsed = json.loads(content)
-                    return parsed
-                except json.JSONDecodeError as e:
-                    logger.error(f"Failed to parse JSON response from Groq API: {e}")
-                    raise AIValidationError("Groq AI provider returned invalid non-JSON output.")
+                payload["response_format"] = {"type": "json_object"}
 
-            return {"raw_text": content}
+            try:
+                logger.info(f"Initiating Groq API completion request (model: '{current_model}', timeout: {self.timeout}s)")
+                with httpx.Client(timeout=self.timeout) as client:
+                    resp = client.post(self.GROQ_API_URL, headers=headers, json=payload)
 
-        except httpx.TimeoutException:
-            logger.error(f"Groq API request timed out after {self.timeout}s")
-            raise AIProviderTimeoutError(f"Groq AI provider timed out after {self.timeout} seconds.")
-        except httpx.RequestError as e:
-            logger.error(f"Network error communicating with Groq API: {e}")
-            raise AIProviderError("Network connection to Groq AI provider failed.")
+                if resp.status_code == 401:
+                    logger.error("Groq API authentication failure (HTTP 401)")
+                    raise AIProviderError("Groq API authentication failed. Invalid API key.")
+
+                if resp.status_code == 429:
+                    logger.error("Groq API rate limit exceeded (HTTP 429)")
+                    raise AIProviderError("Groq API rate limit exceeded. Please try again shortly.")
+
+                if resp.status_code != 200:
+                    logger.warning(f"Groq API model '{current_model}' returned HTTP {resp.status_code}: {resp.text}. Trying next model...")
+                    last_error = f"HTTP {resp.status_code}: {resp.text}"
+                    continue
+
+                data = resp.json()
+                content = data["choices"][0]["message"]["content"]
+
+                if json_mode:
+                    try:
+                        parsed = json.loads(content)
+                        return parsed
+                    except json.JSONDecodeError as e:
+                        logger.error(f"Failed to parse JSON response from Groq API: {e}")
+                        raise AIValidationError("Groq AI provider returned invalid non-JSON output.")
+
+                return {"raw_text": content}
+
+            except (httpx.TimeoutException, httpx.RequestError) as e:
+                logger.warning(f"Network error on Groq model '{current_model}': {e}")
+                last_error = str(e)
+                continue
+
+        raise AIProviderError(f"All Groq models failed. Last error: {last_error}")
 
     def generate_questions(
         self,
