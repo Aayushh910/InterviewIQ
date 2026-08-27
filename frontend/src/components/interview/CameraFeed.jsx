@@ -2,11 +2,19 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Camera, Eye, Mic, MicOff, Video, VideoOff, AlertCircle } from 'lucide-react';
 import { Badge } from '../common/Badge';
+import { useFaceDetection } from '../../hooks/useFaceDetection';
+import { FaceDetectionOverlay } from './FaceDetectionOverlay';
 
 export const CameraFeed = ({ isMicOn, isCameraOn, onToggleMic, onToggleCamera }) => {
   const videoRef = useRef(null);
   const [stream, setStream] = useState(null);
   const [error, setError] = useState(null);
+
+  const faceData = useFaceDetection(videoRef, {
+    isEnabled: isCameraOn && !!stream && !error,
+    isMirrored: true,
+    intervalMs: 120,
+  });
 
   useEffect(() => {
     let currentStream = null;
@@ -65,39 +73,25 @@ export const CameraFeed = ({ isMicOn, isCameraOn, onToggleMic, onToggleCamera })
             <span className="text-[11px] text-tealAccent">Please allow camera access in your browser address bar.</span>
           </div>
         ) : (
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className="w-full h-full object-cover transform -scale-x-100"
-          />
+          <div className="relative w-full h-full flex items-center justify-center">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="w-full h-full object-cover transform -scale-x-100"
+            />
+            <FaceDetectionOverlay
+              {...faceData}
+              isCameraOn={isCameraOn && !!stream && !error}
+            />
+          </div>
         )
       ) : (
         <div className="flex flex-col items-center gap-2 text-gray-500">
           <VideoOff className="w-10 h-10" />
           <span className="text-xs">Camera Turned Off</span>
         </div>
-      )}
-
-      {/* Facial Detection Bounding Box Simulation */}
-      {isCameraOn && !error && (
-        <motion.div
-          animate={{
-            scale: [1, 1.01, 1],
-            borderColor: ['rgba(20, 184, 166, 0.6)', 'rgba(6, 182, 212, 0.9)', 'rgba(20, 184, 166, 0.6)']
-          }}
-          transition={{ duration: 2.5, repeat: Infinity }}
-          className="absolute top-1/5 left-1/4 w-1/2 h-3/5 border-2 border-tealAccent rounded-2xl pointer-events-none p-2 flex flex-col justify-between"
-        >
-          <div className="flex justify-between items-center text-[10px] font-mono text-tealAccent bg-bgDark/80 px-2 py-0.5 rounded">
-            <span>Eye Contact: 96%</span>
-            <span>Head Pose: 0°</span>
-          </div>
-          <div className="text-[10px] font-mono text-emeraldAccent bg-bgDark/80 px-2 py-0.5 rounded self-start">
-            State: Composed
-          </div>
-        </motion.div>
       )}
 
       {/* Controls Overlay */}

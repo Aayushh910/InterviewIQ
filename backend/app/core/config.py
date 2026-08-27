@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
     # Facial Analysis Settings
     FACE_LANDMARKER_MODEL_PATH: str = "models/face_landmarker.task"
-    MAX_FACES: int = 1
+    MAX_FACES: int = 4
     MIN_FACE_DETECTION_CONFIDENCE: float = 0.5
     MIN_FACE_PRESENCE_CONFIDENCE: float = 0.5
     MIN_TRACKING_CONFIDENCE: float = 0.5
@@ -73,8 +73,8 @@ class Settings(BaseSettings):
     # AI Provider Core Configuration
     AI_PROVIDER: str = "groq"
     AI_API_KEY: Optional[str] = None
-    AI_MODEL: str = "llama-3.3-70b-versatile"
-    AI_TIMEOUT_SECONDS: float = 15.0
+    AI_MODEL: str = "openai/gpt-oss-120b"
+    AI_TIMEOUT_SECONDS: float = 20.0
 
     model_config = SettingsConfigDict(
         env_file=".env",
