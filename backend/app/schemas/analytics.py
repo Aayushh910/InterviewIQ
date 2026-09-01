@@ -65,6 +65,8 @@ class QuestionPerformanceItem(BaseModel):
     confidence_indicator: Optional[float] = None
     strengths: List[str] = []
     improvements: List[str] = []
+    recommended_response: Optional[str] = None
+    wpm: Optional[int] = None
     visual_observations: List[str] = []
     evaluation_available: bool = False
 

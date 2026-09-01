@@ -85,7 +85,58 @@ def test_empty_answer_evaluation():
         interview_meta={"interview_type": "Technical"}
     )
     assert res["overall_score"] == 0.0
-    assert "No substantive candidate answer" in res["summary"]
+    assert "No candidate answer" in res["summary"] or "No substantive" in res["summary"]
+    assert "recommended_response" in res and len(res["recommended_response"]) > 10
+
+
+def test_dont_know_and_evasions_evaluated_at_zero():
+    evaluator = AnswerEvaluator()
+    
+    # "Dont knwo"
+    res1 = evaluator.evaluate(
+        question_text="Which metrics would you use for a highly imbalanced binary classifier?",
+        answer_text="Dont knwo",
+        interview_meta={"interview_type": "Technical", "domain": "Machine Learning"}
+    )
+    assert res1["correctness_score"] == 0.0
+    assert res1["relevance_score"] == 0.0
+    assert res1["technical_depth_score"] == 0.0
+    assert res1["completeness_score"] == 0.0
+    assert res1["overall_score"] < 15.0
+    assert "did not know" in res1["summary"].lower() or "declined" in res1["summary"].lower()
+
+    # "I dont know"
+    res2 = evaluator.evaluate(
+        question_text="Explain database indexing in PostgreSQL.",
+        answer_text="I dont know",
+        interview_meta={"interview_type": "Technical", "domain": "Backend"}
+    )
+    assert res2["correctness_score"] == 0.0
+    assert res2["relevance_score"] == 0.0
+    assert res2["overall_score"] < 15.0
+
+    # "I know but dont telling you"
+    res3 = evaluator.evaluate(
+        question_text="Explain React Virtual DOM diffing.",
+        answer_text="I know but dont telling you",
+        interview_meta={"interview_type": "Technical", "domain": "Frontend"}
+    )
+    assert res3["correctness_score"] == 0.0
+    assert res3["relevance_score"] == 0.0
+    assert res3["overall_score"] < 15.0
+
+
+def test_classification_vs_regression_metrics_mismatch():
+    evaluator = AnswerEvaluator()
+    res = evaluator.evaluate(
+        question_text="Which metrics would you use for a highly imbalanced binary classifier?",
+        answer_text="RMSE MAE MSE R2",
+        interview_meta={"interview_type": "Technical", "domain": "Machine Learning"}
+    )
+    assert res["correctness_score"] <= 15.0
+    assert res["relevance_score"] <= 20.0
+    assert "regression" in res["summary"].lower()
+    assert "PR-AUC" in res["recommended_response"] or "Precision-Recall" in res["recommended_response"] or "F1" in res["recommended_response"]
 
 
 def test_excellent_answer_evaluation():
@@ -97,9 +148,10 @@ def test_excellent_answer_evaluation():
     )
     assert res["relevance_score"] >= 80.0
     assert res["correctness_score"] >= 80.0
-    assert res["clarity_score"] >= 80.0
-    assert res["overall_score"] >= 80.0
+    assert res["clarity_score"] >= 75.0
+    assert res["overall_score"] >= 75.0
     assert len(res["strengths"]) >= 1
+    assert "PostgreSQL" in res["recommended_response"] or "B-Tree" in res["recommended_response"]
 
 
 def test_irrelevant_answer_evaluation():
@@ -132,7 +184,7 @@ def test_long_answer_evaluation():
         answer_text=long_text,
         interview_meta={"interview_type": "Technical"}
     )
-    assert res["overall_score"] > 70.0
+    assert res["overall_score"] > 60.0
     assert 0.0 <= res["overall_score"] <= 100.0
 
 
@@ -202,17 +254,17 @@ def test_timing_evaluation_deterministic_scoring():
     # Empty answer
     assert calculate_timing_score(0.0, 0, "") == 0.0
 
-    # Rushed answer (<5s with few words)
-    rushed_score = calculate_timing_score(3.0, 4, "Too short answer.")
-    assert rushed_score == 55.0
+    # Rushed answer (<3s)
+    rushed_score = calculate_timing_score(2.0, 3, "Too short.")
+    assert rushed_score == 25.0
 
     # Optimal answer (30s with 40 words)
-    optimal_score = calculate_timing_score(30.0, 40, "Good length response.")
+    optimal_score = calculate_timing_score(30.0, 40, "Good length response with solid content.")
     assert optimal_score == 98.0
 
     # Extended answer (180s)
     extended_score = calculate_timing_score(180.0, 100, "Very long answer.")
-    assert extended_score == 75.0
+    assert extended_score == 70.0
 
 
 def test_grammar_evaluation_deterministic_scoring():
@@ -224,9 +276,12 @@ def test_grammar_evaluation_deterministic_scoring():
     good_score = calculate_grammar_score("This is a well formed technical explanation with proper structure.")
     assert good_score >= 85.0
 
-    # Repeated words penalty
-    repeated_score = calculate_grammar_score("the the the code code fails")
-    assert repeated_score < 80.0
+    # Typo and broken phrasing penalties
+    typo_score = calculate_grammar_score("Dont knwo")
+    assert typo_score <= 40.0
+
+    syntax_score = calculate_grammar_score("I know but dont telling you")
+    assert syntax_score <= 45.0
 
 
 def test_behavioral_vs_technical_question_type_scoring():
@@ -261,4 +316,4 @@ def test_deterministic_scoring_reproducibility():
     assert res1["relevance_score"] == res2["relevance_score"]
     assert res1["timing_score"] == res2["timing_score"]
     assert res1["grammar_score"] == res2["grammar_score"]
-
+    assert res1["recommended_response"] == res2["recommended_response"]

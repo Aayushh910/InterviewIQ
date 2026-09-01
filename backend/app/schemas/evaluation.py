@@ -54,6 +54,7 @@ class AnswerEvaluationResponse(BaseModel):
     strengths: List[str] = []
     improvements: List[str] = []
     summary: str = ""
+    recommended_response: Optional[str] = None
     evaluator_provider: str = "heuristic"
     created_at: Optional[datetime] = None
 

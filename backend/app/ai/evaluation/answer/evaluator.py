@@ -131,6 +131,11 @@ class AnswerEvaluator:
         else:
             summary = "Candidate answer evaluation complete."
 
+        rec_resp = raw_res.get("recommended_response")
+        if not rec_resp or not isinstance(rec_resp, str) or not rec_resp.strip():
+            from app.core.scoring_config import generate_recommended_response
+            rec_resp = generate_recommended_response(question_text, meta.get("domain", "Software Engineering"), meta.get("difficulty", "Medium"))
+
         return {
             "relevance_score": relevance,
             "correctness_score": correctness,
@@ -146,6 +151,7 @@ class AnswerEvaluator:
             "strengths": strengths,
             "improvements": improvements,
             "summary": summary,
+            "recommended_response": rec_resp.strip(),
             "evaluator_provider": provider_key
         }
 

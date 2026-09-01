@@ -77,25 +77,26 @@ export const InterviewProvider = ({ children }) => {
     const questionAnalysisMapped = (analytics.question_results || []).map((qr) => ({
       question: qr.question_text,
       userAnswer: qr.answer_text || 'Spoken answer transcript recorded.',
-      aiSuggestedAnswer: qr.summary || (qr.improvements && qr.improvements.length > 0
-        ? `Improvement: ${qr.improvements.join(' ')}`
-        : qr.strengths && qr.strengths.length > 0
-        ? `Key Strength: ${qr.strengths.join(' ')}`
-        : 'Solid technical response provided.'),
-      questionScore: qr.answer_score !== null && qr.answer_score !== undefined ? Math.round(qr.answer_score) : overallScore,
-      correctness: qr.correctness !== null && qr.correctness !== undefined ? Math.round(qr.correctness) : overallScore,
-      relevance: qr.relevance !== null && qr.relevance !== undefined ? Math.round(qr.relevance) : overallScore,
-      technicalAccuracy: qr.technical_accuracy !== null && qr.technical_accuracy !== undefined ? Math.round(qr.technical_accuracy) : overallScore,
-      completeness: qr.completeness !== null && qr.completeness !== undefined ? Math.round(qr.completeness) : overallScore,
-      communication: qr.communication !== null && qr.communication !== undefined ? Math.round(qr.communication) : overallScore,
-      grammar: qr.grammar !== null && qr.grammar !== undefined ? Math.round(qr.grammar) : (qr.clarity !== null && qr.clarity !== undefined ? Math.round(qr.clarity) : overallScore),
-      timing: qr.timing !== null && qr.timing !== undefined ? Math.round(qr.timing) : 90,
+      aiSuggestedAnswer: qr.recommended_response || qr.summary || (qr.improvements && qr.improvements.length > 0
+        ? `Key Recommendation: ${qr.improvements.join(' ')}`
+        : 'Comprehensive technical exemplar response.'),
+      questionScore: qr.answer_score !== null && qr.answer_score !== undefined ? Math.round(qr.answer_score) : 0,
+      correctness: qr.correctness !== null && qr.correctness !== undefined ? Math.round(qr.correctness) : 0,
+      relevance: qr.relevance !== null && qr.relevance !== undefined ? Math.round(qr.relevance) : 0,
+      technicalAccuracy: qr.technical_accuracy !== null && qr.technical_accuracy !== undefined ? Math.round(qr.technical_accuracy) : 0,
+      completeness: qr.completeness !== null && qr.completeness !== undefined ? Math.round(qr.completeness) : 0,
+      communication: qr.communication !== null && qr.communication !== undefined ? Math.round(qr.communication) : 0,
+      grammar: qr.grammar !== null && qr.grammar !== undefined ? Math.round(qr.grammar) : (qr.clarity !== null && qr.clarity !== undefined ? Math.round(qr.clarity) : 0),
+      timing: qr.timing !== null && qr.timing !== undefined ? Math.round(qr.timing) : null,
       durationSeconds: qr.duration_seconds,
-      confidence: qr.confidence_indicator !== null && qr.confidence_indicator !== undefined ? Math.round(qr.confidence_indicator * (qr.confidence_indicator <= 1.0 ? 100 : 1)) : overallScore,
+      wpm: qr.wpm,
+      confidence: qr.confidence_indicator !== null && qr.confidence_indicator !== undefined ? Math.round(qr.confidence_indicator * (qr.confidence_indicator <= 1.0 ? 100 : 1)) : 0,
       emotion: qr.visual_observations && qr.visual_observations.length > 0 ? qr.visual_observations[0] : "Composed",
-      speechPace: qr.duration_seconds ? `${qr.duration_seconds}s duration` : "Optimal Pacing",
+      speechPace: qr.wpm ? `${qr.wpm} WPM (${Math.round(qr.duration_seconds || 0)}s)` : (qr.duration_seconds ? `${Math.round(qr.duration_seconds)}s` : "Timing unavailable"),
       facialComposure: analytics.visual_observations?.average_face_presence_ratio ? `${Math.round(analytics.visual_observations.average_face_presence_ratio * 100)}%` : "95%"
     }));
+
+    const firstValidWpm = (analytics.question_results || []).find(q => q.wpm)?.wpm || null;
 
     const newReport = {
       id,
@@ -106,17 +107,17 @@ export const InterviewProvider = ({ children }) => {
       overallScore: overallScore,
       performanceCategory: analytics.performance_category || 'Evaluated',
       scores: {
-        correctness: metrics.correctness !== undefined ? Math.round(metrics.correctness) : overallScore,
-        relevance: metrics.relevance !== undefined ? Math.round(metrics.relevance) : overallScore,
-        technicalAccuracy: metrics.technical_accuracy !== undefined ? Math.round(metrics.technical_accuracy) : (metrics.correctness !== undefined ? Math.round(metrics.correctness) : overallScore),
-        completeness: metrics.completeness !== undefined ? Math.round(metrics.completeness) : overallScore,
-        communication: metrics.communication !== undefined ? Math.round(metrics.communication) : overallScore,
-        grammar: metrics.grammar !== undefined ? Math.round(metrics.grammar) : (metrics.clarity !== undefined ? Math.round(metrics.clarity) : overallScore),
-        timing: metrics.timing !== undefined ? Math.round(metrics.timing) : 90,
+        correctness: metrics.correctness !== undefined ? Math.round(metrics.correctness) : 0,
+        relevance: metrics.relevance !== undefined ? Math.round(metrics.relevance) : 0,
+        technicalAccuracy: metrics.technical_accuracy !== undefined ? Math.round(metrics.technical_accuracy) : (metrics.correctness !== undefined ? Math.round(metrics.correctness) : 0),
+        completeness: metrics.completeness !== undefined ? Math.round(metrics.completeness) : 0,
+        communication: metrics.communication !== undefined ? Math.round(metrics.communication) : 0,
+        grammar: metrics.grammar !== undefined ? Math.round(metrics.grammar) : (metrics.clarity !== undefined ? Math.round(metrics.clarity) : 0),
+        timing: metrics.timing !== undefined ? Math.round(metrics.timing) : 0,
       },
       voiceMetrics: {
-        paceWPM: 140,
-        paceStatus: 'Optimal (130-150 WPM)',
+        paceWPM: firstValidWpm || 140,
+        paceStatus: firstValidWpm ? `${firstValidWpm} WPM (Recorded Pace)` : 'Timing unavailable',
         fillerWordCount: 0,
         clarityScore: `${metrics.clarity !== undefined ? Math.round(metrics.clarity) : overallScore}%`,
       },
@@ -125,8 +126,8 @@ export const InterviewProvider = ({ children }) => {
         postureScore: analytics.visual_observations?.average_face_presence_ratio ? `${Math.round(analytics.visual_observations.average_face_presence_ratio * 100)}% Face Presence` : 'Composed',
         composureRating: analytics.performance_category || 'Evaluated',
       },
-      topStrengths: analytics.top_strengths && analytics.top_strengths.length > 0 ? analytics.top_strengths : ['Demonstrated relevant domain knowledge', 'Articulated technical reasoning clearly'],
-      aiRecommendations: analytics.top_improvements && analytics.top_improvements.length > 0 ? analytics.top_improvements : ['Provide concrete real-world implementation examples', 'Elaborate on edge cases and trade-offs'],
+      topStrengths: analytics.top_strengths && analytics.top_strengths.length > 0 ? analytics.top_strengths : ['Demonstrated structured communication', 'Provided concise answers'],
+      aiRecommendations: analytics.top_improvements && analytics.top_improvements.length > 0 ? analytics.top_improvements : ['Provide deeper domain-specific implementation examples', 'Elaborate on edge cases and trade-offs'],
       questionAnalysis: questionAnalysisMapped
     };
 

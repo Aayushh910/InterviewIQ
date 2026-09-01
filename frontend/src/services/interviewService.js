@@ -110,9 +110,11 @@ export const submitAnswer = async (sessionId, answerData) => {
   return response.data;
 };
 
-export const submitAudioAnswer = async (sessionId, questionId, audioBlob) => {
+export const submitAudioAnswer = async (sessionId, questionId, audioBlob, startedAt = null, submittedAt = null) => {
   const formData = new FormData();
   formData.append('question_id', questionId);
+  if (startedAt) formData.append('started_at', startedAt);
+  if (submittedAt) formData.append('submitted_at', submittedAt);
   const ext = audioBlob?.type?.includes('mp4') ? 'mp4' : audioBlob?.type?.includes('wav') ? 'wav' : 'webm';
   formData.append('file', audioBlob, `candidate_answer.${ext}`);
 

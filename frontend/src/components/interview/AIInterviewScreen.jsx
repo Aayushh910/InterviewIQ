@@ -46,6 +46,7 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
   const [sessionId, setSessionId] = useState(null);
   const [backendQuestions, setBackendQuestions] = useState([]);
   const [questionStartTime, setQuestionStartTime] = useState(() => new Date().toISOString());
+  const questionStartTimeRef = useRef(new Date().toISOString());
   const [activeQuestion, setActiveQuestion] = useState({ id: null, text: '', type: 'main', depth: 0 });
 
   // ─── Answer & Transcript State ───────────────────────────────
@@ -260,7 +261,9 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
       const session = await createSession(interview.id);
       const started = await startSession(session.id);
       setSessionId(started.id);
-      setQuestionStartTime(new Date().toISOString());
+      const nowIso = new Date().toISOString();
+      questionStartTimeRef.current = nowIso;
+      setQuestionStartTime(nowIso);
       setScreenState('ACTIVE');
       setTimerSeconds(240);
       hasExpiredRef.current = false;
@@ -287,7 +290,9 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
     if (isRecording) try { stopRecording(); } catch (e) {}
     const ans = (inputMode === 'voice' ? (liveTranscript || transcript) : textAnswer).trim();
     if (ans.length >= 2 && sessionId && activeQuestion.id) {
-      try { await submitAnswer(sessionId, { question_id: activeQuestion.id, answer_text: ans, time_taken_seconds: 15 }); } catch (e) {}
+      const startedAt = questionStartTimeRef.current || new Date(Date.now() - 15000).toISOString();
+      const submittedAt = new Date().toISOString();
+      try { await submitAnswer(sessionId, { question_id: activeQuestion.id, answer_text: ans, started_at: startedAt, submitted_at: submittedAt }); } catch (e) {}
     }
     let analytics = null;
     if (sessionId) {
@@ -355,18 +360,22 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
     const spokenText = (liveTranscript || transcript || '').trim();
     if (!sessionId) { setAudioError('Session not initialized.'); setIsSubmitting(false); setAiState('listening'); return; }
     if (!audioBlob?.size && !spokenText) { setAudioError('No speech detected. Please speak your answer clearly.'); setIsSubmitting(false); setAiState('listening'); return; }
+    
+    const startedAt = questionStartTimeRef.current || new Date(Date.now() - 15000).toISOString();
+    const submittedAt = new Date().toISOString();
+
     try {
       let res;
       if (audioBlob?.size > 0) {
-        try { res = await submitAudioAnswer(sessionId, activeQuestion.id, audioBlob); }
+        try { res = await submitAudioAnswer(sessionId, activeQuestion.id, audioBlob, startedAt, submittedAt); }
         catch (e) {
           if (spokenText) {
-            const a = await submitAnswer(sessionId, { question_id: activeQuestion.id, answer_text: spokenText });
+            const a = await submitAnswer(sessionId, { question_id: activeQuestion.id, answer_text: spokenText, started_at: startedAt, submitted_at: submittedAt });
             res = { id: a.id, answer: a, next_question: null, interview_complete: currentQIndex + 1 >= totalQuestions };
           } else throw e;
         }
       } else {
-        const a = await submitAnswer(sessionId, { question_id: activeQuestion.id, answer_text: spokenText });
+        const a = await submitAnswer(sessionId, { question_id: activeQuestion.id, answer_text: spokenText, started_at: startedAt, submitted_at: submittedAt });
         res = { id: a.id, answer: a, next_question: null, interview_complete: currentQIndex + 1 >= totalQuestions };
       }
       setTranscript(res?.answer?.answer_text || spokenText);
@@ -384,8 +393,12 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
     if (isSubmitting || !textAnswer.trim()) return;
     setAudioError(null); setIsSubmitting(true); setAiState('thinking');
     if (!sessionId) { setAudioError('Session not initialized.'); setIsSubmitting(false); setAiState('listening'); return; }
+    
+    const startedAt = questionStartTimeRef.current || new Date(Date.now() - 15000).toISOString();
+    const submittedAt = new Date().toISOString();
+
     try {
-      const res = await submitAnswer(sessionId, { question_id: activeQuestion.id, answer_text: textAnswer.trim() });
+      const res = await submitAnswer(sessionId, { question_id: activeQuestion.id, answer_text: textAnswer.trim(), started_at: startedAt, submitted_at: submittedAt });
       setTranscript(textAnswer.trim());
       setTimeout(() => advanceSession(res), 800);
     } catch (err) {
@@ -420,6 +433,9 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
       const nq = res.next_question;
       setActiveQuestion({ id: nq.id, text: nq.question_text, type: nq.question_type, depth: nq.follow_up_depth || 0 });
       if (nq.question_type === 'main') setCurrentQIndex(p => p + 1);
+      const nextTime = new Date().toISOString();
+      questionStartTimeRef.current = nextTime;
+      setQuestionStartTime(nextTime);
       setTranscript(''); setLiveTranscript(''); setTextAnswer(''); setIsSubmitting(false);
     } else {
       const ni = currentQIndex + 1;
@@ -428,6 +444,9 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
         setCurrentQIndex(ni);
         setActiveQuestion({ id: nq.id, text: nq.question_text, type: 'main', depth: 0 });
       }
+      const nextTime = new Date().toISOString();
+      questionStartTimeRef.current = nextTime;
+      setQuestionStartTime(nextTime);
       setTranscript(''); setLiveTranscript(''); setTextAnswer(''); setIsSubmitting(false);
     }
   };

@@ -14,6 +14,7 @@ from app.schemas.analytics import (
     QuestionPerformanceItem,
     InterviewAnalyticsResponse
 )
+from app.core.scoring_config import generate_recommended_response
 
 logger = logging.getLogger(__name__)
 
@@ -233,6 +234,16 @@ def get_session_analytics(
                 align_scores.append(float(a_score))
                 obs_notes.append(f"Camera alignment score: {int(float(a_score) * 100)}%")
 
+        rec_response = generate_recommended_response(q_text, getattr(interview, "domain", "Software Engineering"), getattr(interview, "difficulty", "Medium"))
+        if eval_rec and hasattr(eval_rec, "recommended_response") and getattr(eval_rec, "recommended_response", None):
+            rec_response = eval_rec.recommended_response
+
+        # Calculate actual WPM
+        words = len((ans.answer_text or "").split())
+        calculated_wpm = None
+        if item_dur and item_dur > 0 and words > 0:
+            calculated_wpm = round(words / (item_dur / 60.0))
+
         q_results.append(
             QuestionPerformanceItem(
                 question_id=q_id,
@@ -242,6 +253,8 @@ def get_session_analytics(
                 answer_id=ans.id,
                 answer_text=ans.answer_text,
                 summary=item_summary,
+                recommended_response=rec_response,
+                wpm=calculated_wpm,
                 answer_score=item_score,
                 relevance=item_rel,
                 correctness=item_corr,
