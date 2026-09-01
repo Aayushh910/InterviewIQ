@@ -67,11 +67,14 @@ def start_session(db: Session, session_id: str, user_id: str) -> Optional[Interv
 
 def complete_session(db: Session, session_id: str, user_id: str) -> Optional[InterviewSession]:
     """
-    Transition a session status to completed.
+    Transition a session status to completed (idempotent if already completed).
     """
     session = get_session_by_id(db, session_id=session_id, user_id=user_id)
     if not session:
         return None
+
+    if session.status == "completed":
+        return session
 
     if session.status != "in_progress" and session.status != "not_started":
         raise ValueError("Session is not in active progress")

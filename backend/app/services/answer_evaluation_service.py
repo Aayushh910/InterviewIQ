@@ -50,13 +50,25 @@ def evaluate_answer(
         if session_q:
             question_text = session_q.question_text
 
-    # 2. Build Interview Context Metadata
+    # 2. Build Interview Context Metadata & Timing
+    duration_seconds = None
+    if answer.started_at and answer.submitted_at:
+        duration_seconds = max(0.0, (answer.submitted_at - answer.started_at).total_seconds())
+
+    q_type = "Technical"
+    if main_q:
+        q_type = getattr(main_q, "question_type", "Technical") or "Technical"
+    elif session_q:
+        q_type = getattr(session_q, "question_type", "Technical") or "Technical"
+
     meta = {
         "interview_type": interview.interview_type,
         "domain": interview.domain,
         "difficulty": interview.difficulty,
         "experience_level": interview.experience_level,
-        "mode": interview.mode
+        "mode": interview.mode,
+        "question_type": q_type,
+        "duration_seconds": duration_seconds
     }
 
     # 3. Execute AI Evaluation Engine

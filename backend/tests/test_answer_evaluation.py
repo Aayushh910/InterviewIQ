@@ -53,7 +53,7 @@ def test_score_clamping_and_weighted_formula():
     res = evaluator.evaluate(
         question_text="Explain React Virtual DOM diffing.",
         answer_text="React creates a Virtual DOM tree representation and uses Fiber reconciliation to compare changes efficiently.",
-        interview_meta={"interview_type": "Technical", "domain": "Frontend"}
+        interview_meta={"interview_type": "Technical", "domain": "Frontend", "duration_seconds": 35.0}
     )
 
     assert 0.0 <= res["relevance_score"] <= 100.0
@@ -61,13 +61,17 @@ def test_score_clamping_and_weighted_formula():
     assert 0.0 <= res["completeness_score"] <= 100.0
     assert 0.0 <= res["clarity_score"] <= 100.0
     assert 0.0 <= res["technical_depth_score"] <= 100.0
+    assert 0.0 <= res["grammar_score"] <= 100.0
+    assert 0.0 <= res["timing_score"] <= 100.0
 
     expected_overall = round(
-        res["relevance_score"] * 0.20 +
-        res["correctness_score"] * 0.30 +
-        res["completeness_score"] * 0.20 +
-        res["clarity_score"] * 0.15 +
-        res["technical_depth_score"] * 0.15,
+        res["correctness_score"] * 0.25 +
+        res["relevance_score"] * 0.15 +
+        res["technical_depth_score"] * 0.20 +
+        res["completeness_score"] * 0.15 +
+        res["communication_score"] * 0.10 +
+        res["grammar_score"] * 0.05 +
+        res["timing_score"] * 0.10,
         2
     )
     assert res["overall_score"] == expected_overall
@@ -191,3 +195,70 @@ def test_answer_evaluation_api_flow_and_ownership():
         json={"answer_id": answer_id}
     )
     assert unauth_eval.status_code in [403, 404]
+
+
+def test_timing_evaluation_deterministic_scoring():
+    from app.core.scoring_config import calculate_timing_score
+    # Empty answer
+    assert calculate_timing_score(0.0, 0, "") == 0.0
+
+    # Rushed answer (<5s with few words)
+    rushed_score = calculate_timing_score(3.0, 4, "Too short answer.")
+    assert rushed_score == 55.0
+
+    # Optimal answer (30s with 40 words)
+    optimal_score = calculate_timing_score(30.0, 40, "Good length response.")
+    assert optimal_score == 98.0
+
+    # Extended answer (180s)
+    extended_score = calculate_timing_score(180.0, 100, "Very long answer.")
+    assert extended_score == 75.0
+
+
+def test_grammar_evaluation_deterministic_scoring():
+    from app.core.scoring_config import calculate_grammar_score
+    # Empty
+    assert calculate_grammar_score("") == 0.0
+
+    # Well structured sentence with proper capitalization and terminal punctuation
+    good_score = calculate_grammar_score("This is a well formed technical explanation with proper structure.")
+    assert good_score >= 85.0
+
+    # Repeated words penalty
+    repeated_score = calculate_grammar_score("the the the code code fails")
+    assert repeated_score < 80.0
+
+
+def test_behavioral_vs_technical_question_type_scoring():
+    from app.core.scoring_config import calculate_weighted_overall_score
+    dims = {
+        "correctness": 80.0,
+        "relevance": 90.0,
+        "technical_accuracy": 60.0,
+        "completeness": 85.0,
+        "communication": 90.0,
+        "grammar": 90.0,
+        "timing": 95.0,
+    }
+    tech_overall = calculate_weighted_overall_score(dims, question_type="Technical")
+    behav_overall = calculate_weighted_overall_score(dims, question_type="Behavioral")
+
+    assert 0.0 <= tech_overall <= 100.0
+    assert 0.0 <= behav_overall <= 100.0
+    # Behavioral should weigh communication/relevance higher than technical accuracy
+    assert behav_overall >= tech_overall
+
+
+def test_deterministic_scoring_reproducibility():
+    evaluator = AnswerEvaluator()
+    q = "Explain caching with Redis in a web application."
+    a = "Redis is an in-memory key-value store used to cache database query results and reduce backend load."
+    res1 = evaluator.evaluate(question_text=q, answer_text=a, interview_meta={"interview_type": "Technical", "duration_seconds": 25.0})
+    res2 = evaluator.evaluate(question_text=q, answer_text=a, interview_meta={"interview_type": "Technical", "duration_seconds": 25.0})
+
+    assert res1["overall_score"] == res2["overall_score"]
+    assert res1["correctness_score"] == res2["correctness_score"]
+    assert res1["relevance_score"] == res2["relevance_score"]
+    assert res1["timing_score"] == res2["timing_score"]
+    assert res1["grammar_score"] == res2["grammar_score"]
+

@@ -62,12 +62,15 @@ class Settings(BaseSettings):
     MAX_FOLLOW_UPS_PER_QUESTION: int = 2
     LLM_PROVIDER: str = "local"
 
-    # Answer Evaluation Settings & Weights
-    EVALUATION_WEIGHT_RELEVANCE: float = 0.20
-    EVALUATION_WEIGHT_CORRECTNESS: float = 0.30
-    EVALUATION_WEIGHT_COMPLETENESS: float = 0.20
-    EVALUATION_WEIGHT_CLARITY: float = 0.15
-    EVALUATION_WEIGHT_TECHNICAL_DEPTH: float = 0.15
+    # Answer Evaluation Settings & Weights (Phase 12 Comprehensive Scoring Engine)
+    EVALUATION_WEIGHT_CORRECTNESS: float = 0.25
+    EVALUATION_WEIGHT_RELEVANCE: float = 0.15
+    EVALUATION_WEIGHT_TECHNICAL_DEPTH: float = 0.20
+    EVALUATION_WEIGHT_COMPLETENESS: float = 0.15
+    EVALUATION_WEIGHT_COMMUNICATION: float = 0.10
+    EVALUATION_WEIGHT_GRAMMAR: float = 0.05
+    EVALUATION_WEIGHT_TIMING: float = 0.10
+    EVALUATION_WEIGHT_CLARITY: float = 0.10
     EVALUATION_PROVIDER: str = "heuristic"
 
     # AI Provider Core Configuration

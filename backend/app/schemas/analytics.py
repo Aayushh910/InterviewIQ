@@ -6,8 +6,12 @@ class DimensionMetrics(BaseModel):
     answer_quality: float
     relevance: float
     correctness: float
+    technical_accuracy: float = 0.0
+    completeness: float = 0.0
     clarity: float
     communication: float
+    grammar: float = 0.0
+    timing: float = 0.0
     confidence_indicator: float
 
     model_config = ConfigDict(from_attributes=True)
@@ -43,12 +47,21 @@ class AnswerHighlight(BaseModel):
 class QuestionPerformanceItem(BaseModel):
     question_id: str
     question_text: str
+    question_type: Optional[str] = "main"
+    follow_up_depth: Optional[int] = 0
     answer_id: Optional[str] = None
+    answer_text: Optional[str] = None
+    summary: Optional[str] = None
     answer_score: Optional[float] = None
     relevance: Optional[float] = None
     correctness: Optional[float] = None
+    technical_accuracy: Optional[float] = None
+    completeness: Optional[float] = None
     clarity: Optional[float] = None
     communication: Optional[float] = None
+    grammar: Optional[float] = None
+    timing: Optional[float] = None
+    duration_seconds: Optional[float] = None
     confidence_indicator: Optional[float] = None
     strengths: List[str] = []
     improvements: List[str] = []

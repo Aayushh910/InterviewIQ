@@ -1,12 +1,11 @@
 import logging
 from typing import Dict, Any, Optional
 from app.core.config import settings
-from app.ai.evaluation.answer.config import (
-    EVALUATION_WEIGHT_RELEVANCE,
-    EVALUATION_WEIGHT_CORRECTNESS,
-    EVALUATION_WEIGHT_COMPLETENESS,
-    EVALUATION_WEIGHT_CLARITY,
-    EVALUATION_WEIGHT_TECHNICAL_DEPTH,
+from app.core.scoring_config import (
+    clamp_score,
+    calculate_timing_score,
+    calculate_grammar_score,
+    calculate_weighted_overall_score,
 )
 from app.ai.evaluation.answer.provider import BaseAnswerEvaluationProvider
 from app.ai.evaluation.answer.heuristic_provider import HeuristicAnswerEvaluationProvider
@@ -17,32 +16,21 @@ from app.ai.evaluation.answer.exceptions import AIValidationError, AIProviderErr
 logger = logging.getLogger(__name__)
 
 
-def clamp_score(val: Any, min_val: float = 0.0, max_val: float = 100.0) -> float:
-    """
-    Safely parse and clamp numeric evaluation scores within valid bounds.
-    """
-    try:
-        f = float(val)
-        return max(min_val, min(max_val, f))
-    except (ValueError, TypeError):
-        return min_val
-
-
 class AnswerEvaluator:
     """
     Core AI Evaluation Service orchestrating provider abstraction, score validation,
-    bounding, deterministic weighting, and safe exception propagation.
+    bounding, deterministic 7-dimension weighting, and safe exception propagation.
     """
 
     def __init__(self, provider_name: Optional[str] = None):
-        selected = (provider_name or getattr(settings, "AI_PROVIDER", None) or getattr(settings, "EVALUATION_PROVIDER", "heuristic")).lower()
+        selected = (provider_name or getattr(settings, "EVALUATION_PROVIDER", None) or getattr(settings, "AI_PROVIDER", "heuristic")).lower()
         self.provider_name = selected
         self.provider = self._resolve_provider(selected)
 
     def _resolve_provider(self, provider_name: str, mock_mode: str = "success") -> BaseAnswerEvaluationProvider:
         if provider_name == "mock":
             return MockAnswerEvaluationProvider(mode=mock_mode)
-        elif provider_name in ["openai", "llm", "gemini", "ollama"]:
+        elif provider_name in ["openai", "llm", "gemini", "ollama", "groq"]:
             return LLMAnswerEvaluationProvider()
         else:
             return HeuristicAnswerEvaluationProvider()
@@ -75,32 +63,50 @@ class AnswerEvaluator:
             logger.error("AI provider returned non-dictionary output")
             raise AIValidationError("AI provider response must be a valid JSON object.")
 
-        # Check required fields exist or can be parsed
-        required_keys = ["relevance", "correctness", "completeness", "clarity", "technical_depth"]
-        for key in required_keys:
-            if key not in raw_res and f"{key}_score" not in raw_res:
-                logger.warning(f"AI response missing standard key '{key}'. Applying 0.0 default.")
-
-        # 3. Numeric Score Validation & Clamping
+        # 3. Numeric Score Validation & Clamping for 7 Core Dimensions
         relevance = clamp_score(raw_res.get("relevance", raw_res.get("relevance_score", 0.0)))
         correctness = clamp_score(raw_res.get("correctness", raw_res.get("correctness_score", 0.0)))
         completeness = clamp_score(raw_res.get("completeness", raw_res.get("completeness_score", 0.0)))
         clarity = clamp_score(raw_res.get("clarity", raw_res.get("clarity_score", 0.0)))
-        technical_depth = clamp_score(raw_res.get("technical_depth", raw_res.get("technical_depth_score", 0.0)))
+        technical_depth = clamp_score(
+            raw_res.get("technical_accuracy",
+            raw_res.get("technical_accuracy_score",
+            raw_res.get("technical_depth",
+            raw_res.get("technical_depth_score", 0.0))))
+        )
+
+        words = len((answer_text or "").split())
+        duration = meta.get("duration_seconds")
+
+        # Grammar evaluation
+        grammar = clamp_score(
+            raw_res.get("grammar", raw_res.get("grammar_score", calculate_grammar_score(answer_text)))
+        )
+
+        # Timing evaluation
+        timing = clamp_score(
+            raw_res.get("timing", raw_res.get("timing_score", calculate_timing_score(duration, words, answer_text)))
+        )
 
         # Derived communication & confidence scores
-        communication = clamp_score(raw_res.get("communication", (clarity + completeness) / 2.0))
-        confidence = clamp_score(raw_res.get("confidence", 0.85), min_val=0.0, max_val=1.0)
+        communication = clamp_score(
+            raw_res.get("communication", raw_res.get("communication_score", (clarity + completeness) / 2.0))
+        )
+        confidence = clamp_score(raw_res.get("confidence", raw_res.get("confidence_score", 0.85)), min_val=0.0, max_val=1.0)
 
         # 4. Deterministic Weighted Formula Calculation
-        weighted_sum = (
-            relevance * EVALUATION_WEIGHT_RELEVANCE +
-            correctness * EVALUATION_WEIGHT_CORRECTNESS +
-            completeness * EVALUATION_WEIGHT_COMPLETENESS +
-            clarity * EVALUATION_WEIGHT_CLARITY +
-            technical_depth * EVALUATION_WEIGHT_TECHNICAL_DEPTH
-        )
-        overall_score = round(max(0.0, min(100.0, weighted_sum)), 2)
+        q_type = meta.get("question_type") or meta.get("interview_type") or "Technical"
+        dim_map = {
+            "correctness": correctness,
+            "relevance": relevance,
+            "technical_accuracy": technical_depth,
+            "completeness": completeness,
+            "communication": communication,
+            "grammar": grammar,
+            "timing": timing,
+        }
+
+        overall_score = calculate_weighted_overall_score(dim_map, question_type=q_type)
 
         # 5. Format Strengths, Improvements, Summary
         raw_strengths = raw_res.get("strengths")
@@ -131,7 +137,10 @@ class AnswerEvaluator:
             "completeness_score": completeness,
             "clarity_score": clarity,
             "technical_depth_score": technical_depth,
+            "technical_accuracy_score": technical_depth,
             "communication_score": communication,
+            "grammar_score": grammar,
+            "timing_score": timing,
             "confidence_score": confidence,
             "overall_score": overall_score,
             "strengths": strengths,
