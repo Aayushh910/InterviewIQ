@@ -285,21 +285,52 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
     setAiState('listening');
     try { window.speechSynthesis?.cancel(); } catch (e) {}
     if (isRecording) try { stopRecording(); } catch (e) {}
-    const ans = (inputMode === 'voice' ? transcript : textAnswer).trim();
-    if (ans.length >= 5 && sessionId) {
+    const ans = (inputMode === 'voice' ? (liveTranscript || transcript) : textAnswer).trim();
+    if (ans.length >= 2 && sessionId && activeQuestion.id) {
       try { await submitAnswer(sessionId, { question_id: activeQuestion.id, answer_text: ans, time_taken_seconds: 15 }); } catch (e) {}
     }
-    if (sessionId) try { await completeSession(sessionId); } catch (e) {}
-  };
-
-  // ─── Exit ─────────────────────────────────────────────────────
-  const handleExitInterview = () => {
+    let analytics = null;
+    if (sessionId) {
+      try {
+        await completeSession(sessionId);
+        analytics = await getSessionAnalytics(sessionId);
+      } catch (e) {}
+    }
     exitFullscreen();
     resetRecorder();
     try { recognitionRef.current?.stop(); } catch (e) {}
     webcamStream?.getTracks().forEach(t => t.stop());
     setWebcamStream(null);
-    onFinish({ durationMinutes: Math.ceil((240 - timerSeconds) / 60) || 1, score: 88, sessionId });
+    onFinish({
+      durationMinutes: Math.max(1, Math.ceil((240 - timerSeconds) / 60)),
+      score: analytics?.overall_score ?? 0,
+      sessionId,
+      analytics,
+      title: `${selectedDomain} Technical Interview`
+    });
+  };
+
+  // ─── Exit ─────────────────────────────────────────────────────
+  const handleExitInterview = async () => {
+    exitFullscreen();
+    resetRecorder();
+    try { recognitionRef.current?.stop(); } catch (e) {}
+    webcamStream?.getTracks().forEach(t => t.stop());
+    setWebcamStream(null);
+    let analytics = null;
+    if (sessionId) {
+      try {
+        await completeSession(sessionId);
+        analytics = await getSessionAnalytics(sessionId);
+      } catch (e) {}
+    }
+    onFinish({
+      durationMinutes: Math.max(1, Math.ceil((240 - timerSeconds) / 60)),
+      score: analytics?.overall_score ?? 0,
+      sessionId,
+      analytics,
+      title: `${selectedDomain} Technical Interview`
+    });
   };
 
   // ─── Reset Spoken Answer ──────────────────────────────────────
@@ -366,14 +397,25 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
   // ─── Advance Session ──────────────────────────────────────────
   const advanceSession = async (res) => {
     if (res.interview_complete || (!res.next_question && currentQIndex + 1 >= totalQuestions)) {
+      setScreenState('COMPLETED');
       let analytics = null;
-      try { await completeSession(sessionId); analytics = await getSessionAnalytics(sessionId); } catch (e) {}
+      try {
+        await completeSession(sessionId);
+        analytics = await getSessionAnalytics(sessionId);
+      } catch (e) {}
       exitFullscreen();
       resetRecorder();
+      try { recognitionRef.current?.stop(); } catch (e) {}
       webcamStream?.getTracks().forEach(t => t.stop());
       setWebcamStream(null);
       setIsSubmitting(false);
-      onFinish({ durationMinutes: Math.ceil((240 - timerSeconds) / 60) || 1, score: analytics?.overall_score || 88, sessionId, analytics });
+      onFinish({
+        durationMinutes: Math.max(1, Math.ceil((240 - timerSeconds) / 60)),
+        score: analytics?.overall_score ?? 0,
+        sessionId,
+        analytics,
+        title: `${selectedDomain} Technical Interview`
+      });
     } else if (res.next_question) {
       const nq = res.next_question;
       setActiveQuestion({ id: nq.id, text: nq.question_text, type: nq.question_type, depth: nq.follow_up_depth || 0 });
