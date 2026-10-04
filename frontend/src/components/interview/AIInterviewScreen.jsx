@@ -15,6 +15,7 @@ import {
   submitAudioAnswer,
   submitAnswerFacialFrame,
   getSessionAnalytics,
+  calculateFinalEvaluation,
 } from '../../services/interviewService';
 import { useAudioRecorder } from '../../hooks/useAudioRecorder';
 import { useFaceDetection } from '../../hooks/useFaceDetection';
@@ -414,6 +415,11 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
       let analytics = null;
       try {
         await completeSession(sessionId);
+        try {
+          await calculateFinalEvaluation(sessionId);
+        } catch (evalErr) {
+          console.warn('Phase 12 evaluation compute notice:', evalErr);
+        }
         analytics = await getSessionAnalytics(sessionId);
       } catch (e) {}
       exitFullscreen();

@@ -287,6 +287,44 @@ export const getSessionMultimodalEvidence = async (sessionId, evidenceType = nul
   return response.data;
 };
 
+// ─── Phase 12: Final Evaluation APIs ──────────────────────────────────────
+
+export const calculateFinalEvaluation = async (sessionId, forceRecalculate = false) => {
+  const response = await apiClient.post(`/evaluation/sessions/${sessionId}/final`, {
+    force_recalculate: forceRecalculate,
+  });
+  return response.data;
+};
+
+export const getSessionFinalEvaluation = async (sessionId) => {
+  const response = await apiClient.get(`/evaluation/sessions/${sessionId}/final`);
+  return response.data;
+};
+
+// ─── Phase 13: Results Dashboard & Interview Reports APIs ──────────────────
+
+export const getInterviewResults = async (sessionId) => {
+  const response = await apiClient.get(`/results/sessions/${sessionId}`);
+  return response.data;
+};
+
+export const downloadInterviewReportPdf = async (sessionId, filename = null) => {
+  const response = await apiClient.get(`/reports/sessions/${sessionId}/pdf`, {
+    responseType: 'blob',
+  });
+  const blob = new Blob([response.data], { type: 'application/pdf' });
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = downloadUrl;
+  link.download = filename || `InterviewIQ_Report_${sessionId.slice(0, 8)}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(downloadUrl);
+  return true;
+};
+
+
 
 
 

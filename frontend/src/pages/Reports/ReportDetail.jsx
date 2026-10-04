@@ -78,7 +78,15 @@ export const ReportDetail = ({ reportIdOverride }) => {
         <Link to="/reports" className="inline-flex items-center gap-1.5 text-xs font-mono font-semibold text-neutral-400 hover:text-white">
           <ArrowLeft className="w-4 h-4" /> Back to All Reports
         </Link>
-        <DownloadPDFButton reportTitle={report.title} />
+        <div className="flex items-center gap-3">
+          <Link
+            to={`/results/${id}`}
+            className="px-3.5 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 text-xs font-mono font-bold flex items-center gap-1.5 transition-colors"
+          >
+            <Sparkles className="w-3.5 h-3.5" /> Full Results Dashboard
+          </Link>
+          <DownloadPDFButton sessionId={id} reportTitle={report.title} />
+        </div>
       </div>
 
       {/* Main Report Header Card */}

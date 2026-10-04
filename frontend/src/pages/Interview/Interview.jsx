@@ -29,10 +29,11 @@ export const Interview = () => {
   };
 
   const handleViewReport = () => {
-    if (finishedResult?.reportId) {
-      navigate(`/reports?id=${finishedResult.reportId}`);
+    const targetId = finishedResult?.sessionId || finishedResult?.reportId;
+    if (targetId) {
+      navigate(`/results/${targetId}`);
     } else {
-      navigate('/reports');
+      navigate('/history');
     }
   };
 

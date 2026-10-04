@@ -20,6 +20,7 @@ import { Interview } from '../pages/Interview/Interview';
 import { Resume } from '../pages/Resume/Resume';
 import { Analytics } from '../pages/Analytics/Analytics';
 import { Reports } from '../pages/Reports/Reports';
+import { Results } from '../pages/Results/Results';
 import { Achievements } from '../pages/Achievements/Achievements';
 import { History } from '../pages/History/History';
 import { Profile } from '../pages/Profile/Profile';
@@ -61,6 +62,8 @@ export const AppRoutes = () => {
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/achievements" element={<Achievements />} />
         <Route path="/reports" element={<Reports />} />
+        <Route path="/results/:sessionId" element={<Results />} />
+        <Route path="/results" element={<Results />} />
         <Route path="/history" element={<History />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/settings" element={<Settings />} />
