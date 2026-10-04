@@ -12,6 +12,8 @@ import app.services.facial_analysis_service as facial_analysis_service
 import app.services.temporal_facial_analysis_service as temporal_facial_analysis_service
 import app.services.speech_service as speech_service
 import app.services.answer_evaluation_service as answer_evaluation_service
+import app.services.session_state as session_state
+from app.services.session_state import InterviewStateManager, session_state_manager
 
 __all__ = [
     "register_user",
@@ -26,4 +28,8 @@ __all__ = [
     "temporal_facial_analysis_service",
     "speech_service",
     "answer_evaluation_service",
+    "session_state",
+    "InterviewStateManager",
+    "session_state_manager",
 ]
+

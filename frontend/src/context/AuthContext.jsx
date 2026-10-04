@@ -67,9 +67,21 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
+  // Listen for global 401 Unauthorized events from apiClient
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      setUser(null);
+      setIsAuthenticated(false);
+    };
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
+  }, []);
+
+
   const login = async (email, password) => {
     try {
-      const res = await apiClient.post('/auth/login', { email, password });
+      const cleanEmail = email?.trim().toLowerCase();
+      const res = await apiClient.post('/auth/login', { email: cleanEmail, password });
       const { access_token, user: userData } = res.data;
 
       localStorage.setItem('interviewiq_token', access_token);
@@ -84,9 +96,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const signup = async (fullName, email, password = 'Password@123') => {
+  const signup = async (fullName, email, password) => {
     try {
-      const res = await apiClient.post('/auth/signup', { name: fullName, email, password });
+      const cleanEmail = email?.trim().toLowerCase();
+      const res = await apiClient.post('/auth/signup', { name: fullName?.trim(), email: cleanEmail, password });
       const { access_token, user: userData } = res.data;
 
       localStorage.setItem('interviewiq_token', access_token);

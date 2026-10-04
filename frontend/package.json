@@ -24,7 +24,8 @@
     "recharts": "^2.13.0",
     "tailwind-merge": "^2.5.4",
     "three": "^0.169.0",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "@mediapipe/tasks-vision": "^0.10.17"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",

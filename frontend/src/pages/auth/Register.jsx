@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, ArrowRight } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, AlertTriangle } from 'lucide-react';
 import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
 import { useAuth } from '../../context/AuthContext';
@@ -17,16 +17,20 @@ const registerSchema = z.object({
 export const Register = () => {
   const navigate = useNavigate();
   const { signup } = useAuth();
+  const [errorMessage, setErrorMessage] = useState('');
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(registerSchema),
   });
 
-  const onSubmit = (data) => {
-    signup(data.fullName, data.email);
-    setTimeout(() => {
+  const onSubmit = async (data) => {
+    setErrorMessage('');
+    const result = await signup(data.fullName, data.email.trim(), data.password);
+    if (result?.success) {
       navigate('/dashboard', { replace: true });
-    }, 300);
+    } else {
+      setErrorMessage(result?.error || 'Registration failed. Email may already be in use.');
+    }
   };
 
   return (
@@ -35,6 +39,13 @@ export const Register = () => {
         <h2 className="text-2xl font-sans font-extrabold text-white tracking-tight">Create Your Account</h2>
         <p className="text-xs text-neutral-400 mt-1">Practice smart. Interview with confidence.</p>
       </div>
+
+      {errorMessage && (
+        <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+          <span>{errorMessage}</span>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Input

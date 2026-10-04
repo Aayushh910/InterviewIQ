@@ -23,6 +23,39 @@ from app.schemas.evaluation import (
     AnswerEvaluationRequest,
     AnswerEvaluationResponse,
 )
+from app.schemas.question_generation import (
+    QuestionGenerationRequest,
+    QuestionGenerationResponse,
+)
+from app.schemas.follow_up import (
+    FollowUpRequest,
+    FollowUpItem,
+    FollowUpResponse,
+)
+from app.schemas.speech_synthesis import (
+    SpeechSynthesisRequest,
+    SpeechSynthesisResponse,
+)
+from app.schemas.session_state import (
+    SessionStatus,
+    InterviewConfiguration,
+    QuestionHistoryItem,
+    AnswerHistoryItem,
+    FollowUpHistoryItem,
+    EvaluationReferenceItem,
+    FaceAnalysisReferenceItem,
+    BehaviorAnalysisReferenceItem,
+    SessionProgress,
+    SessionTimestamps,
+    RemainingTimeInfo,
+    InterviewSessionState,
+    SessionInitializeRequest,
+    SessionStateUpdateRequest,
+    AddQuestionRequest,
+    AddAnswerRequest,
+    AddFollowUpRequest,
+    AddEvaluationReferenceRequest,
+)
 
 __all__ = [
     "UserCreate",
@@ -51,4 +84,32 @@ __all__ = [
     "SpeechTranscriptionResponse",
     "AnswerEvaluationRequest",
     "AnswerEvaluationResponse",
+    "QuestionGenerationRequest",
+    "QuestionGenerationResponse",
+    "FollowUpRequest",
+    "FollowUpItem",
+    "FollowUpResponse",
+    "SpeechSynthesisRequest",
+    "SpeechSynthesisResponse",
+    "SessionStatus",
+    "InterviewConfiguration",
+    "QuestionHistoryItem",
+    "AnswerHistoryItem",
+    "FollowUpHistoryItem",
+    "EvaluationReferenceItem",
+    "FaceAnalysisReferenceItem",
+    "BehaviorAnalysisReferenceItem",
+    "SessionProgress",
+    "SessionTimestamps",
+    "RemainingTimeInfo",
+    "InterviewSessionState",
+    "SessionInitializeRequest",
+    "SessionStateUpdateRequest",
+    "AddQuestionRequest",
+    "AddAnswerRequest",
+    "AddFollowUpRequest",
+    "AddEvaluationReferenceRequest",
 ]
+
+
+

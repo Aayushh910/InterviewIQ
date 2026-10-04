@@ -91,3 +91,43 @@ def test_user_registration_and_login_flow():
         headers={"Authorization": f"Bearer {expired_token}"}
     )
     assert expired_response.status_code == 401
+
+
+def test_canonical_user_login(client, canonical_user):
+    """Verify canonical development/test user logs in successfully."""
+    resp = client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "dev@interviewiq.ai",
+            "password": "DevPassword123!"
+        }
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["user"]["email"] == "dev@interviewiq.ai"
+    assert data["user"]["id"] == canonical_user.id
+
+
+def test_canonical_user_persistence_across_sessions(client, canonical_user, auth_headers):
+    """Verify canonical user record and ID remain stable across logins."""
+    me_resp = client.get("/api/v1/auth/me", headers=auth_headers)
+    assert me_resp.status_code == 200
+    me_data = me_resp.json()
+    assert me_data["id"] == canonical_user.id
+    assert me_data["email"] == "dev@interviewiq.ai"
+
+
+def test_login_request_ignores_stale_bearer_header(client, canonical_user):
+    """Verify login succeeds even if a stale/invalid Authorization Bearer header is sent."""
+    stale_token = create_access_token(subject="old_stale_id", expires_delta=timedelta(seconds=-3600))
+    resp = client.post(
+        "/api/v1/auth/login",
+        headers={"Authorization": f"Bearer {stale_token}"},
+        json={
+            "email": "dev@interviewiq.ai",
+            "password": "DevPassword123!"
+        }
+    )
+    assert resp.status_code == 200
+    assert resp.json()["user"]["email"] == "dev@interviewiq.ai"
+

@@ -58,10 +58,34 @@ export const ForgotPassword = () => {
     }
   };
 
-  const handleResetPassword = (e) => {
+  const [resetError, setResetError] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
+
+  const handleResetPassword = async (e) => {
     e.preventDefault();
-    if (password && password === confirmPassword) {
+    setResetError('');
+    if (!password || password !== confirmPassword) {
+      setResetError('Passwords do not match.');
+      return;
+    }
+    if (password.length < 6) {
+      setResetError('Password must be at least 6 characters.');
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      const { apiClient } = await import('../../services/apiClient');
+      await apiClient.post('/auth/reset-password', {
+        email: email.trim().toLowerCase(),
+        password,
+      });
       setStep(4);
+    } catch (err) {
+      const msg = err?.response?.data?.detail || 'Failed to reset password. Please check your email.';
+      setResetError(msg);
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -228,6 +252,12 @@ export const ForgotPassword = () => {
               </div>
             </div>
 
+            {resetError && (
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono">
+                {resetError}
+              </div>
+            )}
+
             <div className="p-3 rounded-2xl bg-[#141414] border border-white/10 text-[11px] font-mono text-emerald-400 flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
               <span>Password Security: Strong 256-bit Encryption Verified</span>
@@ -237,6 +267,7 @@ export const ForgotPassword = () => {
               type="submit"
               variant="primary"
               size="lg"
+              loading={isResetting}
               icon={ArrowRight}
               iconPosition="right"
               className="w-full bg-white text-black hover:bg-neutral-200 font-bold border border-white/20 shadow-xl py-3 text-xs sm:text-sm"

@@ -1,229 +1,174 @@
-# 🎯 InterviewIQ – AI-Powered Interview Performance Analyzer
-<div align="center">
+# 🎯 InterviewIQ — AI-Powered Multimodal Interview Platform
 
-![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react)
-![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=for-the-badge&logo=fastapi)
-![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=for-the-badge&logo=postgresql)
-![OpenRouter](https://img.shields.io/badge/OpenRouter-LLM-blue?style=for-the-badge)
-![Whisper](https://img.shields.io/badge/Whisper-Speech_AI-6A5ACD?style=for-the-badge)
-![OpenCV](https://img.shields.io/badge/OpenCV-Computer_Vision-5C3EE8?style=for-the-badge&logo=opencv)
-![MediaPipe](https://img.shields.io/badge/MediaPipe-Face_Tracking-FF9800?style=for-the-badge)
-![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
-
-### 🚀 AI-Powered Multimodal Mock Interview Platform using LLMs, Speech AI & Computer Vision
-
-*Prepare smarter. Practice better. Get hired faster.*
-
-</div>
+InterviewIQ is an enterprise-grade AI technical interview simulation and assessment platform. It conducts dynamic, multi-turn technical interviews, analyzes real-time video and audio signals, executes deterministic multimodal evaluations, and delivers performance dashboards with downloadable PDF scorecards.
 
 ---
 
-# 📖 Overview
-
-**InterviewIQ** is an AI-powered interview preparation platform that simulates real interview experiences and provides intelligent feedback to help candidates improve their interview performance.
-
-Unlike traditional mock interview platforms, InterviewIQ not only asks interview questions but also analyzes every answer, evaluates communication quality, identifies strengths and weaknesses, generates follow-up questions, and provides personalized suggestions using Large Language Models (LLMs).
-
-TThe platform supports Resume-Based, Job Description-Based, Technical, and HR interviews while analyzing technical knowledge, communication skills, confidence, facial expressions, eye contact, and overall interview performance using LLMs, Speech AI, and Computer Vision.
-
-allowing users to practice for specific roles with customized interview sessions.
-
----
-# ✨ Features
-
-| Category | Features |
-|----------|----------|
-| 👤 User | Authentication, User Profile, Dashboard, Interview History, Resume Upload, PDF Reports |
-| 🤖 AI Interview | AI Interviewer, Dynamic Question Generation, Context-Aware Questions, AI Follow-up Questions |
-| 🎤 Voice AI | AI Voice Questions (Text-to-Speech), Voice Answer Recording, Speech-to-Text (Whisper), Text Answer Support |
-| 😊 Computer Vision | Face Detection, Eye Contact Detection, Head Pose Analysis, Facial Expression Analysis, Attention Monitoring, Confidence Score |
-| 📝 AI Evaluation | Answer Evaluation, Technical Score, Communication Score, Confidence Analysis, Question-wise Analysis |
-| 💡 AI Assistance | AI Feedback, Improvement Suggestions, Personalized Learning Roadmap, Interview Summary |
-| 📄 Interview Types | Resume-Based Interview, Job Description-Based Interview, Technical Interview, HR Interview, Custom Interview |
-| 📊 Analytics & Reports | Performance Dashboard, Progress Tracking, Interview Reports, Performance Trends, Weak Topic Analysis, PDF Export |
-| 👨‍💼 Admin | User Management, Interview Management, Analytics Dashboard, AI Usage Monitoring, Report Management |
-
-# 🏗 System Architecture
+## 🏗 High-Level Architecture
 
 ```text
-                    +---------------------------+
-                    |   React + Vite Frontend   |
-                    +------------+--------------+
-                                 |
-                       REST APIs / WebSocket
-                                 |
-                    +------------v--------------+
-                    |       FastAPI Backend     |
-                    +------------+--------------+
-                                 |
-      +--------------+-----------+-----------+--------------+
-      |              |                       |              |
-      |              |                       |              |
-+-----v-----+  +-----v------+        +-------v------+ +-----v------+
-| PostgreSQL|  | OpenRouter |        | Speech AI    | | Computer   |
-| Database  |  | (LLMs)     |        | Whisper/TTS  | | Vision     |
-+-----------+  +------------+        +--------------+ +------------+
-                     |                                        |
-         +-----------+-----------+                +-----------+-----------+
-         |                       |                |                       |
-     +---v----+             +----v----+      +----v-----+          +------v------+
-     | Gemini |             | DeepSeek|      | OpenCV   |          | MediaPipe   |
-     +--------+             +---------+      +----------+          +-------------+
-                                   |
-                              +----v----+
-                              | Llama   |
-                              +---------+
+Frontend (React 18 + Vite + Tailwind CSS + MediaPipe Vision)
+       │
+       ▼
+Backend API (FastAPI + Python 3.11 + Uvicorn)
+       │
+       ├── Authentication & Session State (JWT + InterviewStateManager)
+       │
+       ├── Groq Interview Agent (Multi-turn Orchestrator)
+       │       │
+       │       ▼
+       │   Tool Registry (Dynamic Tool Execution)
+       │       ├── Question Generation & Contextual Follow-up
+       │       ├── Answer Evaluation & Lifecycle State
+       │       ├── Computer Vision & Behavioral Analysis
+       │       ├── Deterministic Final Scoring
+       │       └── Performance Report Compilation
+       │
+       ├── Deterministic Scoring Pipeline
+       │       AnswerEvaluator ──► EvidenceAggregator ──► ScoringEngine ──► FinalEvaluator
+       │
+       └── Database (PostgreSQL via SQLAlchemy 2.0 & Alembic)
 ```
----
-
-# 🛠 Tech Stack
-
-| Category | Technologies |
-|----------|--------------|
-| Frontend | React.js, Vite, Tailwind CSS |
-| Backend | FastAPI, Python, SQLAlchemy, Pydantic |
-| Database | PostgreSQL |
-| Authentication | JWT, OAuth |
-| AI/LLM | OpenRouter, Gemini, DeepSeek, Llama, Prompt Engineering |
-| Speech | Speech-to-Text APIs,Faster Whisper, Edge TTS |
-| File Processing | PDF Parser, Resume Parser |
-| Deployment | Docker, Render, Vercel, GitHub Actions |
-| Version Control | Git & GitHub |
 
 ---
-# ⚙️ Workflow 
 
-<p align="center">
-<img src="Workflow/Work_git.png" width="100%">
-</p>
+## 🌟 Core Subsystems
+
+### 1. Centralized Interview State Manager (Phase 8)
+- Finite state machine governing session states: `CONFIGURED` → `STARTED` → `IN_PROGRESS` → `COMPLETED` / `CANCELLED`.
+- Atomic session history, question sequencing, and timing tracking.
+
+### 2. Tool Architecture & Tool Registry (Phase 9)
+- Modular tool registry with strong Pydantic schemas, dependency injection (database session, active user), and error encapsulation.
+- Registers all 9 operational tools:
+  1. `generate_interview_question`
+  2. `generate_follow_up_question`
+  3. `evaluate_answer`
+  4. `get_interview_state`
+  5. `update_interview_state`
+  6. `analyze_face`
+  7. `analyze_behavior`
+  8. `calculate_final_evaluation`
+  9. `generate_interview_report`
+
+### 3. Groq Interview Agent (Phase 10)
+- Single orchestrator using high-speed Groq LLM inference to manage conversation turns and invoke registered tools.
+
+### 4. Real-Time Multimodal Analysis (Phase 11)
+- **Computer Vision**: Tracks facial landmarks, head pose orientation, and eye gaze alignment using MediaPipe.
+- **Speech & Behavior**: Analyzes vocal cadence (WPM), response duration, latency, and linguistic structure.
+- Persists all observations to the `multimodal_evidence` database table.
+
+### 5. Deterministic Final Scoring (Phase 12)
+- Replaces non-deterministic LLM scoring with an explainable, weighted formula:
+  - **Answer Quality (Technical & Content Mastery)**: 70%
+  - **Behavioral & Communication Cadence**: 15%
+  - **Visual Engagement & Presence**: 15%
+- Provides per-question breakdowns, pillar confidence indicators, strengths, and areas for improvement.
+
+### 6. Results Dashboard & PDF Reporting (Phase 13)
+- Interactive results dashboard featuring score cards, competency breakdowns, and evidence transparency.
+- Production ReportLab engine generating multi-page, formatted PDF reports with visual scorecards and downloadable artifacts.
 
 ---
-## ⚙️ Installation
 
-### Clone Repository
+## 🚀 Quickstart & Development Setup
 
+### Prerequisites
+- Python 3.10 or 3.11
+- Node.js 18+ (Node 20 recommended)
+- PostgreSQL 14+
+- Groq API Key
+
+### Backend Setup
 ```bash
-git clone https://github.com/Aayushh910/InterviewIQ.git
-cd InterviewIQ
-Backend Setup
 cd backend
+# 1. Configure environment
+cp ../.env.example .env
+# Edit .env with your DATABASE_URL and AI_API_KEY
 
-python -m venv venv
-
-# Windows
-venv\Scripts\activate
-
-# Linux/macOS
-source venv/bin/activate
-
+# 2. Install dependencies
 pip install -r requirements.txt
 
-uvicorn app.main:app --reload
-Frontend Setup
-cd frontend
+# 3. Run database migrations
+alembic upgrade head
 
+# 4. Start backend server
+uvicorn main:app --reload --host 127.0.0.1 --port 8000
+```
+- API Health Check: `http://localhost:8000/api/v1/health`
+- Interactive OpenAPI Docs: `http://localhost:8000/docs`
+
+### Frontend Setup
+```bash
+cd frontend
+# 1. Install dependencies
 npm install
 
+# 2. Run development server
 npm run dev
 ```
-# 📂 Project Structure
+- Web Application: `http://localhost:5173`
+
+---
+
+## 🧪 Testing & Verification
+
+### Run Backend Tests
+```bash
+cd backend
+pytest -v
+```
+
+### Production Frontend Build
+```bash
+cd frontend
+npm run build
+```
+
+---
+
+## 📁 Project Structure
 
 ```text
 InterviewIQ/
-
-├── frontend/
 ├── backend/
-│   ├── api/
-│   ├── ai/
-│   ├── speech/
-│   ├── vision/
-│   ├── reports/
-│   └── models/
-│
-├── assets/
-├── uploads/
-├── reports/
-└── README.md
+│   ├── app/
+│   │   ├── agents/interview/       # Groq Interview Agent
+│   │   ├── ai/                     # AI Providers (Groq, STT, TTS, Vision)
+│   │   ├── api/                    # FastAPI Endpoints & Routers
+│   │   ├── core/                   # Config, Database, Scoring weights, Security
+│   │   ├── evaluation/             # Deterministic Final Evaluation & Aggregation
+│   │   ├── models/                 # SQLAlchemy 2.0 Database Models
+│   │   ├── schemas/                # Pydantic Schemas & DTOs
+│   │   ├── services/               # Core Business Logic Services
+│   │   └── tools/                  # Unified Tool Architecture & 9 Operational Tools
+│   ├── alembic/                    # Database Migrations
+│   ├── models/                     # ML Model Binaries (MediaPipe Face Landmarker)
+│   ├── scripts/                    # Database Seeding & Development Scripts
+│   ├── tests/                      # Pytest Test Suite
+│   └── requirements.txt            # Production Python Dependencies
+├── frontend/
+│   ├── src/
+│   │   ├── components/             # Reusable UI, Interview, Results, & Report Components
+│   │   ├── context/                # React Contexts (Auth, Interview, Resume, Theme)
+│   │   ├── hooks/                  # Audio, Face Detection, & Utility Hooks
+│   │   ├── layouts/                # Main, Auth, & Workspace Layouts
+│   │   ├── pages/                  # Top-level Page Views (Dashboard, Interview, Results, Reports)
+│   │   ├── routes/                 # App Routing & Route Guards
+│   │   ├── services/               # API Client & Backend Interaction Services
+│   │   └── utils/                  # Style & Constant Utilities
+│   ├── public/                     # Static Assets
+│   └── package.json                # Frontend Dependencies & Scripts
+├── docs/
+│   ├── architecture/               # System Architecture Documentation
+│   └── deployment/                 # Deployment & Operations Guide
+├── .env.example                    # Consolidated Environment Configuration Template
+├── .gitignore                      # Version Control Exclusions
+└── README.md                       # Repository Guide & Documentation
 ```
 
-# 📋 Future Scope
-
-- AI Voice Interview
-- Webcam-Based Confidence Analysis
-- Facial Expression Detection
-- Emotion Recognition
-- Company-Specific Interview Sets
-- Coding Interview Support
-- AI Resume Improvement
-- AI Career Guidance
-- Leaderboards
-- Community Challenges
-- Multi-language Support
-
 ---
 
-# 🎯 Project Goals
-
-- Improve interview confidence
-- Reduce interview anxiety
-- Provide personalized feedback
-- Simulate real interview environments
-- Help students prepare efficiently
-- Increase placement success
-
-
----
-
-# 🤝 Contributing
-
-Contributions are welcome!
-
-1. Fork the repository
-2. Create a new branch
-
-```bash
-git checkout -b feature-name
-```
-
-3. Commit your changes
-
-```bash
-git commit -m "Added new feature"
-```
-
-4. Push to GitHub
-
-```bash
-git push origin feature-name
-```
-
-5. Open a Pull Request
-
----
-
-# 📄 License
-
-InterviewIQ – AI Interview Performance Analyzer
-
-Copyright © 2026 **Aayush Savaliya**
-
-This project was developed as part of an academic study at CHARUSAT University (CSPIT) for learning and educational purposes.
-
-**All Rights Reserved.**
-Unauthorized copying, distribution, or submission of this work as one's own is prohibited.
-
----
-<div align="center">
-  
-## ✨ Project Creator
-
-> Designed, Developed, and Maintained by
-# Aayush Savaliya
----
-## ⭐ If you like this project, don't forget to star the repository!
-
-**Made with ❤️ using React, FastAPI, PostgreSQL and AI**
-
-</div>
+## 📄 License
+MIT License.

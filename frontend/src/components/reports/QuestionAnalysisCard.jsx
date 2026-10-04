@@ -48,22 +48,30 @@ export const QuestionAnalysisCard = ({ qa, index }) => {
       </div>
 
       {/* Micro Metrics Breakdown Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-xs font-mono">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-1 text-xs font-mono">
         <div className="p-2.5 rounded-xl bg-[#141414] border border-white/10">
-          <span className="text-[10px] text-neutral-400 block">Grammar Score</span>
-          <span className="font-bold text-emerald-400">{qa.grammar}%</span>
+          <span className="text-[10px] text-neutral-400 block">Correctness</span>
+          <span className="font-bold text-emerald-400">{qa.correctness ?? qa.questionScore ?? 0}%</span>
         </div>
         <div className="p-2.5 rounded-xl bg-[#141414] border border-white/10">
-          <span className="text-[10px] text-neutral-400 block">Confidence</span>
-          <span className="font-bold text-cyan-400">{qa.confidence}%</span>
+          <span className="text-[10px] text-neutral-400 block">Relevance</span>
+          <span className="font-bold text-cyan-400">{qa.relevance ?? qa.questionScore ?? 0}%</span>
         </div>
         <div className="p-2.5 rounded-xl bg-[#141414] border border-white/10">
-          <span className="text-[10px] text-neutral-400 block">Emotion State</span>
-          <span className="font-bold text-purple-400">{qa.emotion}</span>
+          <span className="text-[10px] text-neutral-400 block">Technical Depth</span>
+          <span className="font-bold text-blue-400">{qa.technicalAccuracy ?? qa.questionScore ?? 0}%</span>
         </div>
         <div className="p-2.5 rounded-xl bg-[#141414] border border-white/10">
-          <span className="text-[10px] text-neutral-400 block">Eye Contact</span>
-          <span className="font-bold text-emerald-400">{qa.facialComposure}</span>
+          <span className="text-[10px] text-neutral-400 block">Communication</span>
+          <span className="font-bold text-purple-400">{qa.communication ?? qa.questionScore ?? 0}%</span>
+        </div>
+        <div className="p-2.5 rounded-xl bg-[#141414] border border-white/10">
+          <span className="text-[10px] text-neutral-400 block">Grammar</span>
+          <span className="font-bold text-amber-400">{qa.grammar ?? qa.questionScore ?? 0}%</span>
+        </div>
+        <div className="p-2.5 rounded-xl bg-[#141414] border border-white/10">
+          <span className="text-[10px] text-neutral-400 block">Timing & Pace</span>
+          <span className="font-bold text-emerald-400">{qa.timing ?? 90}%</span>
         </div>
       </div>
     </div>

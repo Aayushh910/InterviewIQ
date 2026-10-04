@@ -31,7 +31,7 @@ export const Login = () => {
 
   const onSubmit = async (data) => {
     setErrorMessage('');
-    const result = await login(data.email, data.password);
+    const result = await login(data.email.trim(), data.password);
     if (result?.success) {
       navigate(from, { replace: true });
     } else {

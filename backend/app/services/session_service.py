@@ -67,11 +67,14 @@ def start_session(db: Session, session_id: str, user_id: str) -> Optional[Interv
 
 def complete_session(db: Session, session_id: str, user_id: str) -> Optional[InterviewSession]:
     """
-    Transition a session status to completed.
+    Transition a session status to completed (idempotent if already completed).
     """
     session = get_session_by_id(db, session_id=session_id, user_id=user_id)
     if not session:
         return None
+
+    if session.status == "completed":
+        return session
 
     if session.status != "in_progress" and session.status != "not_started":
         raise ValueError("Session is not in active progress")
@@ -81,3 +84,18 @@ def complete_session(db: Session, session_id: str, user_id: str) -> Optional[Int
     db.commit()
     db.refresh(session)
     return session
+
+
+def validate_session_active(session: InterviewSession, max_duration_minutes: float = 4.0) -> bool:
+    """
+    Validate whether an interview session is active and within allowed 4-minute duration.
+    """
+    if not session or session.status in ["completed", "abandoned", "expired"]:
+        return False
+    if session.started_at:
+        elapsed = (datetime.utcnow() - session.started_at).total_seconds()
+        allowed_seconds = (max_duration_minutes * 60) + 30.0
+        if elapsed > allowed_seconds:
+            return False
+    return True
+

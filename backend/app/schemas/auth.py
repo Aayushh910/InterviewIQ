@@ -17,3 +17,11 @@ class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+
+class ResetPasswordRequest(BaseModel):
+    """
+    Schema for resetting account password.
+    """
+    email: EmailStr
+    password: str

@@ -1,194 +1,166 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Mic, MicOff, Camera, CameraOff, Pause, Play, RotateCcw, XCircle, Sparkles, Volume2,
-  Eye, ScanFace, Activity, Clock, HelpCircle, MessageSquareText, Send, CheckCircle2, FlipHorizontal, AlertTriangle
+  Mic, MicOff, Camera, CameraOff, Pause, Play, Volume2,
+  Maximize2, Minimize2, FlipHorizontal, AlertTriangle, RotateCcw, ChevronRight,
+  Sparkles, LogOut, CheckCircle2
 } from 'lucide-react';
-import { Button } from '../common/Button';
 import {
   createInterview,
-  getUserInterviews,
   createSession,
   startSession,
   completeSession,
-  getInterviewQuestions,
-  addInterviewQuestion,
+  generateAIQuestions,
+  submitAnswer,
   submitAudioAnswer,
   submitAnswerFacialFrame,
   getSessionAnalytics,
+  calculateFinalEvaluation,
 } from '../../services/interviewService';
 import { useAudioRecorder } from '../../hooks/useAudioRecorder';
-
-// Dynamic Topic & Domain Question Bank
-const DOMAIN_QUESTION_BANK = {
-  Frontend: [
-    "Can you explain how React's Virtual DOM diffing algorithm works under the hood?",
-    "How do you optimize state normalization and memory leak prevention in complex React applications?",
-    "What are the trade-offs between Client-Side Rendering (CSR), Server-Side Rendering (SSR), and Static Site Generation (SSG) in Next.js?",
-    "How does the JavaScript event loop handle macro-tasks versus micro-tasks when dealing with Promises and setTimeout?",
-    "Describe your strategy for optimizing Core Web Vitals (LCP, INP, CLS) in a high-traffic web application.",
-  ],
-  Backend: [
-    "How do you design a high-concurrency microservice with rate-limiting and circuit breaker resilience?",
-    "What are the trade-offs between REST APIs, gRPC, and GraphQL for microservice communication?",
-    "How do you handle database indexing, query optimization, and connection pooling in PostgreSQL when handling millions of records?",
-    "Can you explain Python's Global Interpreter Lock (GIL) and how async/await differs from multi-processing in FastAPI?",
-    "Describe your approach to implementing distributed caching using Redis and cache invalidation strategies.",
-  ],
-  'Data Science': [
-    "Can you explain the bias-variance trade-off and how regularization (L1/L2) helps prevent overfitting?",
-    "How do gradient descent optimization algorithms like Adam and SGD differ in convergence speed and local minima traps?",
-    "Describe your approach to feature selection and handling imbalanced datasets in classification models.",
-    "What are the key differences between Convolutional Neural Networks (CNNs) and Transformer architectures for sequential data?",
-    "How do you evaluate model drift and maintain continuous integration for machine learning models in production?",
-  ],
-  DevOps: [
-    "How do you design an automated CI/CD deployment pipeline with zero-downtime blue/green deployments?",
-    "Can you explain Kubernetes pod lifecycle, container resource limits, and Horizontal Pod Autoscaling (HPA)?",
-    "How do you enforce Infrastructure as Code (IaC) using Terraform while maintaining state file security?",
-    "Describe your strategy for monitoring, centralized logging, and incident alerting in a distributed cloud environment.",
-    "How do you handle secrets management and zero-trust IAM security policies across cloud infrastructure?",
-  ],
-  Behavioral: [
-    "Tell me about a time you had a technical disagreement with a teammate and how you resolved it using the STAR method.",
-    "Where do you see your technical leadership trajectory over the next 3 to 5 years?",
-    "Describe a project that failed or missed deadlines, and what key trade-offs you learned from it.",
-    "How do you prioritize competing requests from product managers vs technical debt refactoring?",
-    "Tell me about a time you took initiative to mentor a junior developer or improve team engineering practices.",
-  ],
-  HR: [
-    "Tell me about a time you had a technical disagreement with a teammate and how you resolved it using the STAR method.",
-    "Where do you see your technical leadership trajectory over the next 3 to 5 years?",
-    "Describe a project that failed or missed deadlines, and what key trade-offs you learned from it.",
-    "How do you prioritize competing requests from product managers vs technical debt refactoring?",
-  ]
-};
+import { useFaceDetection } from '../../hooks/useFaceDetection';
+import { FaceDetectionOverlay } from './FaceDetectionOverlay';
 
 export const AIInterviewScreen = ({ config, onFinish }) => {
   const selectedDomain = config.domain || config.interviewType || 'Frontend';
-  const domainQuestions = DOMAIN_QUESTION_BANK[selectedDomain] || DOMAIN_QUESTION_BANK[config.interviewType] || DOMAIN_QUESTION_BANK.Frontend;
   const totalQuestions = config.questionsCount || 5;
 
+  // ─── Screen State ────────────────────────────────────────────
+  const [screenState, setScreenState] = useState('PREPARING');
   const [currentQIndex, setCurrentQIndex] = useState(0);
-  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [timerSeconds, setTimerSeconds] = useState(240);
   const [isPaused, setIsPaused] = useState(false);
+  const [isInitializingSession, setIsInitializingSession] = useState(false);
+  const [sessionInitError, setSessionInitError] = useState(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const hasExpiredRef = useRef(false);
+
+  // ─── Camera State ────────────────────────────────────────────
   const [micEnabled, setMicEnabled] = useState(true);
   const [cameraEnabled, setCameraEnabled] = useState(true);
+  const [webcamStream, setWebcamStream] = useState(null);
+  const [cameraError, setCameraError] = useState(null);
+  const [isMirrored, setIsMirrored] = useState(true);
+  const videoRef = useRef(null);
 
-  // Backend Integration State
+  // ─── Session State ───────────────────────────────────────────
   const [sessionId, setSessionId] = useState(null);
   const [backendQuestions, setBackendQuestions] = useState([]);
   const [questionStartTime, setQuestionStartTime] = useState(() => new Date().toISOString());
+  const questionStartTimeRef = useRef(new Date().toISOString());
+  const [activeQuestion, setActiveQuestion] = useState({ id: null, text: '', type: 'main', depth: 0 });
 
-  // Active Question (Main or Adaptive Counter Question)
-  const [activeQuestion, setActiveQuestion] = useState({
-    id: 'q_1',
-    text: domainQuestions[0],
-    type: 'main',
-    depth: 0,
-  });
-
-  // Audio Recording Hook
+  // ─── Answer & Transcript State ───────────────────────────────
   const { isRecording, startRecording, stopRecording, reset: resetRecorder } = useAudioRecorder();
-
-  // AI & User State
-  const [aiState, setAiState] = useState('speaking'); // 'speaking' | 'listening' | 'thinking'
+  const [aiState, setAiState] = useState('listening');
+  const [inputMode, setInputMode] = useState('voice');
+  const [textAnswer, setTextAnswer] = useState('');
   const [transcript, setTranscript] = useState('');
   const [liveTranscript, setLiveTranscript] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [audioError, setAudioError] = useState(null);
 
-  // Device Camera Capture State
-  const [webcamStream, setWebcamStream] = useState(null);
-  const [cameraError, setCameraError] = useState(null);
-  const [isMirrored, setIsMirrored] = useState(true);
-  const videoRef = useRef(null);
+  // ─── Refs ────────────────────────────────────────────────────
   const recognitionRef = useRef(null);
+  const transcriptEndRef = useRef(null);
+  const ttsAudioRef = useRef(null);
 
-  // Helper to capture a frame from the live video stream for Facial Analysis
-  const captureCameraFrameBlob = () => {
-    return new Promise((resolve) => {
-      if (!videoRef.current || !cameraEnabled) {
-        return resolve(null);
-      }
-      try {
-        const video = videoRef.current;
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth || 640;
-        canvas.height = video.videoHeight || 480;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return resolve(null);
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.85);
-      } catch (e) {
-        resolve(null);
-      }
-    });
+  // ─── TTS State ───────────────────────────────────────────────
+  const [ttsState, setTtsState] = useState('idle');
+
+  // ─── Face Detection ──────────────────────────────────────────
+  const faceData = useFaceDetection(videoRef, {
+    isEnabled: cameraEnabled && !!webcamStream,
+    isMirrored,
+    intervalMs: 120,
+  });
+
+  // ─── Auto-scroll transcript ───────────────────────────────────
+  useEffect(() => {
+    transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [liveTranscript, transcript]);
+
+  // ─── Fullscreen Listener ──────────────────────────────────────
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement || document.webkitFullscreenElement));
+    document.addEventListener('fullscreenchange', onChange);
+    document.addEventListener('webkitfullscreenchange', onChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange);
+      document.removeEventListener('webkitfullscreenchange', onChange);
+    };
+  }, []);
+
+  const requestFullscreen = async () => {
+    try {
+      if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
+      else if (document.documentElement.webkitRequestFullscreen) await document.documentElement.webkitRequestFullscreen();
+    } catch (e) { /* allowed to fail */ }
   };
 
-  // Initialize Backend Interview Session with Dynamic Domain Questions
-  useEffect(() => {
-    let isMounted = true;
+  const exitFullscreen = () => {
+    try {
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    } catch (e) {}
+  };
 
-    const initBackendSession = async () => {
-      try {
-        // Always create fresh interview for configured topic/domain
-        const activeInterview = await createInterview({
-          title: `${selectedDomain} (${config.difficulty || 'Medium'}) Practice Loop`,
-          domain: selectedDomain,
-          interviewType: config.interviewType || 'Technical',
-          job_role: `${selectedDomain} Specialist`,
-          mode: config.mode,
-          difficulty: config.difficulty,
-          experience: config.experience,
-          questionsCount: totalQuestions,
-        });
-
-        const domainTexts = DOMAIN_QUESTION_BANK[selectedDomain] || DOMAIN_QUESTION_BANK[config.interviewType] || DOMAIN_QUESTION_BANK.Frontend;
-        const countToCreate = Math.min(totalQuestions, domainTexts.length);
-        const qList = [];
-
-        for (let i = 0; i < countToCreate; i++) {
-          const createdQ = await addInterviewQuestion(activeInterview.id, {
-            question_text: domainTexts[i],
-            question_order: i + 1,
-            question_type: (config.interviewType || 'Technical').toLowerCase(),
-          });
-          qList.push(createdQ);
-        }
-
-        if (isMounted) {
-          setBackendQuestions(qList);
-          if (qList.length > 0) {
-            setActiveQuestion({
-              id: qList[0].id,
-              text: qList[0].question_text,
-              type: 'main',
-              depth: 0,
-            });
-          }
-        }
-
-        const session = await createSession(activeInterview.id);
-        const started = await startSession(session.id);
-
-        if (isMounted) {
-          setSessionId(started.id);
-          setQuestionStartTime(new Date().toISOString());
-        }
-      } catch (err) {
-        console.warn('Backend interview session initialization notice:', err);
+  // ─── Camera Setup ─────────────────────────────────────────────
+  const requestDeviceCamera = async () => {
+    try {
+      setCameraError(null);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: true,
+      });
+      setWebcamStream(stream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play().catch(() => {});
       }
-    };
+    } catch (err) {
+      setCameraError(err.message || 'Camera and microphone access is required.');
+    }
+  };
 
-    initBackendSession();
-
+  useEffect(() => {
+    requestDeviceCamera();
     return () => {
-      isMounted = false;
+      resetRecorder();
+      try { recognitionRef.current?.stop(); } catch (e) {}
+      webcamStream?.getTracks().forEach(t => t.stop());
+      if (document.fullscreenElement || document.webkitFullscreenElement) exitFullscreen();
     };
-  }, [config]);
+  }, []);
 
-  // Update Question Start Time when Active Question Changes
+  useEffect(() => {
+    if (cameraEnabled) {
+      if (!webcamStream) requestDeviceCamera();
+      else if (videoRef.current) {
+        videoRef.current.srcObject = webcamStream;
+        videoRef.current.play().catch(() => {});
+      }
+    } else {
+      webcamStream?.getTracks().forEach(t => t.stop());
+      setWebcamStream(null);
+    }
+  }, [cameraEnabled]);
+
+  // ─── Timer ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (screenState !== 'ACTIVE' || isPaused || timerSeconds <= 0) return;
+    const interval = setInterval(() => {
+      setTimerSeconds(prev => {
+        if (prev <= 1) { clearInterval(interval); handleTimerExpiration(); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [screenState, isPaused, timerSeconds]);
+
+  const formatTimer = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+
+  // ─── Question Lifecycle ───────────────────────────────────────
   useEffect(() => {
     setQuestionStartTime(new Date().toISOString());
     setTranscript('');
@@ -196,532 +168,882 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
     setAudioError(null);
   }, [activeQuestion]);
 
-  // Timer Effect
-  useEffect(() => {
-    let interval;
-    if (!isPaused) {
-      interval = setInterval(() => setTimerSeconds((prev) => prev + 1), 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isPaused]);
-
-  // Direct Device Camera & Mic Request Handler
-  const requestDeviceCamera = async () => {
+  // ─── TTS Playback ─────────────────────────────────────────────
+  const playQuestionAudio = (text) => {
+    if (!text?.trim()) return;
+    setTtsState('loading');
+    setAiState('speaking');
+    if (!('speechSynthesis' in window)) { setTtsState('idle'); setAiState('listening'); return; }
     try {
-      setCameraError(null);
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
-          audio: true
-        });
-        setWebcamStream(stream);
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play().catch(() => { });
-        }
-      }
-    } catch (err) {
-      console.error('Device camera capture error:', err);
-      setCameraError(err.message || 'Microphone access is required to record your interview answer.');
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.rate = 1.0; utter.pitch = 1.0; utter.lang = 'en-US';
+      utter.onstart = () => { setTtsState('playing'); setAiState('speaking'); };
+      utter.onend = () => { setTtsState('idle'); setAiState('listening'); };
+      utter.onerror = () => { setTtsState('idle'); setAiState('listening'); };
+      setTtsState('playing');
+      window.speechSynthesis.speak(utter);
+    } catch { setTtsState('idle'); setAiState('listening'); }
+  };
+
+  useEffect(() => {
+    if (screenState === 'ACTIVE' && activeQuestion?.text) playQuestionAudio(activeQuestion.text);
+    return () => { try { window.speechSynthesis?.cancel(); } catch (e) {} };
+  }, [activeQuestion, screenState]);
+
+  const handleToggleAudio = () => {
+    if ('speechSynthesis' in window && window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel(); setTtsState('idle'); setAiState('listening');
+    } else {
+      playQuestionAudio(activeQuestion.text);
     }
   };
 
-  // Setup Device Camera & Mic on Mount & Cleanup on Unmount
+  // ─── Speech Recognition ───────────────────────────────────────
   useEffect(() => {
-    requestDeviceCamera();
-
-    return () => {
-      resetRecorder();
-      if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch (e) {}
-      }
-      if (webcamStream) {
-        webcamStream.getTracks().forEach((track) => track.stop());
-      }
-    };
-  }, []);
-
-  // Re-bind video srcObject whenever cameraEnabled toggles or webcamStream updates
-  useEffect(() => {
-    if (cameraEnabled) {
-      if (!webcamStream) {
-        requestDeviceCamera();
-      } else if (videoRef.current) {
-        videoRef.current.srcObject = webcamStream;
-        videoRef.current.play().catch(() => { });
-      }
-    } else if (webcamStream) {
-      webcamStream.getTracks().forEach((t) => t.stop());
-      setWebcamStream(null);
-    }
-  }, [cameraEnabled]);
-
-  // Live Speech Recognition & Audio Recorder Initialization when AI is listening
-  useEffect(() => {
-    if (aiState === 'listening' && micEnabled && webcamStream && !isRecording) {
-      console.log("[InterviewIQ] Recording started from live microphone stream");
+    let rec = null;
+    let active = true;
+    if (screenState === 'ACTIVE' && micEnabled) {
       startRecording(webcamStream);
-
-      // Initialize Browser Web Speech API for Live Visual UI Feedback
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (SpeechRecognition) {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SR) {
         try {
-          const recognition = new SpeechRecognition();
-          recognition.continuous = true;
-          recognition.interimResults = true;
-          recognition.lang = 'en-US';
-
-          recognition.onresult = (event) => {
-            let currentLive = '';
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
-              currentLive += event.results[i][0].transcript;
-            }
-            if (currentLive.trim()) {
-              setLiveTranscript(currentLive.trim());
-            }
+          rec = new SR();
+          rec.continuous = true; rec.interimResults = true; rec.lang = 'en-US';
+          rec.onresult = (e) => {
+            let t = '';
+            for (let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
+            if (t.trim() && active) setLiveTranscript(t.trim());
           };
-
-          recognition.start();
-          recognitionRef.current = recognition;
-        } catch (e) {
-          console.warn("[InterviewIQ] Browser SpeechRecognition init notice:", e);
-        }
+          rec.onerror = () => {};
+          rec.onend = () => { if (active && screenState === 'ACTIVE' && micEnabled) try { rec.start(); } catch (e) {} };
+          rec.start();
+          recognitionRef.current = rec;
+        } catch (e) {}
       }
     }
-  }, [aiState, micEnabled, webcamStream, isRecording, startRecording]);
+    return () => { active = false; try { rec?.stop(); } catch (e) {} };
+  }, [screenState, micEnabled, webcamStream, startRecording]);
 
-  // AI Speech simulation when active question changes
-  useEffect(() => {
-    setAiState('speaking');
-    const questionText = activeQuestion.text;
+  // ─── Frame Capture ────────────────────────────────────────────
+  const captureCameraFrameBlob = () => new Promise(resolve => {
+    if (!videoRef.current || !cameraEnabled) return resolve(null);
+    try {
+      const v = videoRef.current;
+      const c = document.createElement('canvas');
+      c.width = v.videoWidth || 640; c.height = v.videoHeight || 480;
+      const ctx = c.getContext('2d');
+      if (!ctx) return resolve(null);
+      ctx.drawImage(v, 0, 0, c.width, c.height);
+      c.toBlob(b => resolve(b), 'image/jpeg', 0.85);
+    } catch { resolve(null); }
+  });
 
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(questionText);
-      utterance.rate = 1.0;
-      utterance.pitch = 1.0;
-      utterance.onend = () => {
-        setAiState('listening');
-      };
-      window.speechSynthesis.speak(utterance);
-    } else {
-      const timeout = setTimeout(() => setAiState('listening'), 3500);
-      return () => clearTimeout(timeout);
+  // ─── Session Init ─────────────────────────────────────────────
+  const initBackendSession = async () => {
+    setIsInitializingSession(true);
+    setSessionInitError(null);
+    try {
+      const interview = await createInterview({
+        title: `${selectedDomain} (${config.difficulty || 'Medium'}) Practice Loop`,
+        domain: selectedDomain,
+        interviewType: config.interviewType || 'Technical',
+        job_role: config.job_role || `${selectedDomain} Engineer`,
+        mode: config.mode || 'General',
+        difficulty: config.difficulty || 'Medium',
+        experience: config.experience || '2+',
+        questionsCount: totalQuestions,
+        counterQuestions: config.counterQuestions !== false,
+      });
+      const { questions: qList } = await generateAIQuestions(interview.id, totalQuestions);
+      if (!qList?.length) throw new Error('No questions returned. Please retry.');
+      setBackendQuestions(qList);
+      setActiveQuestion({ id: qList[0].id, text: qList[0].question_text, type: 'main', depth: 0 });
+      const session = await createSession(interview.id);
+      const started = await startSession(session.id);
+      setSessionId(started.id);
+      const nowIso = new Date().toISOString();
+      questionStartTimeRef.current = nowIso;
+      setQuestionStartTime(nowIso);
+      setScreenState('ACTIVE');
+      setTimerSeconds(240);
+      hasExpiredRef.current = false;
+    } catch (err) {
+      const msg = err?.response?.data?.detail || err?.message || 'Failed to start session.';
+      setSessionInitError(msg);
+    } finally {
+      setIsInitializingSession(false);
     }
-  }, [activeQuestion]);
+  };
 
+  const handleStartInterview = async () => {
+    requestFullscreen();
+    await initBackendSession();
+  };
+
+  // ─── Timer Expiration ─────────────────────────────────────────
+  const handleTimerExpiration = async () => {
+    if (hasExpiredRef.current) return;
+    hasExpiredRef.current = true;
+    setScreenState('COMPLETED');
+    setAiState('listening');
+    try { window.speechSynthesis?.cancel(); } catch (e) {}
+    if (isRecording) try { stopRecording(); } catch (e) {}
+    const ans = (inputMode === 'voice' ? (liveTranscript || transcript) : textAnswer).trim();
+    if (ans.length >= 2 && sessionId && activeQuestion.id) {
+      const startedAt = questionStartTimeRef.current || new Date(Date.now() - 15000).toISOString();
+      const submittedAt = new Date().toISOString();
+      try { await submitAnswer(sessionId, { question_id: activeQuestion.id, answer_text: ans, started_at: startedAt, submitted_at: submittedAt }); } catch (e) {}
+    }
+    let analytics = null;
+    if (sessionId) {
+      try {
+        await completeSession(sessionId);
+        analytics = await getSessionAnalytics(sessionId);
+      } catch (e) {}
+    }
+    exitFullscreen();
+    resetRecorder();
+    try { recognitionRef.current?.stop(); } catch (e) {}
+    webcamStream?.getTracks().forEach(t => t.stop());
+    setWebcamStream(null);
+    onFinish({
+      durationMinutes: Math.max(1, Math.ceil((240 - timerSeconds) / 60)),
+      score: analytics?.overall_score ?? 0,
+      sessionId,
+      analytics,
+      title: `${selectedDomain} Technical Interview`
+    });
+  };
+
+  // ─── Exit ─────────────────────────────────────────────────────
+  const handleExitInterview = async () => {
+    exitFullscreen();
+    resetRecorder();
+    try { recognitionRef.current?.stop(); } catch (e) {}
+    webcamStream?.getTracks().forEach(t => t.stop());
+    setWebcamStream(null);
+    let analytics = null;
+    if (sessionId) {
+      try {
+        await completeSession(sessionId);
+        analytics = await getSessionAnalytics(sessionId);
+      } catch (e) {}
+    }
+    onFinish({
+      durationMinutes: Math.max(1, Math.ceil((240 - timerSeconds) / 60)),
+      score: analytics?.overall_score ?? 0,
+      sessionId,
+      analytics,
+      title: `${selectedDomain} Technical Interview`
+    });
+  };
+
+  // ─── Reset Spoken Answer ──────────────────────────────────────
+  const handleResetSpokenAnswer = () => {
+    resetRecorder();
+    try {
+      recognitionRef.current?.stop();
+      setTimeout(() => { if (micEnabled) try { recognitionRef.current?.start(); } catch (e) {} }, 200);
+    } catch (e) {}
+    setTranscript(''); setLiveTranscript(''); setAudioError(null);
+    if (micEnabled && webcamStream) startRecording(webcamStream);
+  };
+
+  // ─── Submit Spoken Answer ─────────────────────────────────────
   const handleFinishUserAnswer = async () => {
     if (isSubmitting) return;
-    setAudioError(null);
-    setIsSubmitting(true);
-    setAiState('thinking');
-
-    // Stop Live Speech Recognition
-    if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch (e) {}
-    }
-
-    // 1. Capture Camera Frame for Facial Analysis
+    setAudioError(null); setIsSubmitting(true); setAiState('thinking');
+    try { recognitionRef.current?.stop(); } catch (e) {}
     const frameBlob = await captureCameraFrameBlob();
-
-    // 2. Stop Audio Recording for this Question
     let audioBlob = null;
-    if (isRecording) {
-      audioBlob = await stopRecording();
-    }
+    try { audioBlob = await stopRecording(); } catch (e) {}
+    const spokenText = (liveTranscript || transcript || '').trim();
+    if (!sessionId) { setAudioError('Session not initialized.'); setIsSubmitting(false); setAiState('listening'); return; }
+    if (!audioBlob?.size && !spokenText) { setAudioError('No speech detected. Please speak your answer clearly.'); setIsSubmitting(false); setAiState('listening'); return; }
+    
+    const startedAt = questionStartTimeRef.current || new Date(Date.now() - 15000).toISOString();
+    const submittedAt = new Date().toISOString();
 
-    console.log("[InterviewIQ] Recording stopped");
-    console.log("[InterviewIQ] Audio blob:", audioBlob);
-    console.log("[InterviewIQ] Audio size:", audioBlob?.size);
-    console.log("[InterviewIQ] Audio type:", audioBlob?.type);
-
-    // Validate Audio Blob
-    if (!audioBlob || audioBlob.size === 0) {
-      setAudioError("Unable to capture audio. Please make sure your microphone is enabled and try speaking again.");
-      setIsSubmitting(false);
-      setAiState('listening');
-      return;
-    }
-
-    if (!sessionId) {
-      setAudioError("Interview session not initialized. Please restart the session.");
-      setIsSubmitting(false);
-      setAiState('listening');
-      return;
-    }
-
-    // 3. Submit Real Audio to Backend STT & Answer Evaluation Pipeline
     try {
-      const res = await submitAudioAnswer(sessionId, activeQuestion.id, audioBlob);
-      console.log("[InterviewIQ] submitAudioAnswer response:", res);
-
-      if (!res || !res.answer || !res.answer.answer_text) {
-        throw new Error("Speech transcription returned an empty or un-substantive response.");
-      }
-
-      const realTranscript = res.answer.answer_text;
-      setTranscript(realTranscript);
-      setLiveTranscript(realTranscript);
-      const answerId = res.id;
-      const nextQuestionInfo = res.next_question;
-      const isComplete = res.interview_complete;
-
-      // 4. Attach Facial Analysis to Answer Record (Fail-Safe)
-      if (answerId && frameBlob) {
-        try {
-          await submitAnswerFacialFrame(sessionId, answerId, frameBlob);
-        } catch (err) {
-          console.warn('[InterviewIQ] Facial frame submission notice (facial analysis operating independently):', err);
+      let res;
+      if (audioBlob?.size > 0) {
+        try { res = await submitAudioAnswer(sessionId, activeQuestion.id, audioBlob, startedAt, submittedAt); }
+        catch (e) {
+          if (spokenText) {
+            const a = await submitAnswer(sessionId, { question_id: activeQuestion.id, answer_text: spokenText, started_at: startedAt, submitted_at: submittedAt });
+            res = { id: a.id, answer: a, next_question: null, interview_complete: currentQIndex + 1 >= totalQuestions };
+          } else throw e;
         }
+      } else {
+        const a = await submitAnswer(sessionId, { question_id: activeQuestion.id, answer_text: spokenText, started_at: startedAt, submitted_at: submittedAt });
+        res = { id: a.id, answer: a, next_question: null, interview_complete: currentQIndex + 1 >= totalQuestions };
       }
-
-      // 5. Complete Session & Load Analytics if Finished
-      setTimeout(async () => {
-        if (isComplete || (!nextQuestionInfo && currentQIndex + 1 >= totalQuestions)) {
-          let analyticsData = null;
-          try {
-            await completeSession(sessionId);
-            analyticsData = await getSessionAnalytics(sessionId);
-          } catch (err) {
-            console.warn('[InterviewIQ] Backend session completion/analytics notice:', err);
-          }
-
-          resetRecorder();
-          if (webcamStream) {
-            webcamStream.getTracks().forEach((track) => track.stop());
-            setWebcamStream(null);
-          }
-
-          setIsSubmitting(false);
-          onFinish({
-            durationMinutes: Math.ceil(timerSeconds / 60) || 5,
-            score: analyticsData?.overall_score || 88,
-            summary: analyticsData?.session_summary || "Session completed successfully.",
-            sessionId: sessionId,
-            analytics: analyticsData,
-          });
-        } else if (nextQuestionInfo) {
-          setActiveQuestion({
-            id: nextQuestionInfo.id,
-            text: nextQuestionInfo.question_text,
-            type: nextQuestionInfo.question_type,
-            parent_id: nextQuestionInfo.parent_question_id,
-            depth: nextQuestionInfo.follow_up_depth,
-          });
-          if (nextQuestionInfo.question_type === 'main') {
-            setCurrentQIndex((prev) => prev + 1);
-          }
-          setTranscript('');
-          setLiveTranscript('');
-          setIsSubmitting(false);
-        } else {
-          const nextIdx = currentQIndex + 1;
-          const nextQ = backendQuestions[nextIdx % backendQuestions.length] || { id: `q_${nextIdx + 1}`, question_text: domainQuestions[nextIdx % domainQuestions.length] };
-          setCurrentQIndex(nextIdx);
-          setActiveQuestion({
-            id: nextQ.id,
-            text: nextQ.question_text,
-            type: 'main',
-            depth: 0,
-          });
-          setTranscript('');
-          setLiveTranscript('');
-          setIsSubmitting(false);
-        }
-      }, 1500);
-
+      setTranscript(res?.answer?.answer_text || spokenText);
+      setLiveTranscript('');
+      if (res.id && frameBlob) try { await submitAnswerFacialFrame(sessionId, res.id, frameBlob); } catch (e) {}
+      setTimeout(() => advanceSession(res), 1000);
     } catch (err) {
-      console.error("[InterviewIQ] Audio answer submission error:", err);
-      const errMsg = err?.response?.data?.detail || err?.message || "Speech transcription failed.";
-      setAudioError(`Speech-to-Text Error: ${errMsg}. Please click 'Submit Answer' to re-record your spoken response.`);
+      setAudioError(err?.response?.data?.detail || err?.message || 'Submission failed.');
+      setIsSubmitting(false); setAiState('listening');
+    }
+  };
+
+  // ─── Submit Text Answer ───────────────────────────────────────
+  const handleFinishTextAnswer = async () => {
+    if (isSubmitting || !textAnswer.trim()) return;
+    setAudioError(null); setIsSubmitting(true); setAiState('thinking');
+    if (!sessionId) { setAudioError('Session not initialized.'); setIsSubmitting(false); setAiState('listening'); return; }
+    
+    const startedAt = questionStartTimeRef.current || new Date(Date.now() - 15000).toISOString();
+    const submittedAt = new Date().toISOString();
+
+    try {
+      const res = await submitAnswer(sessionId, { question_id: activeQuestion.id, answer_text: textAnswer.trim(), started_at: startedAt, submitted_at: submittedAt });
+      setTranscript(textAnswer.trim());
+      setTimeout(() => advanceSession(res), 800);
+    } catch (err) {
+      setAudioError(err?.response?.data?.detail || err?.message || 'Submission failed.');
+      setIsSubmitting(false); setAiState('listening');
+    }
+  };
+
+  // ─── Advance Session ──────────────────────────────────────────
+  const advanceSession = async (res) => {
+    if (res.interview_complete || (!res.next_question && currentQIndex + 1 >= totalQuestions)) {
+      setScreenState('COMPLETED');
+      let analytics = null;
+      try {
+        await completeSession(sessionId);
+        try {
+          await calculateFinalEvaluation(sessionId);
+        } catch (evalErr) {
+          console.warn('Phase 12 evaluation compute notice:', evalErr);
+        }
+        analytics = await getSessionAnalytics(sessionId);
+      } catch (e) {}
+      exitFullscreen();
+      resetRecorder();
+      try { recognitionRef.current?.stop(); } catch (e) {}
+      webcamStream?.getTracks().forEach(t => t.stop());
+      setWebcamStream(null);
       setIsSubmitting(false);
-      setAiState('listening');
+      onFinish({
+        durationMinutes: Math.max(1, Math.ceil((240 - timerSeconds) / 60)),
+        score: analytics?.overall_score ?? 0,
+        sessionId,
+        analytics,
+        title: `${selectedDomain} Technical Interview`
+      });
+    } else if (res.next_question) {
+      const nq = res.next_question;
+      setActiveQuestion({ id: nq.id, text: nq.question_text, type: nq.question_type, depth: nq.follow_up_depth || 0 });
+      if (nq.question_type === 'main') setCurrentQIndex(p => p + 1);
+      const nextTime = new Date().toISOString();
+      questionStartTimeRef.current = nextTime;
+      setQuestionStartTime(nextTime);
+      setTranscript(''); setLiveTranscript(''); setTextAnswer(''); setIsSubmitting(false);
+    } else {
+      const ni = currentQIndex + 1;
+      if (ni < backendQuestions.length) {
+        const nq = backendQuestions[ni];
+        setCurrentQIndex(ni);
+        setActiveQuestion({ id: nq.id, text: nq.question_text, type: 'main', depth: 0 });
+      }
+      const nextTime = new Date().toISOString();
+      questionStartTimeRef.current = nextTime;
+      setQuestionStartTime(nextTime);
+      setTranscript(''); setLiveTranscript(''); setTextAnswer(''); setIsSubmitting(false);
     }
   };
 
-  const handleRestartSession = () => {
-    resetRecorder();
-    if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch (e) {}
-    }
-    setCurrentQIndex(0);
-    setTimerSeconds(0);
-    setTranscript('');
-    setLiveTranscript('');
-    setAudioError(null);
-    const firstQ = backendQuestions[0] || { id: 'q_1', question_text: domainQuestions[0] };
-    setActiveQuestion({
-      id: firstQ.id,
-      text: firstQ.question_text,
-      type: 'main',
-      depth: 0,
-    });
-    setAiState('speaking');
-  };
+  const progress = Math.round(((currentQIndex + 1) / totalQuestions) * 100);
+  const isLastQuestion = activeQuestion.type === 'main' && currentQIndex + 1 === totalQuestions;
+  const currentAnswer = inputMode === 'voice' ? (liveTranscript || transcript) : textAnswer;
+  const canSubmit = inputMode === 'voice'
+    ? (!isSubmitting && aiState !== 'thinking' && aiState !== 'speaking')
+    : (!isSubmitting && aiState !== 'thinking' && !!textAnswer.trim());
 
-  const formatTimer = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-  };
+  // ═══════════════════════════════════════════════════════════════
+  // SCREEN: PREPARING
+  // ═══════════════════════════════════════════════════════════════
+  if (screenState === 'PREPARING') {
+    return (
+      <div className="min-h-[85vh] flex items-center justify-center p-6">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className="w-full max-w-md"
+        >
+          {/* Brand badge */}
+          <div className="flex items-center justify-center mb-8">
+            <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/[0.04] border border-white/10">
+              <div className="w-5 h-5 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center">
+                <Sparkles className="w-3 h-3 text-white" />
+              </div>
+              <span className="text-xs font-semibold text-white tracking-wide">InterviewIQ AI</span>
+            </div>
+          </div>
+
+          {/* Title */}
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-white tracking-tight mb-2">{selectedDomain}</h1>
+            <p className="text-sm text-neutral-500">
+              {config.job_role || `${selectedDomain} Engineer`} · {config.difficulty || 'Medium'} · {config.experience || '2+'} yrs
+            </p>
+          </div>
+
+          {/* Config card */}
+          <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl overflow-hidden mb-4">
+            {[
+              { label: 'Interview Type', value: config.interviewType || 'Technical' },
+              { label: 'Questions', value: `${totalQuestions} questions`, accent: 'text-indigo-400' },
+              { label: 'Follow-up Questions', value: config.counterQuestions !== false ? 'Enabled' : 'Disabled', accent: config.counterQuestions !== false ? 'text-emerald-400' : 'text-neutral-500' },
+              { label: 'Session Duration', value: `${totalQuestions * 4} minutes (approx.)` },
+            ].map(({ label, value, accent }, i) => (
+              <div key={label} className={`flex items-center justify-between px-5 py-3.5 ${i !== 0 ? 'border-t border-white/[0.05]' : ''}`}>
+                <span className="text-xs text-neutral-500">{label}</span>
+                <span className={`text-xs font-semibold ${accent || 'text-white'}`}>{value}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Error */}
+          {sessionInitError && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-xl p-3.5 mb-4"
+            >
+              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+              <span className="text-xs text-red-400 leading-relaxed">{sessionInitError}</span>
+            </motion.div>
+          )}
+
+          {/* Begin button */}
+          <button
+            onClick={handleStartInterview}
+            disabled={isInitializingSession}
+            className="w-full py-4 rounded-xl bg-white text-black text-sm font-bold hover:bg-neutral-100 disabled:opacity-60 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2.5 shadow-lg"
+          >
+            {isInitializingSession ? (
+              <>
+                <span className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                <span>Generating questions…</span>
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4 fill-current" />
+                <span>Begin Interview</span>
+              </>
+            )}
+          </button>
+
+          <p className="text-center text-[11px] text-neutral-600 mt-3">
+            The browser will enter fullscreen when you start
+          </p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // SCREEN: COMPLETED (brief transition state before onFinish)
+  // ═══════════════════════════════════════════════════════════════
+  if (screenState === 'COMPLETED') {
+    return (
+      <div className="min-h-[85vh] flex items-center justify-center p-6">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="w-full max-w-sm text-center"
+        >
+          <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-5">
+            <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-2">Interview Complete</h1>
+          <p className="text-sm text-neutral-500 mb-6">Your responses have been submitted for evaluation.</p>
+          <div className="flex items-center justify-center gap-2 text-xs text-neutral-600">
+            <span className="w-4 h-4 border-2 border-neutral-700 border-t-neutral-400 rounded-full animate-spin" />
+            Processing results…
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // SCREEN: ACTIVE — FULL-SCREEN INTERVIEW ROOM
+  // ═══════════════════════════════════════════════════════════════
+
+  // Derived AI state label
+  const aiStateLabel = (() => {
+    if (aiState === 'speaking') return { text: 'AI Speaking', color: 'text-emerald-400', dot: 'bg-emerald-400' };
+    if (aiState === 'thinking') return { text: 'Evaluating…', color: 'text-amber-400', dot: 'bg-amber-400' };
+    if (isSubmitting) return { text: 'Processing…', color: 'text-amber-400', dot: 'bg-amber-400' };
+    if (isRecording) return { text: 'Recording', color: 'text-red-400', dot: 'bg-red-500' };
+    return { text: 'Listening', color: 'text-indigo-400', dot: 'bg-indigo-400' };
+  })();
 
   return (
-    <div className="h-[calc(100vh-4rem)] w-full bg-transparent flex flex-col justify-between overflow-hidden text-white p-3 sm:p-4 gap-4 font-sans">
+    <div className="fixed inset-0 z-50 flex flex-col bg-[#09090C] text-white overflow-hidden">
 
-      {/* MAIN SCREEN GRID (Camera on Left, Big AI Square & Question/Script on Right) */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-0">
+      {/* ══ TOP BAR ═══════════════════════════════════════════════════ */}
+      <div className="shrink-0 h-13 flex items-center justify-between px-5 border-b border-white/[0.05] bg-[#09090C]/95 backdrop-blur-sm" style={{ height: '52px' }}>
 
-        {/* LEFT 60%: USER CAMERA */}
-        <div className="lg:col-span-7 bg-[#0A0A0A]/90 border border-white/15 rounded-3xl p-3 flex flex-col justify-between relative overflow-hidden backdrop-blur-xl shadow-2xl">
-          <div className="relative flex-1 rounded-2xl bg-black border border-white/10 overflow-hidden flex items-center justify-center">
-            {cameraEnabled ? (
-              <div className="w-full h-full relative flex items-center justify-center bg-black rounded-2xl">
-                <video
-                  ref={(node) => {
-                    videoRef.current = node;
-                    if (node && webcamStream && node.srcObject !== webcamStream) {
-                      node.srcObject = webcamStream;
-                      node.play().catch(() => { });
-                    }
-                  }}
-                  autoPlay
-                  playsInline
-                  muted
-                  className={`w-full h-full object-cover rounded-2xl transition-transform duration-300 ${isMirrored ? '-scale-x-100' : 'scale-x-100'
-                    }`}
-                />
-
-                {!webcamStream && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 text-center p-4">
-                    <Camera className="w-10 h-10 text-emerald-400 mb-2 animate-bounce" />
-                    <span className="text-xs font-mono font-bold text-white mb-1">
-                      {cameraError ? 'Microphone & Camera Permission Required' : 'Starting Device Camera Feed...'}
-                    </span>
-                    <p className="text-[11px] text-neutral-400 max-w-xs mb-3 font-mono">
-                      Allow browser camera & microphone access to record your live spoken answer.
-                    </p>
-                    <button
-                      onClick={requestDeviceCamera}
-                      className="px-4 py-2 rounded-xl bg-emerald-400 text-black font-bold font-mono text-xs hover:bg-emerald-300 shadow-lg transition-all"
-                    >
-                      Enable Device Camera & Microphone
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center text-neutral-500 space-y-2">
-                <CameraOff className="w-12 h-12" />
-                <span className="text-xs font-mono font-semibold">Candidate Camera Feed Paused</span>
-              </div>
-            )}
-
-            {/* Mic, Camera & Mirror Flip Controls at Bottom-Left */}
-            <div className="absolute bottom-4 left-4 z-20 flex items-center gap-2 font-mono">
-              <button
-                onClick={() => setMicEnabled(!micEnabled)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 backdrop-blur-md border shadow-lg transition-colors ${micEnabled
-                    ? 'bg-black/80 text-emerald-400 border-white/20 hover:bg-black'
-                    : 'bg-red-500/90 text-white border-red-400'
-                  }`}
-              >
-                {micEnabled ? <Mic className="w-4 h-4 text-emerald-400" /> : <MicOff className="w-4 h-4" />}
-                <span>{micEnabled ? 'MIC ON' : 'MIC MUTED'}</span>
-              </button>
-
-              <button
-                onClick={() => setCameraEnabled(!cameraEnabled)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 backdrop-blur-md border shadow-lg transition-colors ${cameraEnabled
-                    ? 'bg-black/80 text-cyan-400 border-white/20 hover:bg-black'
-                    : 'bg-red-500/90 text-white border-red-400'
-                  }`}
-              >
-                {cameraEnabled ? <Camera className="w-4 h-4 text-cyan-400" /> : <CameraOff className="w-4 h-4" />}
-                <span>{cameraEnabled ? 'CAMERA ON' : 'CAMERA OFF'}</span>
-              </button>
-
-              <button
-                onClick={() => setIsMirrored(!isMirrored)}
-                className="px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 backdrop-blur-md border border-white/20 bg-black/80 text-neutral-300 hover:text-white hover:bg-black shadow-lg transition-colors"
-                title="Flip Horizontal Mirror View"
-              >
-                <FlipHorizontal className="w-4 h-4 text-emerald-400" />
-                <span>{isMirrored ? 'MIRRORED' : 'ORIGINAL'}</span>
-              </button>
+        {/* Left — brand + status */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0">
+              <Sparkles className="w-3.5 h-3.5 text-white" />
             </div>
+            <span className="text-xs font-semibold text-white hidden sm:block">InterviewIQ</span>
+          </div>
+          <div className="w-px h-4 bg-white/10" />
+          <div className="flex items-center gap-1.5">
+            <span className={`w-1.5 h-1.5 rounded-full ${aiStateLabel.dot} ${aiState !== 'listening' ? 'animate-pulse' : ''}`} />
+            <span className={`text-xs font-medium ${aiStateLabel.color}`}>{aiStateLabel.text}</span>
           </div>
         </div>
 
-        {/* RIGHT 40%: BIG LIVE ANIMATED AI SQUARE & QUESTION + CANDIDATE AUDIO TRANSCRIPT */}
-        <div className="lg:col-span-5 flex flex-col gap-4 min-h-0">
+        {/* Center — progress */}
+        <div className="flex items-center gap-1.5 absolute left-1/2 -translate-x-1/2">
+          {Array.from({ length: totalQuestions }).map((_, i) => (
+            <div
+              key={i}
+              className={`h-1 rounded-full transition-all duration-500 ${
+                i < currentQIndex
+                  ? 'w-5 bg-emerald-400'
+                  : i === currentQIndex
+                  ? 'w-7 bg-white'
+                  : 'w-5 bg-white/10'
+              }`}
+            />
+          ))}
+          <span className="ml-2 text-[10px] text-neutral-600 font-mono tabular-nums">
+            {currentQIndex + 1}/{totalQuestions}
+          </span>
+        </div>
 
-          {/* BIG LIVE ANIMATED AI SQUARE CARD */}
-          <div className="bg-[#0A0A0A]/90 border border-white/15 rounded-3xl p-5 flex flex-col justify-between shadow-2xl backdrop-blur-xl relative overflow-hidden h-64 sm:h-72 shrink-0">
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-cyan-500/10 pointer-events-none" />
-
-            <div className="flex items-center justify-between z-10 font-mono">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-                <span className="text-xs font-bold text-white uppercase tracking-wider">InterviewIQ AI System</span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setIsPaused(!isPaused)}
-                  className="px-2.5 py-1 rounded-xl bg-[#1A1A1A] hover:bg-[#252525] border border-white/10 text-white text-xs font-bold flex items-center gap-1 transition-colors"
-                >
-                  {isPaused ? <Play className="w-3.5 h-3.5 text-emerald-400" /> : <Pause className="w-3.5 h-3.5 text-amber-400" />}
-                  <span>{isPaused ? 'Resume' : 'Pause'}</span>
-                </button>
-
-                <button
-                  onClick={handleRestartSession}
-                  className="px-2.5 py-1 rounded-xl bg-[#1A1A1A] hover:bg-[#252525] border border-white/10 text-neutral-300 text-xs font-bold flex items-center gap-1 transition-colors"
-                >
-                  <RotateCcw className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Restart</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    resetRecorder();
-                    if (recognitionRef.current) {
-                      try { recognitionRef.current.stop(); } catch (e) {}
-                    }
-                    if (webcamStream) {
-                      webcamStream.getTracks().forEach((track) => track.stop());
-                      setWebcamStream(null);
-                    }
-                    onFinish({ durationMinutes: Math.ceil(timerSeconds / 60) || 5, score: 88, sessionId });
-                  }}
-                  className="px-2.5 py-1 rounded-xl bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 text-xs font-bold flex items-center gap-1 transition-colors"
-                >
-                  <XCircle className="w-3.5 h-3.5 text-red-400" />
-                  <span>End</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Central Live Animated AI Visualizer */}
-            <div className="flex-1 flex flex-col items-center justify-center relative py-2 z-10">
-              <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-white/20 via-neutral-700 to-white/30 p-1 shadow-2xl flex items-center justify-center">
-                {aiState === 'speaking' && (
-                  <>
-                    <motion.div
-                      animate={{ scale: [1, 1.5, 1], opacity: [0.7, 0.1, 0.7] }}
-                      transition={{ repeat: Infinity, duration: 1.6, ease: 'easeInOut' }}
-                      className="absolute inset-0 rounded-full border-2 border-emerald-400 pointer-events-none"
-                    />
-                    <motion.div
-                      animate={{ scale: [1, 1.3, 1], opacity: [0.9, 0.2, 0.9] }}
-                      transition={{ repeat: Infinity, duration: 1.2, delay: 0.3 }}
-                      className="absolute inset-0 rounded-full border border-cyan-400 pointer-events-none"
-                    />
-                  </>
-                )}
-
-                <div className="w-full h-full rounded-full bg-[#0A0A0A] flex flex-col items-center justify-center p-2 relative overflow-hidden border border-white/15">
-                  <Sparkles className="w-10 h-10 text-emerald-400 animate-pulse" />
-                  <span className="text-[10px] font-mono font-bold text-white mt-1">IQ AI Engine</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5 h-5 mt-3">
-                {[30, 70, 100, 50, 85, 40, 95, 65, 80, 45].map((h, i) => (
-                  <motion.div
-                    key={i}
-                    animate={{ height: aiState === 'speaking' || isRecording ? [`${h * 0.25}%`, `${h}%`, `${h * 0.25}%`] : '20%' }}
-                    transition={{ repeat: Infinity, duration: 0.5, delay: i * 0.06 }}
-                    className={`w-1 rounded-full ${isRecording ? 'bg-cyan-400' : 'bg-emerald-400'}`}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between z-10 pt-2 border-t border-white/10 font-mono text-xs">
-              <span className={`px-2.5 py-0.5 rounded-full border font-bold text-[11px] ${aiState === 'speaking'
-                  ? 'bg-[#141414] border-emerald-500/40 text-emerald-400'
-                  : aiState === 'thinking'
-                    ? 'bg-[#141414] border-amber-500/40 text-amber-400 animate-pulse'
-                    : 'bg-[#141414] border-cyan-500/40 text-cyan-400'
-                }`}>
-                {aiState === 'speaking' ? 'Speaking Question...' : aiState === 'thinking' ? 'Transcribing & Evaluating...' : isRecording ? 'Recording Live Audio...' : 'Listening to Candidate'}
-              </span>
-
-              <span className="text-neutral-400">
-                Timer: <strong className="text-cyan-400">{formatTimer(timerSeconds)}</strong>
-              </span>
-            </div>
+        {/* Right — controls */}
+        <div className="flex items-center gap-2">
+          {/* Timer */}
+          <div className={`font-mono text-sm font-semibold tabular-nums transition-colors px-2.5 py-1 rounded-lg ${
+            timerSeconds <= 60
+              ? 'text-red-400 bg-red-500/10'
+              : timerSeconds <= 120
+              ? 'text-amber-400 bg-amber-500/10'
+              : 'text-neutral-400 bg-white/[0.04]'
+          }`}>
+            {formatTimer(timerSeconds)}
           </div>
 
-          {/* QUESTION CARD & CANDIDATE TRANSCRIPT */}
-          <div className="flex-1 bg-[#0A0A0A]/90 border border-white/15 rounded-3xl p-5 flex flex-col justify-between overflow-y-auto shadow-2xl backdrop-blur-xl space-y-4">
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-1.5">
-                    <HelpCircle className="w-4 h-4 text-emerald-400" /> Question {currentQIndex + 1} of {totalQuestions}
-                  </span>
-                  {activeQuestion.type === 'counter' && (
-                    <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/30 flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-amber-400" /> Adaptive Counter Question
-                    </span>
-                  )}
-                </div>
-                <span className="text-[10px] font-mono text-neutral-400 bg-[#1A1A1A] px-2.5 py-1 rounded-full border border-white/10">
-                  {selectedDomain} Domain
-                </span>
-              </div>
+          {/* Pause */}
+          <button
+            onClick={() => setIsPaused(!isPaused)}
+            title={isPaused ? 'Resume' : 'Pause timer'}
+            className="p-2 rounded-lg text-neutral-500 hover:text-white hover:bg-white/[0.06] transition-colors"
+          >
+            {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+          </button>
 
-              <h2 className="text-base sm:text-lg font-sans font-extrabold text-white leading-relaxed tracking-tight">
-                "{activeQuestion.text}"
-              </h2>
+          {/* Fullscreen */}
+          <button
+            onClick={() => isFullscreen ? exitFullscreen() : requestFullscreen()}
+            title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+            className="p-2 rounded-lg text-neutral-500 hover:text-white hover:bg-white/[0.06] transition-colors"
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
+
+          {/* End interview */}
+          <button
+            onClick={handleExitInterview}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-neutral-500 hover:text-red-400 hover:bg-red-500/[0.08] border border-white/[0.06] hover:border-red-500/20 transition-all"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span className="hidden sm:block">End</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ══ MAIN BODY ═════════════════════════════════════════════════ */}
+      <div className="flex-1 flex min-h-0 overflow-hidden">
+
+        {/* ══ LEFT: QUESTION + RESPONSE PANEL ══════════════════════════ */}
+        <div className="flex-1 flex flex-col min-w-0 min-h-0 border-r border-white/[0.05]">
+
+          {/* Scrollable question area */}
+          <div className="flex-1 overflow-y-auto px-7 xl:px-10 pt-7 pb-2 flex flex-col gap-5">
+
+            {/* Question type badge */}
+            <div className="flex items-center gap-2">
+              {activeQuestion.type === 'counter' ? (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full">
+                  <Sparkles className="w-3 h-3" />
+                  Follow-up · Depth {activeQuestion.depth || 1}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-neutral-600 bg-white/[0.03] border border-white/[0.06] px-2.5 py-1 rounded-full">
+                  Question {currentQIndex + 1} of {totalQuestions}
+                </span>
+              )}
+
+              {/* Replay audio button */}
+              {aiState !== 'speaking' && activeQuestion.text && (
+                <button
+                  onClick={handleToggleAudio}
+                  title="Replay question audio"
+                  className="inline-flex items-center gap-1 text-[11px] text-neutral-600 hover:text-neutral-300 transition-colors px-2 py-1 rounded-lg hover:bg-white/[0.04]"
+                >
+                  <Volume2 className="w-3 h-3" />
+                  <span className="hidden sm:block">Replay</span>
+                </button>
+              )}
             </div>
 
-            {/* Candidate Spoken Transcript & Errors */}
-            <div className="space-y-3 pt-3 border-t border-white/10">
-              {audioError && (
-                <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-3 flex items-start gap-2 text-xs font-mono text-red-400">
-                  <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                  <span>{audioError}</span>
+            {/* THE QUESTION — Primary focus */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeQuestion.id || activeQuestion.text}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <h2 className="text-xl xl:text-2xl font-semibold text-white leading-relaxed tracking-tight">
+                  {activeQuestion.text || (
+                    <span className="text-neutral-600">Loading question…</span>
+                  )}
+                </h2>
+              </motion.div>
+            </AnimatePresence>
+
+            {/* AI speaking state — inline under question */}
+            <AnimatePresence>
+              {aiState === 'speaking' && (
+                <motion.div
+                  key="speaking-pill"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  className="flex items-center gap-2"
+                >
+                  <div className="flex items-end gap-[3px] h-4">
+                    {[2, 4, 6, 4, 2].map((h, i) => (
+                      <span
+                        key={i}
+                        className="w-[3px] rounded-full bg-emerald-400/70"
+                        style={{ height: `${h * 2.5}px`, animation: `soundBar 0.7s ease-in-out ${i * 0.1}s infinite alternate` }}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-xs text-emerald-400/70">AI is reading the question</span>
+                  <button
+                    onClick={handleToggleAudio}
+                    className="text-[11px] text-emerald-400/50 hover:text-emerald-400 underline ml-1 transition-colors"
+                  >
+                    Stop
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Divider */}
+            <div className="h-px bg-white/[0.05]" />
+
+            {/* ── RESPONSE ZONE ─────────────────────────────── */}
+            <div className="flex-1 flex flex-col min-h-0 pb-2">
+
+              {/* Mode toggle + clear button */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-1 p-1 bg-white/[0.03] border border-white/[0.07] rounded-lg">
+                  <button
+                    onClick={() => setInputMode('voice')}
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                      inputMode === 'voice' ? 'bg-white text-black shadow-sm' : 'text-neutral-500 hover:text-white'
+                    }`}
+                  >
+                    🎙 Speak
+                  </button>
+                  <button
+                    onClick={() => setInputMode('text')}
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                      inputMode === 'text' ? 'bg-white text-black shadow-sm' : 'text-neutral-500 hover:text-white'
+                    }`}
+                  >
+                    ✏️ Type
+                  </button>
+                </div>
+
+                {inputMode === 'voice' && (liveTranscript || transcript) && (
+                  <button
+                    onClick={handleResetSpokenAnswer}
+                    disabled={isSubmitting}
+                    className="flex items-center gap-1 text-xs text-neutral-600 hover:text-red-400 transition-colors disabled:opacity-40 px-2 py-1 rounded-lg hover:bg-red-500/[0.06]"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    Clear
+                  </button>
+                )}
+              </div>
+
+              {/* Voice transcript */}
+              {inputMode === 'voice' && (
+                <div className="flex-1 min-h-[90px] bg-white/[0.02] border border-white/[0.06] rounded-xl px-4 py-3.5 overflow-y-auto relative">
+                  {(liveTranscript || transcript) ? (
+                    <p className="text-[15px] text-neutral-200 leading-relaxed font-light">
+                      {liveTranscript || transcript}
+                      {liveTranscript && (
+                        <span className="inline-block w-0.5 h-4 ml-1 bg-white/40 animate-pulse align-middle" />
+                      )}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-neutral-700 italic">
+                      {isRecording
+                        ? 'Start speaking — your words will appear here in real-time…'
+                        : 'Waiting for microphone…'}
+                    </p>
+                  )}
+                  <div ref={transcriptEndRef} />
                 </div>
               )}
 
-              <div className="bg-[#141414] border border-white/10 rounded-2xl p-3.5 flex items-start gap-3">
-                <MessageSquareText className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                <div className="flex-1 max-h-[100px] overflow-y-auto text-xs sm:text-sm font-sans font-medium text-neutral-200 leading-relaxed">
-                  {transcript ? (
-                    <span><strong className="text-emerald-400 font-mono text-xs uppercase block mb-0.5">Authoritative Whisper STT Transcript:</strong> "{transcript}"</span>
-                  ) : liveTranscript ? (
-                    <span><strong className="text-cyan-400 font-mono text-xs uppercase block mb-0.5">Live Speech Transcript (Streaming):</strong> "{liveTranscript}"</span>
-                  ) : aiState === 'thinking' ? (
-                    <span className="text-amber-400 italic text-xs font-mono animate-pulse">Transcribing microphone audio with Whisper STT & evaluating...</span>
-                  ) : isRecording ? (
-                    <span className="text-cyan-400 italic text-xs font-mono">Microphone active — speak your answer clearly, then click 'Submit Answer'.</span>
-                  ) : (
-                    <span className="text-neutral-400 italic text-xs font-mono">Click 'Submit Answer' when finished speaking.</span>
-                  )}
+              {/* Text mode */}
+              {inputMode === 'text' && (
+                <div className="flex-1 flex flex-col min-h-[90px]">
+                  <textarea
+                    value={textAnswer}
+                    onChange={e => setTextAnswer(e.target.value)}
+                    placeholder="Type your answer here…"
+                    className="flex-1 w-full bg-white/[0.02] border border-white/[0.06] rounded-xl px-4 py-3.5 text-[15px] text-white placeholder-neutral-700 focus:outline-none focus:border-white/[0.16] resize-none transition-colors leading-relaxed font-light"
+                  />
+                  <div className="mt-1.5 flex items-center justify-between px-1">
+                    <span className="text-[11px] text-neutral-700">
+                      {textAnswer.split(/\s+/).filter(Boolean).length} words
+                    </span>
+                    <span className="text-[11px] text-neutral-700">{textAnswer.length} chars</span>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="flex justify-end pt-1">
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="md"
-                  onClick={handleFinishUserAnswer}
-                  disabled={aiState === 'thinking' || isSubmitting}
-                  icon={Send}
-                  iconPosition="right"
-                  className="w-full bg-white text-black hover:bg-neutral-200 font-bold border border-white/20 text-xs sm:text-sm py-3 shadow-xl font-mono disabled:opacity-50"
-                >
-                  {isSubmitting ? 'Processing Audio & STT...' : activeQuestion.type === 'main' && currentQIndex + 1 === totalQuestions ? 'Submit Spoken Answer & Complete Session' : 'Submit Spoken Answer / Next Question'}
-                </Button>
-              </div>
+              {/* Error */}
+              <AnimatePresence>
+                {audioError && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="mt-3 flex items-start gap-2.5 bg-red-500/[0.08] border border-red-500/20 rounded-xl px-4 py-3"
+                  >
+                    <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-red-400 leading-relaxed">{audioError}</p>
+                    </div>
+                    <button
+                      onClick={() => setAudioError(null)}
+                      className="text-[11px] text-red-400/50 hover:text-red-400 transition-colors shrink-0"
+                    >
+                      ✕
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
+
+          {/* ── BOTTOM DOCK ─────────────────────────────── */}
+          <div className="shrink-0 px-7 xl:px-10 py-4 border-t border-white/[0.05] bg-[#09090C]/60">
+            <button
+              onClick={inputMode === 'voice' ? handleFinishUserAnswer : handleFinishTextAnswer}
+              disabled={!canSubmit}
+              className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl bg-white text-black text-sm font-bold hover:bg-neutral-100 disabled:opacity-35 disabled:cursor-not-allowed transition-all"
+            >
+              {isSubmitting ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                  <span>Evaluating response…</span>
+                </>
+              ) : aiState === 'thinking' ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                  <span>AI is thinking…</span>
+                </>
+              ) : (
+                <>
+                  <span>{isLastQuestion ? 'Submit & Finish Interview' : 'Submit Answer'}</span>
+                  <ChevronRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </div>
         </div>
+        {/* end left panel */}
+
+        {/* ══ RIGHT: CAMERA PANEL ═══════════════════════════════════ */}
+        <div className="w-[560px] xl:w-[620px] shrink-0 flex flex-col min-h-0 bg-[#0A0A0D]">
+
+          {/* Camera section */}
+          <div className="shrink-0">
+            {/* Camera container — 16:9 */}
+            <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+              <div className="absolute inset-0 bg-[#0D0D10]">
+                {cameraEnabled ? (
+                  <>
+                    <video
+                      ref={node => {
+                        videoRef.current = node;
+                        if (node && webcamStream && node.srcObject !== webcamStream) {
+                          node.srcObject = webcamStream;
+                          node.play().catch(() => {});
+                        }
+                      }}
+                      autoPlay
+                      playsInline
+                      muted
+                      className={`absolute inset-0 w-full h-full object-cover ${isMirrored ? '-scale-x-100' : ''}`}
+                    />
+                    {cameraEnabled && webcamStream && (
+                      <FaceDetectionOverlay {...faceData} isCameraOn={cameraEnabled && !!webcamStream} />
+                    )}
+                  </>
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#0D0D10]">
+                    <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center">
+                      <CameraOff className="w-6 h-6 text-neutral-700" />
+                    </div>
+                    <span className="text-xs text-neutral-700">Camera off</span>
+                  </div>
+                )}
+
+                {/* Camera error */}
+                {cameraError && cameraEnabled && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 bg-[#0D0D10]">
+                    <AlertTriangle className="w-8 h-8 text-amber-500" />
+                    <p className="text-[11px] text-neutral-500 text-center leading-relaxed">{cameraError}</p>
+                  </div>
+                )}
+
+                {/* REC indicator */}
+                {isRecording && cameraEnabled && !cameraError && (
+                  <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 text-[10px] font-bold text-white bg-black/70 backdrop-blur-sm px-2 py-1 rounded-lg">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                    REC
+                  </div>
+                )}
+
+                {/* AI orb — corner overlay */}
+                <div className="absolute bottom-2.5 right-2.5">
+                  <div className={`relative w-10 h-10 rounded-xl border flex items-center justify-center shadow-2xl transition-all duration-500 ${
+                    aiState === 'speaking'
+                      ? 'bg-emerald-500/20 border-emerald-400/50 shadow-emerald-500/30'
+                      : aiState === 'thinking'
+                      ? 'bg-amber-500/20 border-amber-400/50 shadow-amber-500/30'
+                      : 'bg-indigo-500/15 border-indigo-400/30 shadow-indigo-500/20'
+                  } backdrop-blur-sm`}>
+                    {aiState === 'speaking' ? (
+                      <div className="flex items-end gap-[2px] h-4">
+                        {[2, 3, 4, 3, 2].map((h, i) => (
+                          <span
+                            key={i}
+                            className="w-[2px] rounded-full bg-emerald-400"
+                            style={{ height: `${h * 2.5}px`, animation: `soundBar 0.7s ease-in-out ${i * 0.1}s infinite alternate` }}
+                          />
+                        ))}
+                      </div>
+                    ) : aiState === 'thinking' ? (
+                      <div className="flex items-center gap-0.5">
+                        {[0, 0.15, 0.3].map((d, i) => (
+                          <span key={i} className="w-1 h-1 rounded-full bg-amber-400 animate-bounce" style={{ animationDelay: `${d}s` }} />
+                        ))}
+                      </div>
+                    ) : (
+                      <Sparkles className="w-4 h-4 text-indigo-400" />
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Camera controls strip */}
+            <div className="flex flex-col border-b border-white/[0.05]">
+              <div className="flex items-center justify-between px-4 py-2.5">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setMicEnabled(!micEnabled)}
+                    title={micEnabled ? 'Mute microphone' : 'Unmute microphone'}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                      micEnabled
+                        ? 'bg-white/[0.04] border-white/[0.08] text-neutral-300 hover:text-white'
+                        : 'bg-red-500/15 border-red-500/30 text-red-400'
+                    }`}
+                  >
+                    {micEnabled ? <Mic className="w-3.5 h-3.5" /> : <MicOff className="w-3.5 h-3.5" />}
+                    <span>{micEnabled ? 'Mic' : 'Muted'}</span>
+                  </button>
+                  <button
+                    onClick={() => setCameraEnabled(!cameraEnabled)}
+                    title={cameraEnabled ? 'Turn camera off' : 'Turn camera on'}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                      cameraEnabled
+                        ? 'bg-white/[0.04] border-white/[0.08] text-neutral-300 hover:text-white'
+                        : 'bg-red-500/15 border-red-500/30 text-red-400'
+                    }`}
+                  >
+                    {cameraEnabled ? <Camera className="w-3.5 h-3.5" /> : <CameraOff className="w-3.5 h-3.5" />}
+                    <span>{cameraEnabled ? 'Cam' : 'Cam off'}</span>
+                  </button>
+                </div>
+                <button
+                  onClick={() => setIsMirrored(!isMirrored)}
+                  title="Flip camera mirror"
+                  className="p-1.5 rounded-lg text-neutral-600 hover:text-neutral-300 hover:bg-white/[0.04] transition-colors"
+                >
+                  <FlipHorizontal className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Paused banner — inside controls strip */}
+              <AnimatePresence>
+                {isPaused && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="mx-4 mb-2.5 flex items-center justify-between gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3.5 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <Pause className="w-3.5 h-3.5 text-amber-400" />
+                        <span className="text-xs text-amber-400 font-medium">Timer paused</span>
+                      </div>
+                      <button
+                        onClick={() => setIsPaused(false)}
+                        className="text-xs text-amber-400/60 hover:text-amber-400 transition-colors"
+                      >
+                        Resume
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+
+          {/* No duplicate transcript here — answer is shown in the left panel only */}
+        </div>
+        {/* end right panel */}
       </div>
+      {/* end main body */}
+
+      {/* Keyframes */}
+      <style>{`
+        @keyframes soundBar {
+          from { transform: scaleY(0.4); opacity: 0.6; }
+          to   { transform: scaleY(1.4); opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 };

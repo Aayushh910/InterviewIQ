@@ -59,10 +59,10 @@ export const InterviewFinishedStep = ({ result, onViewReport }) => {
         <div className="p-6 rounded-2xl bg-[#141414] border border-white/15 inline-block w-full max-w-sm font-mono shadow-md">
           <div className="text-xs text-neutral-400 uppercase tracking-wider mb-1">Overall AI Readiness Score</div>
           <div className="text-5xl font-extrabold text-emerald-400">
-            {result?.score || 92}%
+            {Math.round(result?.score ?? result?.analytics?.overall_score ?? 0)}%
           </div>
           <p className="text-xs text-emerald-400 font-semibold mt-2">
-            Top 5% Performance • High Confidence Rating
+            {result?.analytics?.performance_category || 'Evaluation Completed'} • AI Evaluated
           </p>
         </div>
 

@@ -74,6 +74,22 @@ def authenticate_user(db: Session, email: str, password: str) -> User:
     return user
 
 
+def reset_user_password(db: Session, email: str, new_password: str) -> User:
+    """
+    Reset and store new hashed password for user by email.
+    """
+    user = get_user_by_email(db, email)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User with this email not found."
+        )
+    user.hashed_password = hash_password(new_password)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
 def build_token_response(user: User) -> dict:
     """
     Generate JWT access token and return token response payload.

@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
     # Facial Analysis Settings
     FACE_LANDMARKER_MODEL_PATH: str = "models/face_landmarker.task"
-    MAX_FACES: int = 1
+    MAX_FACES: int = 4
     MIN_FACE_DETECTION_CONFIDENCE: float = 0.5
     MIN_FACE_PRESENCE_CONFIDENCE: float = 0.5
     MIN_TRACKING_CONFIDENCE: float = 0.5
@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     MAX_VIDEO_DURATION_SECONDS: int = 300
 
     # Speech-to-Text Analysis Settings
+    STT_PROVIDER: str = "groq"
+    STT_API_KEY: Optional[str] = None
+    STT_MODEL: str = "whisper-large-v3-turbo"
+    STT_TIMEOUT_SECONDS: float = 30.0
     STT_MODEL_SIZE: str = "tiny"
     STT_DEVICE: str = "cpu"
     STT_COMPUTE_TYPE: str = "int8"
@@ -42,23 +46,38 @@ class Settings(BaseSettings):
     MAX_AUDIO_SIZE_MB: int = 25
     MAX_AUDIO_DURATION_SECONDS: int = 300
 
+    # Text-to-Speech Analysis Settings
+    TTS_PROVIDER: str = "mock"
+    TTS_API_KEY: Optional[str] = None
+    TTS_MODEL: str = "default"
+    TTS_VOICE: str = "default"
+    TTS_LANGUAGE: str = "en"
+    TTS_TIMEOUT_SECONDS: float = 30.0
+
+
+
+
+
     # Adaptive Counter-Question Settings
     MAX_FOLLOW_UPS_PER_QUESTION: int = 2
     LLM_PROVIDER: str = "local"
 
-    # Answer Evaluation Settings & Weights
-    EVALUATION_WEIGHT_RELEVANCE: float = 0.20
-    EVALUATION_WEIGHT_CORRECTNESS: float = 0.30
-    EVALUATION_WEIGHT_COMPLETENESS: float = 0.20
-    EVALUATION_WEIGHT_CLARITY: float = 0.15
-    EVALUATION_WEIGHT_TECHNICAL_DEPTH: float = 0.15
+    # Answer Evaluation Settings & Weights (Phase 12 Comprehensive Scoring Engine)
+    EVALUATION_WEIGHT_CORRECTNESS: float = 0.25
+    EVALUATION_WEIGHT_RELEVANCE: float = 0.15
+    EVALUATION_WEIGHT_TECHNICAL_DEPTH: float = 0.20
+    EVALUATION_WEIGHT_COMPLETENESS: float = 0.15
+    EVALUATION_WEIGHT_COMMUNICATION: float = 0.10
+    EVALUATION_WEIGHT_GRAMMAR: float = 0.05
+    EVALUATION_WEIGHT_TIMING: float = 0.10
+    EVALUATION_WEIGHT_CLARITY: float = 0.10
     EVALUATION_PROVIDER: str = "heuristic"
 
     # AI Provider Core Configuration
-    AI_PROVIDER: str = "heuristic"
+    AI_PROVIDER: str = "groq"
     AI_API_KEY: Optional[str] = None
-    AI_MODEL: str = "gpt-4o-mini"
-    AI_TIMEOUT_SECONDS: float = 10.0
+    AI_MODEL: str = "openai/gpt-oss-120b"
+    AI_TIMEOUT_SECONDS: float = 20.0
 
     model_config = SettingsConfigDict(
         env_file=".env",

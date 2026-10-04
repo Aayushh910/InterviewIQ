@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.router import api_router
-from app.api import ai
+from app.api import ai, speech
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -25,6 +25,21 @@ app.add_middleware(
 
 app.include_router(api_router)
 app.include_router(ai.router, prefix="/api/ai", tags=["AI Foundation Direct Alias"])
+app.include_router(speech.router, prefix="/api/ai/speech", tags=["Speech Recognition Direct Alias"])
+
+
+
+@app.on_event("startup")
+def init_db_tables():
+    """Ensure newly introduced tables exist on application startup."""
+    from app.core.database import engine
+    from app.models.multimodal_evidence import MultimodalEvidence
+    from app.models.final_evaluation import FinalEvaluation
+    try:
+        MultimodalEvidence.__table__.create(bind=engine, checkfirst=True)
+        FinalEvaluation.__table__.create(bind=engine, checkfirst=True)
+    except Exception:
+        pass
 
 
 @app.get("/")

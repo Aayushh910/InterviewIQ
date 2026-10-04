@@ -136,10 +136,10 @@ export const Reports = () => {
                 </div>
 
                 <Link
-                  to={`/reports?id=${item.id}`}
+                  to={`/results/${item.id}`}
                   className="px-4 py-2.5 rounded-xl bg-white text-black font-bold hover:bg-neutral-200 text-xs shadow-xl border border-white/20 flex items-center gap-1.5 transition-all"
                 >
-                  View Full Report <ArrowRight className="w-4 h-4" />
+                  View Performance Results <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
             </div>

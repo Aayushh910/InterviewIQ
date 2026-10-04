@@ -1,23 +1,67 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Award, Calendar, Clock, CheckCircle2, AlertTriangle, Sparkles, FileText } from 'lucide-react';
+import { ArrowLeft, Award, Calendar, Clock, CheckCircle2, AlertTriangle, Sparkles, FileText, Loader2 } from 'lucide-react';
 import { useInterview } from '../../context/InterviewContext';
 import { QuestionAnalysisCard } from '../../components/reports/QuestionAnalysisCard';
 import { DownloadPDFButton } from '../../components/reports/DownloadPDFButton';
 
 export const ReportDetail = ({ reportIdOverride }) => {
   const [searchParams] = useSearchParams();
-  const { getReportById } = useInterview();
+  const { getReportById, fetchReportById } = useInterview();
 
   const id = reportIdOverride || searchParams.get('id') || 'int_101';
-  const report = getReportById(id);
+  const [report, setReport] = useState(() => getReportById(id));
+  const [isLoading, setIsLoading] = useState(!report);
+  const [error, setError] = useState(null);
 
-  if (!report) {
+  useEffect(() => {
+    let isMounted = true;
+    const existing = getReportById(id);
+    if (existing) {
+      setReport(existing);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    fetchReportById(id)
+      .then((data) => {
+        if (isMounted) {
+          if (data) setReport(data);
+          else setError('Report not found or not yet evaluated.');
+          setIsLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          setError(err?.message || 'Failed to load report analytics.');
+          setIsLoading(false);
+        }
+      });
+
+    return () => { isMounted = false; };
+  }, [id]);
+
+  if (isLoading) {
     return (
-      <div className="p-8 text-center space-y-4">
-        <h2 className="text-xl font-bold text-slate-100">Report Not Found</h2>
-        <Link to="/reports" className="text-emerald-400 underline text-xs">Back to Reports List</Link>
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center space-y-4">
+        <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
+        <p className="text-sm text-neutral-400 font-mono">Loading official performance analytics…</p>
+      </div>
+    );
+  }
+
+  if (error || !report) {
+    return (
+      <div className="p-8 max-w-lg mx-auto text-center space-y-4 rounded-3xl bg-[#0A0A0A] border border-white/10 my-12">
+        <AlertTriangle className="w-8 h-8 text-amber-400 mx-auto" />
+        <h2 className="text-xl font-bold text-white">Report Not Found</h2>
+        <p className="text-xs text-neutral-400">{error || 'The requested interview report is not available.'}</p>
+        <Link to="/reports" className="inline-block px-4 py-2 rounded-xl bg-white text-black text-xs font-bold hover:bg-neutral-200">
+          Back to Reports Archive
+        </Link>
       </div>
     );
   }
@@ -34,7 +78,15 @@ export const ReportDetail = ({ reportIdOverride }) => {
         <Link to="/reports" className="inline-flex items-center gap-1.5 text-xs font-mono font-semibold text-neutral-400 hover:text-white">
           <ArrowLeft className="w-4 h-4" /> Back to All Reports
         </Link>
-        <DownloadPDFButton reportTitle={report.title} />
+        <div className="flex items-center gap-3">
+          <Link
+            to={`/results/${id}`}
+            className="px-3.5 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 text-xs font-mono font-bold flex items-center gap-1.5 transition-colors"
+          >
+            <Sparkles className="w-3.5 h-3.5" /> Full Results Dashboard
+          </Link>
+          <DownloadPDFButton sessionId={id} reportTitle={report.title} />
+        </div>
       </div>
 
       {/* Main Report Header Card */}
@@ -57,12 +109,12 @@ export const ReportDetail = ({ reportIdOverride }) => {
           <div className="p-4 rounded-2xl bg-[#141414] border border-white/15 text-center shrink-0 w-full lg:w-48 shadow-md font-mono">
             <span className="text-[10px] text-neutral-400 uppercase">Overall AI Score</span>
             <div className="text-4xl font-extrabold text-emerald-400">{report.overallScore}%</div>
-            <span className="text-[11px] text-emerald-400 font-bold">Top 5% Performance</span>
+            <span className="text-[11px] text-emerald-400 font-bold">{report.performanceCategory || 'Evaluated'}</span>
           </div>
         </div>
 
-        {/* 6 Sub-Scores Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-2">
+        {/* 7 Core Scoring Dimensions Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 pt-2">
           {Object.entries(report.scores || {}).map(([key, val]) => (
             <div key={key} className="p-3 rounded-2xl bg-[#141414]/80 border border-white/10 text-center font-mono">
               <span className="text-[10px] text-neutral-400 uppercase tracking-wider block capitalize">
@@ -77,7 +129,7 @@ export const ReportDetail = ({ reportIdOverride }) => {
       {/* Question-wise Analysis */}
       <div className="space-y-4">
         <h2 className="text-lg font-bold text-white dark:text-white light:text-slate-900 flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-emerald-400" /> Question-wise Transcript & AI Evaluation
+          <Sparkles className="w-5 h-5 text-emerald-400" /> Question-wise Transcript & AI Evaluation ({report.questionAnalysis?.length || 0})
         </h2>
 
         <div className="space-y-4">
@@ -94,26 +146,24 @@ export const ReportDetail = ({ reportIdOverride }) => {
             <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Key Strengths
           </h3>
           <ul className="space-y-2 text-xs text-neutral-300">
-            <li className="flex items-start gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 shrink-0" />
-              Solid architectural reasoning for Virtual DOM reconciliation and Fiber node scheduling.
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 shrink-0" />
-              Maintained 95% steady eye contact throughout complex algorithm trade-off questions.
-            </li>
+            {(report.topStrengths && report.topStrengths.length > 0 ? report.topStrengths : ['Demonstrated structured technical thinking', 'Clear and concise articulation of core concepts']).map((str, i) => (
+              <li key={i} className="flex items-start gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 shrink-0" />
+                <span>{str}</span>
+              </li>
+            ))}
           </ul>
         </div>
 
         <div className="rounded-3xl bg-[#0A0A0A]/90 dark:bg-[#0A0A0A]/90 light:bg-white border border-white/15 dark:border-white/15 light:border-slate-200 p-6 shadow-2xl backdrop-blur-xl space-y-3">
           <h3 className="text-base font-bold text-white dark:text-white light:text-slate-900 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-400" /> AI Improvement Tips
+            <AlertTriangle className="w-4 h-4 text-amber-400" /> AI Improvement Recommendations
           </h3>
           <ul className="space-y-2 text-xs text-neutral-300">
-            {(report.aiRecommendations || []).map((rec, i) => (
+            {(report.aiRecommendations && report.aiRecommendations.length > 0 ? report.aiRecommendations : ['Provide deeper implementation trade-offs', 'Elaborate on production scalability constraints']).map((rec, i) => (
               <li key={i} className="flex items-start gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0" />
-                {rec}
+                <span>{rec}</span>
               </li>
             ))}
           </ul>

@@ -21,11 +21,17 @@ export const useAudioRecorder = () => {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
 
-  const startRecording = useCallback((stream) => {
-    if (!stream) {
-      console.warn('Cannot start audio recording: MediaStream is empty');
-      return;
+  const startRecording = useCallback(async (stream) => {
+    let targetStream = stream;
+    if (!targetStream || targetStream.getAudioTracks().length === 0) {
+      try {
+        targetStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (err) {
+        console.warn('Cannot start audio recording: MediaStream audio track missing and getUserMedia failed:', err);
+        return;
+      }
     }
+
 
     try {
       // Create audio-only MediaStream from audio tracks if stream has both video & audio

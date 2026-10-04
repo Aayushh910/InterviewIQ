@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.models.answer import Answer
 from app.models.interview import Interview
 from app.models.interview_question import InterviewQuestion
+from app.models.session_question import SessionQuestion
 from app.models.interview_session import InterviewSession
 from app.schemas.analytics import (
     DimensionMetrics,
@@ -13,6 +14,7 @@ from app.schemas.analytics import (
     QuestionPerformanceItem,
     InterviewAnalyticsResponse
 )
+from app.core.scoring_config import generate_recommended_response
 
 logger = logging.getLogger(__name__)
 
@@ -57,8 +59,8 @@ def get_session_analytics(
 
     interview = session.interview
 
-    # 1. Fetch questions for interview
-    questions = db.query(InterviewQuestion).filter(
+    # 1. Fetch main questions for interview
+    main_questions = db.query(InterviewQuestion).filter(
         InterviewQuestion.interview_id == interview.id
     ).order_by(InterviewQuestion.question_order).all()
 
@@ -66,12 +68,56 @@ def get_session_analytics(
     answers = db.query(Answer).filter(Answer.session_id == session_id).all()
     ans_by_q_id = {ans.question_id: ans for ans in answers}
 
+    # 3. Fetch any session-specific dynamic counter / follow-up questions that were answered
+    session_questions = db.query(SessionQuestion).filter(
+        SessionQuestion.session_id == session_id
+    ).order_by(SessionQuestion.question_order, SessionQuestion.follow_up_depth).all()
+
+    answered_sq = [sq for sq in session_questions if sq.id in ans_by_q_id]
+
+    # Build unified question list
+    all_questions = []
+    for mq in main_questions:
+        all_questions.append({
+            "id": mq.id,
+            "question_text": mq.question_text,
+            "question_type": "main",
+            "follow_up_depth": 0,
+            "order": mq.question_order
+        })
+        # Add follow-ups attached to this main question that were answered
+        for sq in answered_sq:
+            if sq.parent_question_id == mq.id:
+                all_questions.append({
+                    "id": sq.id,
+                    "question_text": sq.question_text,
+                    "question_type": sq.question_type or "counter",
+                    "follow_up_depth": sq.follow_up_depth or 1,
+                    "order": sq.question_order
+                })
+
+    # Add any orphaned answered session questions not matched by parent
+    mapped_sq_ids = {q["id"] for q in all_questions}
+    for sq in answered_sq:
+        if sq.id not in mapped_sq_ids:
+            all_questions.append({
+                "id": sq.id,
+                "question_text": sq.question_text,
+                "question_type": sq.question_type or "counter",
+                "follow_up_depth": sq.follow_up_depth or 1,
+                "order": sq.question_order
+            })
+
     q_results: List[QuestionPerformanceItem] = []
     overall_scores: List[float] = []
     relevance_scores: List[float] = []
     correctness_scores: List[float] = []
+    tech_scores: List[float] = []
+    completeness_scores: List[float] = []
     clarity_scores: List[float] = []
     comm_scores: List[float] = []
+    gram_scores: List[float] = []
+    time_scores: List[float] = []
     conf_scores: List[float] = []
 
     face_ratios: List[float] = []
@@ -83,13 +129,20 @@ def get_session_analytics(
     strongest_item: Optional[tuple[float, AnswerHighlight]] = None
     weakest_item: Optional[tuple[float, AnswerHighlight]] = None
 
-    for q in questions:
-        ans = ans_by_q_id.get(q.id)
+    for q in all_questions:
+        q_id = q["id"]
+        q_text = q["question_text"]
+        q_type = q["question_type"]
+        q_depth = q["follow_up_depth"]
+
+        ans = ans_by_q_id.get(q_id)
         if not ans:
             q_results.append(
                 QuestionPerformanceItem(
-                    question_id=q.id,
-                    question_text=q.question_text,
+                    question_id=q_id,
+                    question_text=q_text,
+                    question_type=q_type,
+                    follow_up_depth=q_depth,
                     evaluation_available=False
                 )
             )
@@ -101,38 +154,56 @@ def get_session_analytics(
         item_score = None
         item_rel = None
         item_corr = None
+        item_tech = None
+        item_comp = None
         item_clar = None
         item_comm = None
+        item_gram = None
+        item_time = None
+        item_dur = None
         item_conf = None
         item_strengths = []
         item_improvements = []
+        item_summary = None
         has_eval = False
+
+        if ans.started_at and ans.submitted_at:
+            item_dur = round(max(0.0, (ans.submitted_at - ans.started_at).total_seconds()), 1)
 
         if eval_rec:
             has_eval = True
             item_score = float(eval_rec.overall_score)
             item_rel = float(eval_rec.relevance_score)
             item_corr = float(eval_rec.correctness_score)
+            item_tech = float(eval_rec.technical_depth_score)
+            item_comp = float(eval_rec.completeness_score)
             item_clar = float(eval_rec.clarity_score)
             item_comm = float(getattr(eval_rec, "communication_score", eval_rec.clarity_score))
+            item_gram = float(getattr(eval_rec, "grammar_score", eval_rec.clarity_score))
+            item_time = float(getattr(eval_rec, "timing_score", 90.0))
             item_conf = float(getattr(eval_rec, "confidence_score", eval_rec.overall_score))
 
             item_strengths = eval_rec.strengths or []
             item_improvements = eval_rec.improvements or []
+            item_summary = eval_rec.summary
 
             overall_scores.append(item_score)
             relevance_scores.append(item_rel)
             correctness_scores.append(item_corr)
+            tech_scores.append(item_tech)
+            completeness_scores.append(item_comp)
             clarity_scores.append(item_clar)
             comm_scores.append(item_comm)
+            gram_scores.append(item_gram)
+            time_scores.append(item_time)
             conf_scores.append(item_conf)
 
             all_strengths.extend(item_strengths)
             all_improvements.extend(item_improvements)
 
             highlight = AnswerHighlight(
-                question_id=q.id,
-                question_text=q.question_text,
+                question_id=q_id,
+                question_text=q_text,
                 answer_id=ans.id,
                 answer_score=item_score,
                 key_takeaway=eval_rec.summary or (item_strengths[0] if item_strengths else "Evaluated answer response.")
@@ -163,16 +234,37 @@ def get_session_analytics(
                 align_scores.append(float(a_score))
                 obs_notes.append(f"Camera alignment score: {int(float(a_score) * 100)}%")
 
+        rec_response = generate_recommended_response(q_text, getattr(interview, "domain", "Software Engineering"), getattr(interview, "difficulty", "Medium"))
+        if eval_rec and hasattr(eval_rec, "recommended_response") and getattr(eval_rec, "recommended_response", None):
+            rec_response = eval_rec.recommended_response
+
+        # Calculate actual WPM
+        words = len((ans.answer_text or "").split())
+        calculated_wpm = None
+        if item_dur and item_dur > 0 and words > 0:
+            calculated_wpm = round(words / (item_dur / 60.0))
+
         q_results.append(
             QuestionPerformanceItem(
-                question_id=q.id,
-                question_text=q.question_text,
+                question_id=q_id,
+                question_text=q_text,
+                question_type=q_type,
+                follow_up_depth=q_depth,
                 answer_id=ans.id,
+                answer_text=ans.answer_text,
+                summary=item_summary,
+                recommended_response=rec_response,
+                wpm=calculated_wpm,
                 answer_score=item_score,
                 relevance=item_rel,
                 correctness=item_corr,
+                technical_accuracy=item_tech,
+                completeness=item_comp,
                 clarity=item_clar,
                 communication=item_comm,
+                grammar=item_gram,
+                timing=item_time,
+                duration_seconds=item_dur,
                 confidence_indicator=item_conf,
                 strengths=item_strengths,
                 improvements=item_improvements,
@@ -185,8 +277,12 @@ def get_session_analytics(
     overall_avg = round(sum(overall_scores) / len(overall_scores), 2) if overall_scores else None
     rel_avg = round(sum(relevance_scores) / len(relevance_scores), 2) if relevance_scores else 0.0
     corr_avg = round(sum(correctness_scores) / len(correctness_scores), 2) if correctness_scores else 0.0
+    tech_avg = round(sum(tech_scores) / len(tech_scores), 2) if tech_scores else 0.0
+    comp_avg = round(sum(completeness_scores) / len(completeness_scores), 2) if completeness_scores else 0.0
     clar_avg = round(sum(clarity_scores) / len(clarity_scores), 2) if clarity_scores else 0.0
     comm_avg = round(sum(comm_scores) / len(comm_scores), 2) if comm_scores else 0.0
+    gram_avg = round(sum(gram_scores) / len(gram_scores), 2) if gram_scores else 0.0
+    time_avg = round(sum(time_scores) / len(time_scores), 2) if time_scores else 0.0
     conf_avg = round(sum(conf_scores) / len(conf_scores), 2) if conf_scores else 0.0
 
     dim_metrics = None
@@ -195,8 +291,12 @@ def get_session_analytics(
             answer_quality=overall_avg,
             relevance=rel_avg,
             correctness=corr_avg,
+            technical_accuracy=tech_avg,
+            completeness=comp_avg,
             clarity=clar_avg,
             communication=comm_avg,
+            grammar=gram_avg,
+            timing=time_avg,
             confidence_indicator=conf_avg
         )
 
@@ -210,7 +310,7 @@ def get_session_analytics(
     )
 
     comp_metrics = CompletionMetrics(
-        total_questions=len(questions),
+        total_questions=len(main_questions),
         answered_questions=len(answers),
         evaluated_answers=len(overall_scores),
         facial_analysis_available=len(face_ratios)
