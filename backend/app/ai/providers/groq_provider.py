@@ -105,11 +105,75 @@ class GroqProvider(BaseAIProvider):
 
         raise AIProviderError(f"All Groq models failed. Last error: {last_error}")
 
+    def generate_chat_with_tools(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: Optional[List[Dict[str, Any]]] = None,
+        tool_choice: Optional[str] = "auto",
+        temperature: float = 0.2
+    ) -> Dict[str, Any]:
+        """
+        Send chat completion request to Groq API with function/tool definitions.
+        Returns {'content': str | None, 'tool_calls': List[Dict], 'finish_reason': str}.
+        """
+        if not self.api_key:
+            logger.error("AI_API_KEY is not configured for GroqProvider.")
+            raise AIProviderError("Groq AI provider API key is missing or not configured.")
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+
+        candidate_models = [self.model, "llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+        candidate_models = list(dict.fromkeys(candidate_models))
+
+        last_error = None
+        for current_model in candidate_models:
+            payload: Dict[str, Any] = {
+                "model": current_model,
+                "messages": messages,
+                "temperature": temperature
+            }
+
+            if tools:
+                payload["tools"] = tools
+                if tool_choice:
+                    payload["tool_choice"] = tool_choice
+
+            try:
+                with httpx.Client(timeout=self.timeout) as client:
+                    resp = client.post(self.GROQ_API_URL, headers=headers, json=payload)
+
+                if resp.status_code == 401:
+                    raise AIProviderError("Groq API authentication failed. Invalid API key.")
+                if resp.status_code == 429:
+                    raise AIProviderError("Groq API rate limit exceeded. Please try again shortly.")
+                if resp.status_code != 200:
+                    last_error = f"HTTP {resp.status_code}: {resp.text}"
+                    continue
+
+                data = resp.json()
+                choice = data["choices"][0]
+                message = choice["message"]
+
+                return {
+                    "content": message.get("content"),
+                    "tool_calls": message.get("tool_calls") or [],
+                    "finish_reason": choice.get("finish_reason", "stop")
+                }
+            except (httpx.TimeoutException, httpx.RequestError) as e:
+                last_error = str(e)
+                continue
+
+        raise AIProviderError(f"All Groq models failed for chat with tools. Last error: {last_error}")
+
     def generate_questions(
         self,
         interview_meta: Dict[str, Any],
         number_of_questions: int
     ) -> List[Dict[str, Any]]:
+
         """
         Generate structured interview questions via Groq AI provider.
         """

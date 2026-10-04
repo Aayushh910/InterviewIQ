@@ -46,3 +46,17 @@ class BaseAIProvider(ABC):
         """
         pass
 
+    def generate_chat_with_tools(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: Optional[List[Dict[str, Any]]] = None,
+        tool_choice: Optional[str] = "auto",
+        temperature: float = 0.2
+    ) -> Dict[str, Any]:
+        """
+        Execute chat completion with tool calling support.
+        Returns dict with keys: 'content', 'tool_calls', 'finish_reason'.
+        """
+        return {"content": None, "tool_calls": []}
+
+
