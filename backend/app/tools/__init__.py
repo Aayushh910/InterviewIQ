@@ -37,8 +37,8 @@ from app.tools.multimodal.behavior_tool import AnalyzeBehaviorTool
 # Final Evaluation Tool (Phase 12)
 from app.tools.final_evaluation.tool import CalculateFinalEvaluationTool
 
-# Future-Ready Contracts
-from app.tools.future.contracts import (
+# Operational Reporting Tool (Phase 13)
+from app.tools.report.tool import (
     GenerateInterviewReportTool,
 )
 
