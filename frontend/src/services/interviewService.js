@@ -170,3 +170,123 @@ export const getSessionAnswers = async (sessionId) => {
   const response = await apiClient.get(`/sessions/${sessionId}/answers`);
   return response.data;
 };
+
+// ─── Phase 8: Interview State Manager Client APIs ──────────────────────────
+
+export const createSessionState = async (interviewId) => {
+  const response = await apiClient.post(`/sessions/state/${interviewId}`);
+  return response.data;
+};
+
+export const getSessionState = async (sessionId) => {
+  const response = await apiClient.get(`/sessions/${sessionId}/state`);
+  return response.data;
+};
+
+export const initializeSessionState = async (sessionId, initData = {}) => {
+  const response = await apiClient.post(`/sessions/${sessionId}/state/initialize`, initData);
+  return response.data;
+};
+
+export const updateSessionState = async (sessionId, updateData) => {
+  const response = await apiClient.patch(`/sessions/${sessionId}/state`, updateData);
+  return response.data;
+};
+
+export const addSessionQuestion = async (sessionId, questionData) => {
+  const response = await apiClient.post(`/sessions/${sessionId}/state/questions`, {
+    question_text: questionData.question_text || questionData.text,
+    question_order: questionData.question_order,
+    question_type: questionData.question_type || 'technical',
+    topic: questionData.topic,
+    difficulty: questionData.difficulty,
+  });
+  return response.data;
+};
+
+export const submitAnswerToState = async (sessionId, answerData) => {
+  const response = await apiClient.post(`/sessions/${sessionId}/state/answers`, {
+    question_id: answerData.question_id,
+    answer_text: answerData.answer_text || '',
+    started_at: answerData.started_at,
+    submitted_at: answerData.submitted_at,
+  });
+  return response.data;
+};
+
+export const addFollowUpToState = async (sessionId, followUpData) => {
+  const response = await apiClient.post(`/sessions/${sessionId}/state/follow-ups`, {
+    parent_question_id: followUpData.parent_question_id,
+    answer_id: followUpData.answer_id,
+    question_text: followUpData.question_text || followUpData.text,
+    follow_up_depth: followUpData.follow_up_depth || 1,
+    question_order: followUpData.question_order,
+  });
+  return response.data;
+};
+
+export const addEvaluationReferenceToState = async (sessionId, evalData) => {
+  const response = await apiClient.post(`/sessions/${sessionId}/state/evaluations`, evalData);
+  return response.data;
+};
+
+export const endSessionState = async (sessionId, reason = 'completed') => {
+  const response = await apiClient.post(`/sessions/${sessionId}/state/end?reason=${reason}`);
+  return response.data;
+};
+
+// ─── Phase 9: Tool Registry Client APIs ────────────────────────────────────
+
+export const getAvailableTools = async (includeFuture = false) => {
+  const response = await apiClient.get(`/tools?include_future=${includeFuture}`);
+  return response.data;
+};
+
+export const getToolDefinition = async (toolName) => {
+  const response = await apiClient.get(`/tools/${toolName}`);
+  return response.data;
+};
+
+export const executeTool = async (toolName, payload = {}) => {
+  const response = await apiClient.post(`/tools/${toolName}/execute`, payload);
+  return response.data;
+};
+
+// ─── Phase 10: Groq Interview Agent Client APIs ───────────────────────────
+
+export const orchestrateAgentTurn = async (turnData, providerOverride = null, mockMode = null) => {
+  let url = '/agent/orchestrate';
+  const params = [];
+  if (providerOverride) params.push(`provider_override=${encodeURIComponent(providerOverride)}`);
+  if (mockMode) params.push(`mock_mode=${encodeURIComponent(mockMode)}`);
+  if (params.length > 0) url += `?${params.join('&')}`;
+
+  const response = await apiClient.post(url, {
+    session_id: turnData.session_id,
+    user_message: turnData.user_message || null,
+    candidate_answer: turnData.candidate_answer || null,
+    question_id: turnData.question_id || null,
+    duration_seconds: turnData.duration_seconds || null,
+    max_iterations: turnData.max_iterations || 4,
+  });
+  return response.data;
+};
+
+export const getAgentCapabilities = async () => {
+  const response = await apiClient.get('/agent/capabilities');
+  return response.data;
+};
+
+// ─── Phase 11: Multimodal Evidence APIs ────────────────────────────────────
+
+export const getSessionMultimodalEvidence = async (sessionId, evidenceType = null) => {
+  const url = evidenceType 
+    ? `/sessions/${sessionId}/multimodal/evidence?evidence_type=${encodeURIComponent(evidenceType)}`
+    : `/sessions/${sessionId}/multimodal/evidence`;
+  const response = await apiClient.get(url);
+  return response.data;
+};
+
+
+
+

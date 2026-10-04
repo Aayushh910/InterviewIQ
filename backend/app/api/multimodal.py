@@ -62,3 +62,51 @@ def get_session_multimodal(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
+
+
+@router.get("/sessions/{session_id}/multimodal/evidence", status_code=status.HTTP_200_OK)
+def get_session_multimodal_evidence(
+    session_id: str,
+    evidence_type: str = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Retrieve structured, chronological multimodal evidence records (face & behavior telemetry)
+    for an interview session.
+    """
+    from app.services.multimodal_evidence_service import evidence_service
+    try:
+        records = evidence_service.get_session_evidence(
+            db=db,
+            session_id=session_id,
+            user_id=str(current_user.id),
+            evidence_type=evidence_type
+        )
+        return [
+            {
+                "id": str(r.id),
+                "session_id": str(r.session_id),
+                "question_id": str(r.question_id) if r.question_id else None,
+                "answer_id": str(r.answer_id) if r.answer_id else None,
+                "evidence_type": r.evidence_type,
+                "status": r.status,
+                "confidence_score": r.confidence_score,
+                "raw_evidence": r.raw_evidence,
+                "derived_indicators": r.derived_indicators,
+                "observations": r.observations,
+                "recorded_at": r.recorded_at.isoformat() if r.recorded_at else None,
+            }
+            for r in records
+        ]
+    except KeyError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Session not found"
+        )
+    except PermissionError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Unauthorized access to session"
+        )
+

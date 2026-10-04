@@ -29,6 +29,17 @@ app.include_router(speech.router, prefix="/api/ai/speech", tags=["Speech Recogni
 
 
 
+@app.on_event("startup")
+def init_db_tables():
+    """Ensure newly introduced tables exist on application startup."""
+    from app.core.database import engine
+    from app.models.multimodal_evidence import MultimodalEvidence
+    try:
+        MultimodalEvidence.__table__.create(bind=engine, checkfirst=True)
+    except Exception:
+        pass
+
+
 @app.get("/")
 def root():
     """
