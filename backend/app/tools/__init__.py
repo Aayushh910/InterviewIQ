@@ -34,9 +34,11 @@ from app.tools.interview_state.tool import (
 from app.tools.multimodal.face_tool import AnalyzeFaceTool
 from app.tools.multimodal.behavior_tool import AnalyzeBehaviorTool
 
+# Final Evaluation Tool (Phase 12)
+from app.tools.final_evaluation.tool import CalculateFinalEvaluationTool
+
 # Future-Ready Contracts
 from app.tools.future.contracts import (
-    CalculateFinalEvaluationTool,
     GenerateInterviewReportTool,
 )
 
@@ -56,8 +58,9 @@ def register_standard_tools(registry: ToolRegistry = default_registry) -> ToolRe
         # Multimodal Active Tools (Phase 11)
         AnalyzeFaceTool(),
         AnalyzeBehaviorTool(),
-        # Future-Ready Tool Contracts
+        # Final Evaluation Active Tool (Phase 12)
         CalculateFinalEvaluationTool(),
+        # Future-Ready Tool Contracts
         GenerateInterviewReportTool(),
     ]
 

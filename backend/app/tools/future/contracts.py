@@ -1,9 +1,9 @@
 """
 Future-ready tool contracts for InterviewIQ.
-In Phase 11, AnalyzeFaceTool and AnalyzeBehaviorTool have graduated into real operational tools
-in `app.tools.multimodal`.
+In Phase 12, CalculateFinalEvaluationTool has graduated into a real operational tool
+in `app.tools.final_evaluation`.
 
-Only final scoring and reporting remain as future contracts.
+Only report generation remains as a future contract.
 """
 
 from typing import Optional, Dict, Any
@@ -12,52 +12,23 @@ from app.tools.base.tool import BaseTool
 from app.tools.base.context import ToolExecutionContext
 from app.tools.base.result import ToolResult
 
-# Re-export real multimodal tools from their operational package for backward compatibility
+# Re-export real operational tools for backward compatibility
 from app.tools.multimodal.face_tool import AnalyzeFaceTool
 from app.tools.multimodal.behavior_tool import AnalyzeBehaviorTool
+from app.tools.final_evaluation.tool import CalculateFinalEvaluationTool
 from app.schemas.multimodal_evidence import (
     AnalyzeFaceInput,
     AnalyzeFaceOutput,
     AnalyzeBehaviorInput,
     AnalyzeBehaviorOutput,
 )
+from app.tools.final_evaluation.schemas import (
+    CalculateFinalEvaluationInput,
+    CalculateFinalEvaluationOutput,
+)
 
 
-# ─── 1. Final Evaluation Contract (Future) ────────────────────────────────────
-
-class CalculateFinalEvaluationInput(BaseModel):
-    session_id: str = Field(..., description="Interview session ID to evaluate")
-    model_config = ConfigDict(from_attributes=True)
-
-
-class CalculateFinalEvaluationOutput(BaseModel):
-    overall_score: float = Field(default=0.0)
-    performance_category: str = Field(default="Evaluated")
-    category_scores: Dict[str, float] = Field(default_factory=dict)
-    summary: str = Field(default="")
-    model_config = ConfigDict(from_attributes=True)
-
-
-class CalculateFinalEvaluationTool(BaseTool):
-    """
-    Future-ready contract for calculating comprehensive final session scores.
-    """
-    name: str = "calculate_final_evaluation"
-    description: str = "Future evaluation tool contract for aggregating question scores into final session evaluation."
-    input_schema = CalculateFinalEvaluationInput
-    output_schema = CalculateFinalEvaluationOutput
-    category: str = "final_evaluation"
-    is_future_contract: bool = True
-
-    def execute(self, context: ToolExecutionContext, params: CalculateFinalEvaluationInput) -> ToolResult:
-        return ToolResult(
-            tool_name=self.name,
-            success=False,
-            error=f"Tool '{self.name}' is a future-ready contract and is not yet implemented in Phase 11."
-        )
-
-
-# ─── 2. Report Generation Contract (Future) ───────────────────────────────────
+# ─── 1. Report Generation Contract (Future) ───────────────────────────────────
 
 class GenerateInterviewReportInput(BaseModel):
     session_id: str = Field(..., description="Interview session ID")
@@ -74,21 +45,50 @@ class GenerateInterviewReportOutput(BaseModel):
 
 class GenerateInterviewReportTool(BaseTool):
     """
-    Future-ready contract for interview report generation and PDF compilation.
+    Operational tool for interview report generation and PDF compilation (Phase 13).
     """
     name: str = "generate_interview_report"
-    description: str = "Future reporting tool contract for compiling comprehensive candidate performance reports."
+    description: str = "Compile comprehensive candidate performance report and generate downloadable PDF."
     input_schema = GenerateInterviewReportInput
     output_schema = GenerateInterviewReportOutput
     category: str = "reporting"
-    is_future_contract: bool = True
+    is_future_contract: bool = False
 
     def execute(self, context: ToolExecutionContext, params: GenerateInterviewReportInput) -> ToolResult:
-        return ToolResult(
-            tool_name=self.name,
-            success=False,
-            error=f"Tool '{self.name}' is a future-ready contract and is not yet implemented in Phase 11."
-        )
+        if not context.db:
+            return ToolResult(
+                tool_name=self.name,
+                success=False,
+                error="Database session required in ToolExecutionContext to generate report."
+            )
+
+        try:
+            from app.services.report_service import report_service
+            # Validate and generate report
+            pdf_bytes = report_service.generate_pdf_report(
+                db=context.db,
+                session_id=params.session_id,
+                user_id=context.user_id,
+            )
+            report_id = f"rep_{params.session_id[:8]}"
+            report_url = f"/api/v1/reports/sessions/{params.session_id}/pdf"
+            summary = f"Official performance report compiled successfully ({len(pdf_bytes)} bytes)."
+
+            return ToolResult(
+                tool_name=self.name,
+                success=True,
+                data={
+                    "report_id": report_id,
+                    "report_url": report_url,
+                    "summary": summary,
+                }
+            )
+        except Exception as e:
+            return ToolResult(
+                tool_name=self.name,
+                success=False,
+                error=f"Failed to generate report for session '{params.session_id}': {str(e)}"
+            )
 
 
 __all__ = [
