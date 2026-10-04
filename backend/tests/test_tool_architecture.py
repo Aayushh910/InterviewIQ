@@ -359,9 +359,8 @@ def test_update_interview_state_tool_invalid_transition():
 # ─── 6. Future-Ready Tool Contracts Tests ──────────────────────────────────────
 
 def test_future_tool_contracts_are_non_executing():
-    """Verify remaining future tool contracts are registered, flagged, and do not execute fake scoring."""
+    """Verify remaining future tool contracts are registered, flagged, and do not execute fake reporting."""
     future_tools = [
-        CalculateFinalEvaluationTool(),
         GenerateInterviewReportTool(),
     ]
 
@@ -373,9 +372,10 @@ def test_future_tool_contracts_are_non_executing():
         assert res.success is False
         assert "future-ready contract" in res.error
 
-    # Phase 11 graduated tools are operational
+    # Phase 11 & Phase 12 graduated tools are operational
     assert AnalyzeFaceTool().is_future_contract is False
     assert AnalyzeBehaviorTool().is_future_contract is False
+    assert CalculateFinalEvaluationTool().is_future_contract is False
 
 
 # ─── 7. Tool Discovery HTTP Endpoints ──────────────────────────────────────────

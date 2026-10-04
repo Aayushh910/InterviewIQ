@@ -251,6 +251,19 @@ class MockProvider(BaseAIProvider):
                     "finish_reason": "stop"
                 }
 
+            if tool_name == "calculate_final_evaluation":
+                return {
+                    "content": json.dumps({
+                        "action": "END_INTERVIEW",
+                        "reasoning": "Final interview evaluation calculated successfully across all dimensions.",
+                        "response_to_candidate": "Your final interview evaluation has been completed successfully.",
+                        "tool_call_used": "calculate_final_evaluation",
+                        "metadata": {"overall_score": 84.5}
+                    }),
+                    "tool_calls": [],
+                    "finish_reason": "stop"
+                }
+
             # Generic tool completed
             return {
                 "content": json.dumps({
@@ -295,6 +308,22 @@ class MockProvider(BaseAIProvider):
                         "arguments": json.dumps({
                             "session_id": "test_session_id",
                             "transcript": "I built an event-driven system with decoupled microservices."
+                        })
+                    }
+                }],
+                "finish_reason": "tool_calls"
+            }
+
+        if self.mock_mode == "mock_calculate_final_evaluation" or "final evaluation" in low_msg or "calculate_final_evaluation" in low_msg:
+            return {
+                "content": None,
+                "tool_calls": [{
+                    "id": "call_final_eval_mock_1",
+                    "type": "function",
+                    "function": {
+                        "name": "calculate_final_evaluation",
+                        "arguments": json.dumps({
+                            "session_id": "test_session_id"
                         })
                     }
                 }],

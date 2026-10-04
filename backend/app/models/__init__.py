@@ -6,6 +6,7 @@ from app.models.session_question import SessionQuestion
 from app.models.answer import Answer
 from app.models.answer_evaluation import AnswerEvaluation
 from app.models.multimodal_evidence import MultimodalEvidence
+from app.models.final_evaluation import FinalEvaluation
 
 __all__ = [
     "User",
@@ -15,5 +16,6 @@ __all__ = [
     "SessionQuestion",
     "Answer",
     "AnswerEvaluation",
-    "MultimodalEvidence"
+    "MultimodalEvidence",
+    "FinalEvaluation",
 ]
