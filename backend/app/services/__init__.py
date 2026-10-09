@@ -31,5 +31,8 @@ __all__ = [
     "session_state",
     "InterviewStateManager",
     "session_state_manager",
+    "proctoring_service",
 ]
+
+import app.services.proctoring_service as proctoring_service
 

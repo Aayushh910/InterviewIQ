@@ -16,9 +16,14 @@ import {
   submitAnswerFacialFrame,
   getSessionAnalytics,
   calculateFinalEvaluation,
+  getProctoringConfig,
+  submitProctoringEvents,
+  getProctoringSummary,
+  terminateSessionByPolicy,
 } from '../../services/interviewService';
 import { useAudioRecorder } from '../../hooks/useAudioRecorder';
 import { useFaceDetection } from '../../hooks/useFaceDetection';
+import { useBrowserMonitoring } from '../../hooks/useBrowserMonitoring';
 import { FaceDetectionOverlay } from './FaceDetectionOverlay';
 
 export const AIInterviewScreen = ({ config, onFinish }) => {
@@ -68,11 +73,60 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
   // ─── TTS State ───────────────────────────────────────────────
   const [ttsState, setTtsState] = useState('idle');
 
-  // ─── Face Detection ──────────────────────────────────────────
+  // ─── Proctoring Policy & Buffer (Phase 16 & 17) ──────────────
+  const [proctoringPolicy, setProctoringPolicy] = useState({
+    tabMonitoringEnabled: true,
+    fullscreenEnforcementEnabled: false,
+    policyMode: 'warning_only',
+    maxTabDepartures: 2,
+    gracePeriodSeconds: 10.0,
+    phoneDetectionEnabled: true,
+    gazeEyeAnalysisEnabled: true,
+    phoneConfidenceThreshold: 0.45,
+    autoSubmissionEnabled: false,
+  });
+
+  const pendingEventsRef = useRef([]);
+
+  const handleProctoringEvent = (event) => {
+    if (!sessionId) return;
+    pendingEventsRef.current.push({
+      ...event,
+      session_id: sessionId,
+    });
+  };
+
+  // Periodic flush of pending proctoring events
+  useEffect(() => {
+    if (screenState !== 'ACTIVE' || !sessionId) return;
+    const interval = setInterval(async () => {
+      if (pendingEventsRef.current.length === 0) return;
+      const batch = pendingEventsRef.current.splice(0, 15);
+      try {
+        await submitProctoringEvents(sessionId, batch);
+      } catch (err) {
+        pendingEventsRef.current.unshift(...batch);
+      }
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [screenState, sessionId]);
+
+  // ─── Face Detection (Phase 16) ───────────────────────────────
   const faceData = useFaceDetection(videoRef, {
     isEnabled: cameraEnabled && !!webcamStream,
     isMirrored,
     intervalMs: 120,
+    phoneDetectionEnabled: proctoringPolicy.phoneDetectionEnabled,
+    phoneConfidenceThreshold: proctoringPolicy.phoneConfidenceThreshold || 0.45,
+    onProctoringEvent: handleProctoringEvent,
+  });
+
+  // ─── Browser & Tab Monitoring (Phase 17) ─────────────────────
+  const browserMonitoring = useBrowserMonitoring({
+    isActive: screenState === 'ACTIVE',
+    policy: proctoringPolicy,
+    onProctoringEvent: handleProctoringEvent,
+    onPolicyViolation: (violation) => handlePolicyAutoSubmit(violation),
   });
 
   // ─── Auto-scroll transcript ───────────────────────────────────
@@ -262,6 +316,27 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
       const session = await createSession(interview.id);
       const started = await startSession(session.id);
       setSessionId(started.id);
+
+      // Fetch authoritative proctoring policy
+      try {
+        const policyConfig = await getProctoringConfig(started.id);
+        if (policyConfig) {
+          setProctoringPolicy({
+            tabMonitoringEnabled: policyConfig.tab_monitoring_enabled ?? true,
+            fullscreenEnforcementEnabled: policyConfig.fullscreen_enforcement_enabled ?? false,
+            policyMode: policyConfig.policy_mode ?? 'warning_only',
+            maxTabDepartures: policyConfig.max_tab_departures ?? 2,
+            gracePeriodSeconds: policyConfig.grace_period_seconds ?? 10.0,
+            phoneDetectionEnabled: policyConfig.phone_detection_enabled ?? true,
+            gazeEyeAnalysisEnabled: policyConfig.gaze_eye_analysis_enabled ?? true,
+            phoneConfidenceThreshold: policyConfig.phone_confidence_threshold ?? 0.45,
+            autoSubmissionEnabled: policyConfig.auto_submission_enabled ?? false,
+          });
+        }
+      } catch (pErr) {
+        // Retain default policy
+      }
+
       const nowIso = new Date().toISOString();
       questionStartTimeRef.current = nowIso;
       setQuestionStartTime(nowIso);
@@ -279,6 +354,73 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
   const handleStartInterview = async () => {
     requestFullscreen();
     await initBackendSession();
+  };
+
+  // ─── Automatic Policy Submission (Phase 17) ───────────────────
+  const handlePolicyAutoSubmit = async (violation = {}) => {
+    if (hasExpiredRef.current) return;
+    hasExpiredRef.current = true;
+    setScreenState('COMPLETED');
+    setAiState('listening');
+
+    try { window.speechSynthesis?.cancel(); } catch (e) {}
+    if (isRecording) try { stopRecording(); } catch (e) {}
+
+    // Flush remaining proctoring events
+    if (sessionId && pendingEventsRef.current.length > 0) {
+      const remaining = [...pendingEventsRef.current];
+      pendingEventsRef.current = [];
+      try { await submitProctoringEvents(sessionId, remaining); } catch (e) {}
+    }
+
+    const ans = (inputMode === 'voice' ? (liveTranscript || transcript) : textAnswer).trim();
+    if (ans.length >= 2 && sessionId && activeQuestion.id) {
+      const startedAt = questionStartTimeRef.current || new Date(Date.now() - 15000).toISOString();
+      const submittedAt = new Date().toISOString();
+      try {
+        await submitAnswer(sessionId, {
+          question_id: activeQuestion.id,
+          answer_text: ans,
+          started_at: startedAt,
+          submitted_at: submittedAt,
+        });
+      } catch (e) {}
+    }
+
+    let analytics = null;
+    const reason = violation.reason || 'proctoring_tab_departures';
+    if (sessionId) {
+      try {
+        await terminateSessionByPolicy(sessionId, {
+          reason,
+          departureCount: violation.departureCount || proctoringPolicy.maxTabDepartures,
+          details: { maxAllowed: proctoringPolicy.maxTabDepartures },
+        });
+        try {
+          await calculateFinalEvaluation(sessionId);
+        } catch (evalErr) {
+          console.warn('Evaluation calculation notice:', evalErr);
+        }
+        analytics = await getSessionAnalytics(sessionId);
+      } catch (e) {}
+    }
+
+    exitFullscreen();
+    resetRecorder();
+    try { recognitionRef.current?.stop(); } catch (e) {}
+    webcamStream?.getTracks().forEach(t => t.stop());
+    setWebcamStream(null);
+
+    onFinish({
+      durationMinutes: Math.max(1, Math.ceil((240 - timerSeconds) / 60)),
+      score: analytics?.overall_score ?? 0,
+      sessionId,
+      analytics,
+      title: `${selectedDomain} Technical Interview`,
+      terminatedByPolicy: true,
+      terminationReason: reason,
+      departureCount: violation.departureCount,
+    });
   };
 
   // ─── Timer Expiration ─────────────────────────────────────────
@@ -905,7 +1047,12 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
                       className={`absolute inset-0 w-full h-full object-cover ${isMirrored ? '-scale-x-100' : ''}`}
                     />
                     {cameraEnabled && webcamStream && (
-                      <FaceDetectionOverlay {...faceData} isCameraOn={cameraEnabled && !!webcamStream} />
+                      <FaceDetectionOverlay
+                        {...faceData}
+                        isCameraOn={cameraEnabled && !!webcamStream}
+                        monitoringState={browserMonitoring}
+                        onDismissWarning={browserMonitoring.dismissWarning}
+                      />
                     )}
                   </>
                 ) : (

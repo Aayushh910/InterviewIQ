@@ -1,4 +1,5 @@
 from typing import List
+# pyrefly: ignore [missing-import]
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Form
 from sqlalchemy.orm import Session
 from app.core.database import get_db
@@ -11,6 +12,8 @@ import app.services.answer_service as answer_service
 import app.services.speech_service as speech_service
 import app.services.facial_analysis_service as facial_analysis_service
 import app.services.temporal_facial_analysis_service as temporal_facial_analysis_service
+import app.services.proctoring_service as proctoring_service
+from app.schemas.proctoring import ProctoringPolicy, SessionTerminationRequest
 
 router = APIRouter()
 
@@ -293,3 +296,79 @@ def get_answer(
             detail="Answer not found"
         )
     return answer
+
+
+# --- PROCTORING ALIAS ENDPOINTS ---
+
+@router.get("/sessions/{session_id}/proctoring-config", response_model=ProctoringPolicy)
+def get_session_proctoring_config_alias(
+    session_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    config = proctoring_service.get_session_proctoring_config(
+        db, session_id=session_id, user_id=current_user.id
+    )
+    if not config:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found or unauthorized")
+    return config
+
+
+@router.post("/sessions/{session_id}/proctoring-events", status_code=status.HTTP_201_CREATED)
+def submit_proctoring_events_alias(
+    session_id: str,
+    payload: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    from app.schemas.proctoring import ProctoringEventCreate, ProctoringEventsBatchRequest, ProctoringEventResponse
+    try:
+        if "events" in payload and isinstance(payload["events"], list):
+            batch = ProctoringEventsBatchRequest.model_validate(payload)
+            events = proctoring_service.record_proctoring_events_batch(
+                db, session_id=session_id, user_id=current_user.id, batch=batch
+            )
+            if events is None:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found or unauthorized")
+            return [ProctoringEventResponse.model_validate(e) for e in events]
+        else:
+            event_in = ProctoringEventCreate.model_validate(payload)
+            event = proctoring_service.record_proctoring_event(
+                db, session_id=session_id, user_id=current_user.id, event_in=event_in
+            )
+            if event is None:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found or unauthorized")
+            return ProctoringEventResponse.model_validate(event)
+    except HTTPException:
+        raise
+    except Exception as err:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(err))
+
+
+@router.get("/sessions/{session_id}/proctoring-summary")
+def get_session_proctoring_summary_alias(
+    session_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    summary = proctoring_service.get_session_proctoring_summary(
+        db, session_id=session_id, user_id=current_user.id
+    )
+    if not summary:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found or unauthorized")
+    return summary
+
+
+@router.post("/sessions/{session_id}/terminate", response_model=SessionResponse)
+def terminate_session_by_policy_alias(
+    session_id: str,
+    termination_in: SessionTerminationRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    session = proctoring_service.terminate_session_by_policy(
+        db, session_id=session_id, user_id=current_user.id, termination_in=termination_in
+    )
+    if not session:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found or unauthorized")
+    return session

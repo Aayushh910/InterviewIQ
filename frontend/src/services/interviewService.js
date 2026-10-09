@@ -324,6 +324,35 @@ export const downloadInterviewReportPdf = async (sessionId, filename = null) => 
   return true;
 };
 
+// ─── Phase 16 & 17: AI Proctoring & Session Control APIs ───────────────────
+
+export const getProctoringConfig = async (sessionId) => {
+  const response = await apiClient.get(`/interviews/${sessionId}/proctoring-config`);
+  return response.data;
+};
+
+export const submitProctoringEvents = async (sessionId, payload) => {
+  // Supports either array of events or object
+  const body = Array.isArray(payload) ? { events: payload } : payload;
+  const response = await apiClient.post(`/interviews/${sessionId}/proctoring-events`, body);
+  return response.data;
+};
+
+export const getProctoringSummary = async (sessionId) => {
+  const response = await apiClient.get(`/interviews/${sessionId}/proctoring-summary`);
+  return response.data;
+};
+
+export const terminateSessionByPolicy = async (sessionId, terminationData = {}) => {
+  const response = await apiClient.post(`/interviews/${sessionId}/terminate`, {
+    reason: terminationData.reason || 'proctoring_tab_departures',
+    departure_count: terminationData.departureCount || terminationData.departure_count,
+    details: terminationData.details || {},
+  });
+  return response.data;
+};
+
+
 
 
 

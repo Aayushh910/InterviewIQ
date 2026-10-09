@@ -4,6 +4,19 @@ InterviewIQ is an enterprise-grade AI technical interview simulation and assessm
 
 ---
 
+## 📚 Documentation Suite
+
+For comprehensive deep-dives, visual diagrams, and industry analysis, explore the full documentation suite:
+
+| Document | Focus | Highlights |
+| :--- | :--- | :--- |
+| **[Problem Statement](file:///d:/InterviewIQ/docs/PROBLEM_STATEMENT.md)** | Why InterviewIQ is Needed | Real hiring metrics ($4,700/hire, 73% candidate anxiety, 92% feedback vacuum) & the 4 structural hiring failures. |
+| **[Solution Specification](file:///d:/InterviewIQ/docs/SOLUTION.md)** | What, Why & How We Built It | End-to-end pipeline, 3-pillar scoring (70/15/15), autonomous Groq agent, and 9 operational tools. |
+| **[System Architecture](file:///d:/InterviewIQ/docs/ARCHITECTURE.md)** | Full Visual Blueprint | Complete Mermaid tier diagram, turn-by-turn sequence diagram, PostgreSQL ER schema, & security model. |
+| **[Deployment Guide](file:///d:/InterviewIQ/docs/DEPLOYMENT.md)** | Setup & Operations | Quickstart instructions, environment configuration, database migrations, and verification steps. |
+
+---
+
 ## 🏗 High-Level Architecture
 
 ```text
