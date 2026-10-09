@@ -109,7 +109,22 @@ __all__ = [
     "AddAnswerRequest",
     "AddFollowUpRequest",
     "AddEvaluationReferenceRequest",
+    "ProctoringPolicy",
+    "ProctoringEventCreate",
+    "ProctoringEventResponse",
+    "ProctoringEventsBatchRequest",
+    "ProctoringSummaryResponse",
+    "SessionTerminationRequest",
 ]
+
+from app.schemas.proctoring import (
+    ProctoringPolicy,
+    ProctoringEventCreate,
+    ProctoringEventResponse,
+    ProctoringEventsBatchRequest,
+    ProctoringSummaryResponse,
+    SessionTerminationRequest,
+)
 
 
 

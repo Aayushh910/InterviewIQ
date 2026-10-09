@@ -31,13 +31,18 @@ app.include_router(speech.router, prefix="/api/ai/speech", tags=["Speech Recogni
 
 @app.on_event("startup")
 def init_db_tables():
-    """Ensure newly introduced tables exist on application startup."""
+    """Ensure newly introduced tables and columns exist on application startup."""
+    from sqlalchemy import text
     from app.core.database import engine
     from app.models.multimodal_evidence import MultimodalEvidence
     from app.models.final_evaluation import FinalEvaluation
+    from app.models.proctoring_event import ProctoringEvent
     try:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE interview_sessions ADD COLUMN IF NOT EXISTS termination_reason VARCHAR(100)"))
         MultimodalEvidence.__table__.create(bind=engine, checkfirst=True)
         FinalEvaluation.__table__.create(bind=engine, checkfirst=True)
+        ProctoringEvent.__table__.create(bind=engine, checkfirst=True)
     except Exception:
         pass
 

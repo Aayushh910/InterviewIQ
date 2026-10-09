@@ -15,9 +15,11 @@ class InterviewSession(Base):
     interview_id = Column(String, ForeignKey("interviews.id", ondelete="CASCADE"), nullable=False, index=True)
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
-    status = Column(String(50), nullable=False, default="not_started")  # not_started, in_progress, completed, abandoned
+    status = Column(String(50), nullable=False, default="not_started")  # not_started, in_progress, completed, abandoned, terminated_by_policy
+    termination_reason = Column(String(100), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     interview = relationship("Interview", back_populates="sessions")
     answers = relationship("Answer", back_populates="session", cascade="all, delete-orphan")
+    proctoring_events = relationship("ProctoringEvent", back_populates="session", cascade="all, delete-orphan", order_by="ProctoringEvent.recorded_at")
