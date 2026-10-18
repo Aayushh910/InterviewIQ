@@ -98,7 +98,10 @@ def submit_audio_answer(
     filename: str = "",
     content_type: str = "",
     provider_name: Optional[str] = None,
-    mock_mode: Optional[str] = None
+    mock_mode: Optional[str] = None,
+    override_provider: Optional[str] = None,
+    api_key: Optional[str] = None,
+    model: Optional[str] = None
 ) -> AnswerSubmitResponse:
     """
     Complete Voice Interview Answer Submission Pipeline:
@@ -139,7 +142,13 @@ def submit_audio_answer(
     )
 
     result = answer_service.submit_answer(
-        db, session_id=session_id, user_id=user_id, data=answer_in
+        db,
+        session_id=session_id,
+        user_id=user_id,
+        data=answer_in,
+        override_provider=override_provider,
+        api_key=api_key,
+        model=model
     )
 
     return result

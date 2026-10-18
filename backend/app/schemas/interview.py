@@ -47,5 +47,14 @@ class InterviewResponse(InterviewBase):
     user_id: str
     created_at: datetime
     updated_at: datetime
+    session_id: Optional[str] = None
+    score: Optional[float] = None
+    duration: Optional[str] = None
+    duration_minutes: Optional[float] = None
+    summary: Optional[str] = None
+    confidence: Optional[float] = None
+    typeBadge: Optional[str] = None
+    date: Optional[str] = None
+    role: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)

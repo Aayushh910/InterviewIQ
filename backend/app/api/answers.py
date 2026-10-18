@@ -1,6 +1,6 @@
 from typing import List
 # pyrefly: ignore [missing-import]
-from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Form
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Form, Request
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.api.deps import get_current_user
@@ -88,15 +88,25 @@ def complete_session(
 def submit_answer(
     session_id: str,
     answer_in: AnswerCreate,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
     Submit candidate answer text for a question during an active session, returning next question info.
     """
+    provider = request.headers.get("x-ai-provider")
+    api_key = request.headers.get("x-ai-api-key")
+    model = request.headers.get("x-ai-model")
     try:
         result = answer_service.submit_answer(
-            db, session_id=session_id, user_id=current_user.id, data=answer_in
+            db,
+            session_id=session_id,
+            user_id=current_user.id,
+            data=answer_in,
+            override_provider=provider,
+            api_key=api_key,
+            model=model
         )
         return result
     except KeyError:
@@ -114,6 +124,7 @@ def submit_answer(
 @router.post("/sessions/{session_id}/answers/audio", response_model=AnswerSubmitResponse, status_code=status.HTTP_201_CREATED)
 async def submit_audio_answer(
     session_id: str,
+    request: Request,
     question_id: str = Form(...),
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
@@ -123,6 +134,9 @@ async def submit_audio_answer(
     Submit candidate audio recording for a question during an active session.
     Transcribes audio to text, saves/updates Answer record, runs Phase 2 evaluation, and returns next question info.
     """
+    provider = request.headers.get("x-ai-provider")
+    api_key = request.headers.get("x-ai-api-key")
+    model = request.headers.get("x-ai-model")
     try:
         contents = await file.read()
         filename = file.filename or ""
@@ -146,7 +160,10 @@ async def submit_audio_answer(
             user_id=current_user.id,
             audio_bytes=contents,
             filename=filename,
-            content_type=content_type
+            content_type=content_type,
+            override_provider=provider,
+            api_key=api_key,
+            model=model
         )
         return result
     except KeyError:

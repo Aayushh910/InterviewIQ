@@ -48,16 +48,18 @@ class EvidenceAggregator:
         """
         Retrieve, validate, and normalize all evidence for a specific interview session attempt.
         """
-        # 1. Retrieve session and verify ownership
+        # 1. Retrieve session and verify ownership (support session ID or interview ID)
         session = db.query(InterviewSession).join(Interview).filter(
-            InterviewSession.id == session_id
-        ).first()
+            (InterviewSession.id == session_id) | (InterviewSession.interview_id == session_id)
+        ).order_by(InterviewSession.created_at.desc()).first()
 
         if not session:
             raise SessionNotFoundError(f"Interview session '{session_id}' not found.")
 
         if str(session.interview.user_id) != str(user_id):
             raise UnauthorizedEvaluationError(f"User '{user_id}' is not authorized to evaluate session '{session_id}'.")
+
+        real_session_id = session.id
 
         # 2. Check session status
         if require_completed and session.status == "not_started":
@@ -69,12 +71,12 @@ class EvidenceAggregator:
         ).order_by(InterviewQuestion.question_order.asc()).all()
 
         session_questions: List[SessionQuestion] = db.query(SessionQuestion).filter(
-            SessionQuestion.session_id == session_id
+            SessionQuestion.session_id == real_session_id
         ).order_by(SessionQuestion.created_at.asc()).all()
 
         # 4. Retrieve answers and answer evaluations
         answers: List[Answer] = db.query(Answer).filter(
-            Answer.session_id == session_id
+            Answer.session_id == real_session_id
         ).order_by(Answer.created_at.asc()).all()
 
         if not answers and require_completed:
@@ -94,7 +96,7 @@ class EvidenceAggregator:
         multimodal_records: List[MultimodalEvidence] = []
         try:
             multimodal_records = db.query(MultimodalEvidence).filter(
-                MultimodalEvidence.session_id == session_id
+                MultimodalEvidence.session_id == real_session_id
             ).order_by(MultimodalEvidence.recorded_at.asc()).all()
         except Exception as e:
             logger.warning(f"Could not query MultimodalEvidence: {e}")

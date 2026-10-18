@@ -54,10 +54,10 @@ class ResultsService:
         Retrieve and format interview evaluation into a candidate-facing DTO.
         Validates authentication, session ownership, session existence, and evaluation existence.
         """
-        # 1. Session verification & ownership check
+        # 1. Session verification & ownership check (support session ID or interview ID)
         session = db.query(InterviewSession).join(Interview).filter(
-            InterviewSession.id == session_id
-        ).first()
+            (InterviewSession.id == session_id) | (InterviewSession.interview_id == session_id)
+        ).order_by(InterviewSession.created_at.desc()).first()
 
         if not session:
             raise SessionNotFoundError(f"Interview session '{session_id}' not found.")
@@ -65,10 +65,18 @@ class ResultsService:
         if str(session.interview.user_id) != str(user_id):
             raise UnauthorizedEvaluationError(f"User '{user_id}' is not authorized to access session '{session_id}'.")
 
-        # 2. Evaluation existence check
+        # 2. Evaluation existence check (auto-generate if answers exist)
         final_eval = db.query(FinalEvaluation).filter(
-            FinalEvaluation.session_id == session_id
+            FinalEvaluation.session_id == session.id
         ).first()
+
+        if not final_eval:
+            try:
+                from app.evaluation.evaluator import final_evaluator
+                final_evaluator.evaluate_interview_session(db=db, session_id=session.id, user_id=user_id)
+                final_eval = db.query(FinalEvaluation).filter(FinalEvaluation.session_id == session.id).first()
+            except Exception as eval_err:
+                logger.warning(f"Auto evaluation on results fetch notice: {eval_err}")
 
         if not final_eval:
             raise EvaluationNotFoundError(f"Final evaluation has not yet been generated for session '{session_id}'.")
@@ -88,9 +96,9 @@ class ResultsService:
             duration_minutes = max(1, round(delta_sec / 60))
 
         # 4. Extract underlying dimension evidence
-        answer_dimensions = cls._extract_answer_dimensions(db, session_id, user_id)
-        comm_signals = cls._extract_communication_signals(db, session_id, user_id, final_eval)
-        visual_signals = cls._extract_visual_signals(db, session_id, user_id, final_eval)
+        answer_dimensions = cls._extract_answer_dimensions(db, session.id, user_id)
+        comm_signals = cls._extract_communication_signals(db, session.id, user_id, final_eval)
+        visual_signals = cls._extract_visual_signals(db, session.id, user_id, final_eval)
 
         # 5. Applied weights & breakdowns
         applied_weights = final_eval.applied_weights or {}

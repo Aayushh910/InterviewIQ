@@ -15,3 +15,6 @@ opencv-python>=4.10.0
 mediapipe>=1.0.0
 numpy>=2.0.0
 reportlab>=4.0.0
+email-validator>=2.0.0
+faster-whisper>=1.0.0
+python-multipart>=0.0.9

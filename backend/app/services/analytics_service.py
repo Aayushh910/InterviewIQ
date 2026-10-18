@@ -53,10 +53,13 @@ def get_session_analytics(
     extract visual computer-vision observations, deduplicate strengths and top improvements,
     and construct structured InterviewAnalyticsResponse.
     """
-    session = db.query(InterviewSession).filter(InterviewSession.id == session_id).first()
+    session = db.query(InterviewSession).filter(
+        (InterviewSession.id == session_id) | (InterviewSession.interview_id == session_id)
+    ).order_by(InterviewSession.created_at.desc()).first()
     if not session or session.interview.user_id != user_id:
         raise KeyError("Session not found or unauthorized")
 
+    real_session_id = session.id
     interview = session.interview
 
     # 1. Fetch main questions for interview
@@ -65,12 +68,12 @@ def get_session_analytics(
     ).order_by(InterviewQuestion.question_order).all()
 
     # 2. Fetch answers for session
-    answers = db.query(Answer).filter(Answer.session_id == session_id).all()
+    answers = db.query(Answer).filter(Answer.session_id == real_session_id).all()
     ans_by_q_id = {ans.question_id: ans for ans in answers}
 
     # 3. Fetch any session-specific dynamic counter / follow-up questions that were answered
     session_questions = db.query(SessionQuestion).filter(
-        SessionQuestion.session_id == session_id
+        SessionQuestion.session_id == real_session_id
     ).order_by(SessionQuestion.question_order, SessionQuestion.follow_up_depth).all()
 
     answered_sq = [sq for sq in session_questions if sq.id in ans_by_q_id]

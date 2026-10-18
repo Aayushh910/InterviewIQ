@@ -1,4 +1,5 @@
 import logging
+from typing import Optional, Dict, Any, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
@@ -211,3 +212,94 @@ def generate_follow_up_question_endpoint(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An internal error occurred during follow-up question analysis."
         )
+
+
+from pydantic import BaseModel
+import time
+import httpx
+
+class AISettingsVerifyRequest(BaseModel):
+    provider: str
+    api_key: str
+    model: Optional[str] = None
+
+
+@router.post("/settings/verify", status_code=status.HTTP_200_OK)
+def verify_ai_settings(
+    req: AISettingsVerifyRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Test connectivity and credentials for candidate-supplied custom AI model API keys.
+    """
+    provider = req.provider.lower().strip()
+    key = req.api_key.strip()
+
+    if not key:
+        return {"success": False, "message": "API key cannot be empty"}
+
+    # Determine endpoint and test model
+    if provider == "gemini":
+        url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+        model = req.model or "gemini-1.5-flash"
+    elif provider == "groq":
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        model = req.model or "llama-3.3-70b-versatile"
+    elif provider == "ollama":
+        url = "http://localhost:11434/v1/chat/completions"
+        model = req.model or "llama3"
+    else:  # openai
+        url = "https://api.openai.com/v1/chat/completions"
+        model = req.model or "gpt-4o-mini"
+
+    headers = {
+        "Authorization": f"Bearer {key}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "user", "content": "ping"}
+        ],
+        "max_tokens": 5
+    }
+
+    start_time = time.time()
+    try:
+        with httpx.Client(timeout=10.0) as client:
+            resp = client.post(url, headers=headers, json=payload)
+
+        latency_ms = round((time.time() - start_time) * 1000)
+
+        if resp.status_code == 200:
+            return {
+                "success": True,
+                "message": f"Connected & Active ({latency_ms}ms ping)",
+                "provider": provider,
+                "model": model,
+                "latency_ms": latency_ms
+            }
+        elif resp.status_code in [401, 403]:
+            return {
+                "success": False,
+                "message": f"Authentication failed ({resp.status_code}): Invalid {provider.capitalize()} API key.",
+                "provider": provider
+            }
+        elif resp.status_code == 429:
+            return {
+                "success": False,
+                "message": f"Rate limit exceeded on {provider.capitalize()} account.",
+                "provider": provider
+            }
+        else:
+            return {
+                "success": False,
+                "message": f"{provider.capitalize()} API returned HTTP {resp.status_code}: {resp.text[:100]}",
+                "provider": provider
+            }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Connection test failed: {str(e)}",
+            "provider": provider
+        }

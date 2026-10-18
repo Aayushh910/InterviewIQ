@@ -27,11 +27,12 @@ class AnswerEvaluator:
         self.provider_name = selected
         self.provider = self._resolve_provider(selected)
 
-    def _resolve_provider(self, provider_name: str, mock_mode: str = "success") -> BaseAnswerEvaluationProvider:
+    def _resolve_provider(self, provider_name: str, mock_mode: str = "success", api_key: Optional[str] = None) -> BaseAnswerEvaluationProvider:
         if provider_name == "mock":
             return MockAnswerEvaluationProvider(mode=mock_mode)
-        elif provider_name in ["openai", "llm", "gemini", "ollama", "groq"]:
-            return LLMAnswerEvaluationProvider()
+        elif provider_name in ["openai", "llm", "gemini", "ollama", "groq"] or api_key or getattr(settings, "AI_API_KEY", None):
+            p_name = provider_name if provider_name in ["openai", "gemini", "ollama", "groq"] else getattr(settings, "AI_PROVIDER", "groq")
+            return LLMAnswerEvaluationProvider(provider_name=p_name, api_key=api_key)
         else:
             return HeuristicAnswerEvaluationProvider()
 
@@ -43,11 +44,12 @@ class AnswerEvaluator:
         override_provider: Optional[str] = None
     ) -> Dict[str, Any]:
         meta = interview_meta or {}
+        api_key = meta.get("api_key") or getattr(settings, "AI_API_KEY", None)
         provider_key = (override_provider or meta.get("provider") or self.provider_name).lower()
         mock_mode = meta.get("mock_mode", "success")
 
-        provider = self._resolve_provider(provider_key, mock_mode=mock_mode)
-        logger.info(f"Evaluating answer using AI provider: '{provider_key}'")
+        provider = self._resolve_provider(provider_key, mock_mode=mock_mode, api_key=api_key)
+        logger.info(f"Evaluating answer using AI provider: '{provider_key}' (has_key: {bool(api_key)})")
 
         # 1. Execute Provider Evaluation
         try:
