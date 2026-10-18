@@ -132,15 +132,25 @@ export const Reports = () => {
               <div className="flex items-center justify-between sm:justify-end gap-6 shrink-0 pt-4 sm:pt-0 border-t sm:border-0 border-white/10">
                 <div className="text-right font-mono">
                   <span className="text-[10px] text-neutral-400 uppercase">AI Score</span>
-                  <div className={`text-xl font-extrabold ${color.text}`}>{item.score}%</div>
+                  <div className={`text-xl font-extrabold ${color.text}`}>
+                    {item.score !== null && item.score !== undefined ? `${Math.round(item.score)}%` : 'Pending'}
+                  </div>
                 </div>
 
-                <Link
-                  to={`/results/${item.id}`}
-                  className="px-4 py-2.5 rounded-xl bg-white text-black font-bold hover:bg-neutral-200 text-xs shadow-xl border border-white/20 flex items-center gap-1.5 transition-all"
-                >
-                  View Performance Results <ArrowRight className="w-4 h-4" />
-                </Link>
+                <div className="flex items-center gap-2">
+                  <Link
+                    to={`/reports?id=${item.session_id || item.id}`}
+                    className="px-3.5 py-2.5 rounded-xl bg-[#141414] hover:bg-[#1f1f1f] text-neutral-200 text-xs font-semibold border border-white/15 transition-all"
+                  >
+                    View Report
+                  </Link>
+                  <Link
+                    to={`/results/${item.session_id || item.id}`}
+                    className="px-4 py-2.5 rounded-xl bg-white text-black font-bold hover:bg-neutral-200 text-xs shadow-xl border border-white/20 flex items-center gap-1.5 transition-all"
+                  >
+                    View Results <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
               </div>
             </div>
           );

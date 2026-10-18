@@ -27,6 +27,7 @@ export const InterviewFinishedStep = ({ result, onViewReport }) => {
   }, []);
 
   const isComplete = analyzingStep === steps.length - 1;
+  const finalScore = Math.round(result?.score ?? result?.analytics?.overall_score ?? 0);
 
   return (
     <motion.div
@@ -44,25 +45,43 @@ export const InterviewFinishedStep = ({ result, onViewReport }) => {
         </div>
 
         <div className="space-y-2">
-          <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-widest bg-[#141414] px-3.5 py-1 rounded-full border border-white/20 shadow-sm">
-            Interview Finished!
+          <span className={`text-xs font-mono font-bold uppercase tracking-widest px-3.5 py-1 rounded-full border shadow-sm ${
+            finalScore >= 75
+              ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+              : finalScore >= 50
+              ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+              : 'text-rose-400 bg-rose-500/10 border-rose-500/20'
+          }`}>
+            Interview Complete
           </span>
           <h1 className="text-3xl font-sans font-extrabold text-white dark:text-white light:text-slate-900 tracking-tight">
-            Outstanding Performance!
+            {finalScore >= 75
+              ? 'Outstanding Performance!'
+              : finalScore >= 50
+              ? 'Solid Foundation - Good Effort'
+              : 'Evaluation Complete - Areas for Growth'}
           </h1>
           <p className="text-xs sm:text-sm text-neutral-400 max-w-md mx-auto">
-            Your responses have been processed by the InterviewIQ AI Evaluation Engine.
+            {finalScore >= 75
+              ? 'Your answers demonstrated deep technical accuracy, concise structure, and clear communication.'
+              : finalScore >= 50
+              ? 'You answered relevant concepts well, with specific recommendations for deeper technical depth.'
+              : 'Your responses were evaluated. Domain terminology and technical depth need focused practice.'}
           </p>
         </div>
 
         {/* Overall Score Badge */}
         <div className="p-6 rounded-2xl bg-[#141414] border border-white/15 inline-block w-full max-w-sm font-mono shadow-md">
           <div className="text-xs text-neutral-400 uppercase tracking-wider mb-1">Overall AI Readiness Score</div>
-          <div className="text-5xl font-extrabold text-emerald-400">
-            {Math.round(result?.score ?? result?.analytics?.overall_score ?? 0)}%
+          <div className={`text-5xl font-extrabold ${
+            finalScore >= 75 ? 'text-emerald-400' : finalScore >= 50 ? 'text-amber-400' : 'text-rose-400'
+          }`}>
+            {finalScore}%
           </div>
-          <p className="text-xs text-emerald-400 font-semibold mt-2">
-            {result?.analytics?.performance_category || 'Evaluation Completed'} • AI Evaluated
+          <p className={`text-xs font-semibold mt-2 ${
+            finalScore >= 75 ? 'text-emerald-400' : finalScore >= 50 ? 'text-amber-400' : 'text-rose-400'
+          }`}>
+            {result?.analytics?.performance_category || (finalScore >= 75 ? 'High Readiness' : finalScore >= 50 ? 'Intermediate' : 'Needs Practice')} • AI Evaluated
           </p>
         </div>
 

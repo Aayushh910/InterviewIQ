@@ -23,6 +23,22 @@ apiClient.interceptors.request.use((config) => {
       config.headers.Authorization = `Bearer ${token}`;
     }
   }
+
+  // Attach Custom AI Model Provider & Key if configured by candidate
+  const customAiKey = localStorage.getItem('interviewiq_ai_api_key');
+  const customAiProvider = localStorage.getItem('interviewiq_ai_provider');
+  const customAiModel = localStorage.getItem('interviewiq_ai_model');
+
+  if (customAiKey) {
+    config.headers['x-ai-api-key'] = customAiKey;
+  }
+  if (customAiProvider) {
+    config.headers['x-ai-provider'] = customAiProvider;
+  }
+  if (customAiModel) {
+    config.headers['x-ai-model'] = customAiModel;
+  }
+
   return config;
 }, (error) => {
   return Promise.reject(error);

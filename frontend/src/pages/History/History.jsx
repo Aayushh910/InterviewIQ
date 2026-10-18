@@ -168,24 +168,26 @@ export const History = () => {
                     <div className="flex items-center gap-4 text-xs text-neutral-400 font-mono pt-1">
                       <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-neutral-500" /> {item.date || 'Today'}</span>
                       <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-neutral-500" /> {item.duration || '15 Mins'}</span>
-                      <span className={`font-bold ${color.text}`}>{item.score ? `${item.score}%` : 'Pending'} AI Score</span>
+                      <span className={`font-bold ${color.text}`}>
+                        {item.score !== null && item.score !== undefined ? `${Math.round(item.score)}%` : 'Pending'} AI Score
+                      </span>
                     </div>
                   </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 shrink-0 pt-3 lg:pt-0 border-t lg:border-0 border-white/10 justify-end">
                   <Link
-                    to={`/reports?id=${item.id}`}
-                    className="px-3.5 py-2 rounded-xl bg-[#141414] hover:bg-[#1f1f1f] text-neutral-200 text-xs font-semibold flex items-center gap-1.5 border border-white/15 transition-colors"
+                    to={`/results/${item.session_id || item.id}`}
+                    className="px-3.5 py-2 rounded-xl bg-white text-black font-bold text-xs flex items-center gap-1.5 shadow-md hover:bg-neutral-200 transition-colors"
                   >
-                    <FileText className="w-3.5 h-3.5 text-amber-400" /> View Report
+                    <BarChart3 className="w-3.5 h-3.5" /> View Results
                   </Link>
 
                   <Link
-                    to="/analytics"
+                    to={`/reports?id=${item.session_id || item.id}`}
                     className="px-3.5 py-2 rounded-xl bg-[#141414] hover:bg-[#1f1f1f] text-neutral-200 text-xs font-semibold flex items-center gap-1.5 border border-white/15 transition-colors"
                   >
-                    <BarChart3 className="w-3.5 h-3.5 text-cyan-400" /> View Analytics
+                    <FileText className="w-3.5 h-3.5 text-amber-400" /> View Report
                   </Link>
 
                   <Link

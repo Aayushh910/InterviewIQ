@@ -6,14 +6,21 @@ import {
 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 
+import { apiClient } from '../../services/apiClient';
+
 export const Settings = () => {
   // Custom AI API Key State
-  const [aiProvider, setAiProvider] = useState('openai'); // 'openai' | 'gemini' | 'claude' | 'ollama'
-  const [apiKey, setApiKey] = useState('sk-proj-4982a7f82b91c...89d1');
-  const [voiceApiKey, setVoiceApiKey] = useState('');
+  const [aiProvider, setAiProvider] = useState(() => localStorage.getItem('interviewiq_ai_provider') || 'groq');
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem('interviewiq_ai_api_key') || '');
+  const [aiModel, setAiModel] = useState(() => localStorage.getItem('interviewiq_ai_model') || '');
+  const [voiceApiKey, setVoiceApiKey] = useState(() => localStorage.getItem('interviewiq_voice_api_key') || '');
   const [showApiKey, setShowApiKey] = useState(false);
   const [apiTesting, setApiTesting] = useState(false);
-  const [apiStatus, setApiStatus] = useState('Connected & Active (38ms ping)');
+  const [apiStatus, setApiStatus] = useState(() => {
+    return localStorage.getItem('interviewiq_ai_api_key')
+      ? 'Custom Key Configured & Active'
+      : 'Using System Default Engine (Groq / Heuristic)';
+  });
 
   // Hardware Devices State
   const [cameraDevice, setCameraDevice] = useState('Integrated HD Web Camera 1080p');
@@ -49,14 +56,42 @@ export const Settings = () => {
     }
   }, []);
 
-  const handleTestApiKey = () => {
-    setApiTesting(true);
-    setTimeout(() => {
-      setApiTesting(false);
-      setApiStatus('API Connection Verified (34ms ping)');
-      setToast('Custom AI API Key verified and saved successfully!');
+  const handleTestApiKey = async () => {
+    if (!apiKey.trim()) {
+      setToast('Please enter an AI model API key.');
       setTimeout(() => setToast(''), 3000);
-    }, 1200);
+      return;
+    }
+
+    setApiTesting(true);
+    try {
+      const res = await apiClient.post('/ai/settings/verify', {
+        provider: aiProvider,
+        api_key: apiKey.trim(),
+        model: aiModel || undefined,
+      });
+
+      if (res.data?.success) {
+        localStorage.setItem('interviewiq_ai_provider', aiProvider);
+        localStorage.setItem('interviewiq_ai_api_key', apiKey.trim());
+        if (aiModel) localStorage.setItem('interviewiq_ai_model', aiModel);
+        if (voiceApiKey) localStorage.setItem('interviewiq_voice_api_key', voiceApiKey.trim());
+        setApiStatus(res.data.message || 'Connected & Active');
+        setToast('Custom AI API Key verified and saved! Live interviews will now use your key.');
+      } else {
+        setApiStatus('Verification failed');
+        setToast(res.data?.message || 'Verification failed. Please check your credentials.');
+      }
+    } catch (err) {
+      localStorage.setItem('interviewiq_ai_provider', aiProvider);
+      localStorage.setItem('interviewiq_ai_api_key', apiKey.trim());
+      if (aiModel) localStorage.setItem('interviewiq_ai_model', aiModel);
+      setApiStatus('Saved locally');
+      setToast('Custom AI API key saved locally! It will be sent with your interview requests.');
+    } finally {
+      setApiTesting(false);
+      setTimeout(() => setToast(''), 4000);
+    }
   };
 
   const handlePasswordSubmit = (e) => {
@@ -125,8 +160,9 @@ export const Settings = () => {
                   onChange={(e) => setAiProvider(e.target.value)}
                   className="w-full bg-[#141414] border border-white/15 text-xs rounded-xl p-3 text-white font-mono focus:outline-none focus:border-emerald-400"
                 >
+                  <option value="groq">Groq (Llama 3.3 70B - Ultra Fast / Recommended)</option>
+                  <option value="gemini">Google Gemini (Gemini 1.5 Pro / Flash)</option>
                   <option value="openai">OpenAI (GPT-4o / GPT-4 Turbo)</option>
-                  <option value="gemini">Google Gemini 1.5 Pro Engine</option>
                   <option value="claude">Anthropic Claude 3.5 Sonnet</option>
                   <option value="ollama">Local Ollama / Custom API Endpoint</option>
                 </select>
@@ -141,7 +177,13 @@ export const Settings = () => {
                     type={showApiKey ? 'text' : 'password'}
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
-                    placeholder="sk-proj-..."
+                    placeholder={
+                      aiProvider === 'groq'
+                        ? 'gsk_...'
+                        : aiProvider === 'gemini'
+                        ? 'AIzaSy...'
+                        : 'sk-proj-...'
+                    }
                     className="w-full bg-[#141414] border border-white/15 text-xs rounded-xl pl-4 pr-10 py-3 text-white font-mono focus:outline-none focus:border-emerald-400"
                   />
                   <button
@@ -152,6 +194,25 @@ export const Settings = () => {
                     {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase font-mono tracking-wider text-neutral-300 mb-1.5">
+                  Optional Model Identifier (Default: Provider Recommended)
+                </label>
+                <input
+                  type="text"
+                  value={aiModel}
+                  onChange={(e) => setAiModel(e.target.value)}
+                  placeholder={
+                    aiProvider === 'groq'
+                      ? 'llama-3.3-70b-versatile'
+                      : aiProvider === 'gemini'
+                      ? 'gemini-1.5-flash'
+                      : 'gpt-4o'
+                  }
+                  className="w-full bg-[#141414] border border-white/15 text-xs rounded-xl p-3 text-white font-mono focus:outline-none focus:border-emerald-400"
+                />
               </div>
 
               <div>

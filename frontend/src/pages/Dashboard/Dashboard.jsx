@@ -55,7 +55,7 @@ export const Dashboard = () => {
       <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-white/[0.02] rounded-full blur-3xl pointer-events-none -z-10" />
 
       {/* Welcome Hero */}
-      <WelcomeHero userName={user?.name} activeInterview={interviews[0]} />
+      <WelcomeHero userName={user?.name} activeInterview={interviews[0]} readinessScore={realStats.readinessScore} />
 
       {/* KPI Cards */}
       <KPICards stats={realStats} />

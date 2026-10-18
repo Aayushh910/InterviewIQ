@@ -3,24 +3,20 @@ import { UploadCloud, FileText, Sparkles, AlertCircle } from 'lucide-react';
 import { useResumes } from '../../context/ResumeContext';
 
 export const ResumeUploader = () => {
-  const { addResume } = useResumes();
+  const { uploadResumeFile } = useResumes();
   const [targetRole, setTargetRole] = useState('Senior Full-Stack Candidate');
   const [isUploading, setIsUploading] = useState(false);
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setIsUploading(true);
-    setTimeout(() => {
-      addResume({
-        fileName: file.name,
-        fileSize: `${Math.round(file.size / 1024)} KB`,
-        targetRole: targetRole || 'Software Candidate',
-        skillsFound: ['React 18', 'TypeScript', 'Node.js', 'PostgreSQL', 'Docker', 'Tailwind CSS'],
-      });
+    try {
+      await uploadResumeFile(file, targetRole);
+    } finally {
       setIsUploading(false);
-    }, 1200);
+    }
   };
 
   return (
