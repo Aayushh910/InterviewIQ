@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict, Any, Union
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
@@ -11,8 +11,17 @@ from app.schemas.interview import (
 )
 from app.schemas.question import QuestionCreate, QuestionResponse
 from app.schemas.session import SessionCreate, SessionResponse
+from app.schemas.proctoring import (
+    ProctoringPolicy,
+    ProctoringEventCreate,
+    ProctoringEventResponse,
+    ProctoringEventsBatchRequest,
+    ProctoringSummaryResponse,
+    SessionTerminationRequest,
+)
 import app.services.interview_service as interview_service
 import app.services.session_service as session_service
+import app.services.proctoring_service as proctoring_service
 
 router = APIRouter()
 
@@ -177,3 +186,110 @@ def get_sessions(
             detail="Interview not found"
         )
     return sessions
+
+
+# --- PROCTORING & MONITORING ENDPOINTS (PHASE 16 & PHASE 17) ---
+
+@router.get("/{session_id}/proctoring-config", response_model=ProctoringPolicy)
+def get_session_proctoring_config(
+    session_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Retrieve authoritative proctoring policy and thresholds for an interview session.
+    """
+    config = proctoring_service.get_session_proctoring_config(
+        db, session_id=session_id, user_id=current_user.id
+    )
+    if not config:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Session not found or unauthorized"
+        )
+    return config
+
+
+@router.post("/{session_id}/proctoring-events", status_code=status.HTTP_201_CREATED)
+def submit_proctoring_events(
+    session_id: str,
+    payload: Dict[str, Any],
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Ingest validated proctoring event(s). Supports single event or batch events.
+    """
+    try:
+        # Check if batch payload or single event payload
+        if "events" in payload and isinstance(payload["events"], list):
+            batch = ProctoringEventsBatchRequest.model_validate(payload)
+            events = proctoring_service.record_proctoring_events_batch(
+                db, session_id=session_id, user_id=current_user.id, batch=batch
+            )
+            if events is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Session not found or unauthorized"
+                )
+            return [ProctoringEventResponse.model_validate(e) for e in events]
+        else:
+            event_in = ProctoringEventCreate.model_validate(payload)
+            event = proctoring_service.record_proctoring_event(
+                db, session_id=session_id, user_id=current_user.id, event_in=event_in
+            )
+            if event is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Session not found or unauthorized"
+                )
+            return ProctoringEventResponse.model_validate(event)
+    except HTTPException:
+        raise
+    except Exception as err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(err)
+        )
+
+
+@router.get("/{session_id}/proctoring-summary", response_model=ProctoringSummaryResponse)
+def get_session_proctoring_summary(
+    session_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Retrieve comprehensive proctoring summary and metrics for an interview session.
+    """
+    summary = proctoring_service.get_session_proctoring_summary(
+        db, session_id=session_id, user_id=current_user.id
+    )
+    if not summary:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Session not found or unauthorized"
+        )
+    return summary
+
+
+@router.post("/{session_id}/terminate", response_model=SessionResponse)
+def terminate_session_by_policy(
+    session_id: str,
+    termination_in: SessionTerminationRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Safely and idempotently terminate an interview session due to proctoring policy violation.
+    """
+    session = proctoring_service.terminate_session_by_policy(
+        db, session_id=session_id, user_id=current_user.id, termination_in=termination_in
+    )
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Session not found or unauthorized"
+        )
+    return session
+

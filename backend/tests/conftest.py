@@ -18,6 +18,15 @@ def db_session():
     Session-level database session fixture for test execution.
     """
     db = SessionLocal()
+    from sqlalchemy import text
+    from app.core.database import engine
+    from app.models.proctoring_event import ProctoringEvent
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE interview_sessions ADD COLUMN IF NOT EXISTS termination_reason VARCHAR(100)"))
+        ProctoringEvent.__table__.create(bind=engine, checkfirst=True)
+    except Exception:
+        pass
     try:
         yield db
     finally:
@@ -37,6 +46,11 @@ def canonical_user(db_session):
             name="Canonical Dev Candidate"
         )
         user = register_user(db_session, user_in)
+    else:
+        from app.core.security import hash_password
+        user.hashed_password = hash_password(CANONICAL_TEST_USER_PASSWORD)
+        db_session.commit()
+        db_session.refresh(user)
     return user
 
 

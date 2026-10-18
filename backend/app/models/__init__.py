@@ -7,6 +7,7 @@ from app.models.answer import Answer
 from app.models.answer_evaluation import AnswerEvaluation
 from app.models.multimodal_evidence import MultimodalEvidence
 from app.models.final_evaluation import FinalEvaluation
+from app.models.proctoring_event import ProctoringEvent
 
 __all__ = [
     "User",
@@ -18,4 +19,5 @@ __all__ = [
     "AnswerEvaluation",
     "MultimodalEvidence",
     "FinalEvaluation",
+    "ProctoringEvent",
 ]

@@ -65,21 +65,33 @@ def start_session(db: Session, session_id: str, user_id: str) -> Optional[Interv
     return session
 
 
-def complete_session(db: Session, session_id: str, user_id: str) -> Optional[InterviewSession]:
+def complete_session(
+    db: Session,
+    session_id: str,
+    user_id: str,
+    status: str = "completed",
+    termination_reason: Optional[str] = None
+) -> Optional[InterviewSession]:
     """
-    Transition a session status to completed (idempotent if already completed).
+    Transition a session status to completed or terminated_by_policy (idempotent if already completed/terminated).
     """
     session = get_session_by_id(db, session_id=session_id, user_id=user_id)
     if not session:
         return None
 
-    if session.status == "completed":
+    if session.status in ["completed", "terminated_by_policy"]:
+        if termination_reason and not session.termination_reason:
+            session.termination_reason = termination_reason
+            db.commit()
+            db.refresh(session)
         return session
 
     if session.status != "in_progress" and session.status != "not_started":
         raise ValueError("Session is not in active progress")
 
-    session.status = "completed"
+    session.status = status
+    if termination_reason:
+        session.termination_reason = termination_reason
     session.completed_at = datetime.utcnow()
     db.commit()
     db.refresh(session)
