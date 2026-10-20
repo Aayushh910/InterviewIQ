@@ -4,8 +4,6 @@ import { BarChart3 } from 'lucide-react';
 import { AnalyticsOverview } from '../../components/analytics/AnalyticsOverview';
 import { SpeechStats } from '../../components/analytics/SpeechStats';
 import { FacialComposure } from '../../components/analytics/FacialComposure';
-import { EmotionTimeline } from '../../components/analytics/EmotionTimeline';
-import { AIRoadmap } from '../../components/analytics/AIRoadmap';
 
 export const Analytics = () => {
   return (
@@ -21,29 +19,23 @@ export const Analytics = () => {
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#141414] border border-white/20 text-cyan-400 text-xs font-mono font-semibold mb-2 shadow-sm">
             <BarChart3 className="w-3.5 h-3.5" /> Performance Intelligence
           </div>
-          <h1 className="text-2xl sm:text-3xl font-sans font-extrabold text-white dark:text-white light:text-slate-900 tracking-tight">
-            Complete Visual Analytics & Biometrics
+          <h1 className="text-2xl sm:text-3xl font-sans font-extrabold text-white tracking-tight">
+            Performance Analytics & Sensor Intelligence
           </h1>
           <p className="text-xs sm:text-sm text-neutral-400">
-            Comprehensive breakdown of vocal cadence, computer vision eye gaze, STAR technical response depth, and emotion timelines.
+            Granular evaluation across competency dimensions, vocal clarity, speech cadence, and computer vision face presence.
           </p>
         </div>
       </div>
 
-      {/* Multidimensional Radar & 7-Day Trend */}
+      {/* Multidimensional Radar & Score Progression */}
       <AnalyticsOverview />
 
-      {/* Acoustic & Speech Metrics */}
+      {/* Acoustic & Speech Transcription Metrics */}
       <SpeechStats />
 
-      {/* Computer Vision Facial & Eye Gaze Analytics */}
+      {/* Computer Vision Facial Presence & Pose Tracking */}
       <FacialComposure />
-
-      {/* Emotion & Stress Timeline */}
-      <EmotionTimeline />
-
-      {/* AI Career Roadmap */}
-      <AIRoadmap />
     </motion.div>
   );
 };

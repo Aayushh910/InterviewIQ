@@ -20,8 +20,6 @@ import { Interview } from '../pages/Interview/Interview';
 import { Resume } from '../pages/Resume/Resume';
 import { Analytics } from '../pages/Analytics/Analytics';
 import { Reports } from '../pages/Reports/Reports';
-import { Results } from '../pages/Results/Results';
-import { Achievements } from '../pages/Achievements/Achievements';
 import { History } from '../pages/History/History';
 import { Profile } from '../pages/Profile/Profile';
 import { Settings } from '../pages/Settings/Settings';
@@ -60,10 +58,10 @@ export const AppRoutes = () => {
         <Route path="/interview" element={<Interview />} />
         <Route path="/resume" element={<Resume />} />
         <Route path="/analytics" element={<Analytics />} />
-        <Route path="/achievements" element={<Achievements />} />
         <Route path="/reports" element={<Reports />} />
-        <Route path="/results/:sessionId" element={<Results />} />
-        <Route path="/results" element={<Results />} />
+        <Route path="/reports/:sessionId" element={<Reports />} />
+        <Route path="/results/:sessionId" element={<Reports />} />
+        <Route path="/results" element={<Reports />} />
         <Route path="/history" element={<History />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/settings" element={<Settings />} />
@@ -75,7 +73,8 @@ export const AppRoutes = () => {
         <Route path="/resume-studio" element={<Navigate to="/resume" replace />} />
         <Route path="/coach" element={<Navigate to="/analytics" replace />} />
         <Route path="/ai-coach" element={<Navigate to="/analytics" replace />} />
-        <Route path="/learning" element={<Navigate to="/achievements" replace />} />
+        <Route path="/achievements" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/learning" element={<Navigate to="/dashboard" replace />} />
       </Route>
 
       {/* Fallback Catch-all */}

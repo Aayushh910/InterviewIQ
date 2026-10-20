@@ -27,19 +27,22 @@ import { useFaceDetection } from '../../hooks/useFaceDetection';
 import { useBrowserMonitoring } from '../../hooks/useBrowserMonitoring';
 import { FaceDetectionOverlay } from './FaceDetectionOverlay';
 
-export const AIInterviewScreen = ({ config, onFinish }) => {
+export const AIInterviewScreen = ({ config, onFinish, preloadedData, initialStream }) => {
   const selectedDomain = config.domain || config.interviewType || 'Frontend';
   const totalQuestions = config.questionsCount || 5;
 
   // ─── Screen State ────────────────────────────────────────────
-  const [screenState, setScreenState] = useState('PREPARING');
+  const [screenState, setScreenState] = useState(preloadedData ? 'ACTIVE' : 'PREPARING');
   const [currentQIndex, setCurrentQIndex] = useState(0);
-  const [timerSeconds, setTimerSeconds] = useState(240);
+  const [timerSeconds, setTimerSeconds] = useState(180); // 3-minute timer per question
+  const [isTimerRunning, setIsTimerRunning] = useState(false); // starts after AI finishes speaking
   const [isPaused, setIsPaused] = useState(false);
   const [isInitializingSession, setIsInitializingSession] = useState(false);
   const [sessionInitError, setSessionInitError] = useState(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
   const hasExpiredRef = useRef(false);
+  const isAiSpeakingRef = useRef(false);
 
   // ─── Camera State ────────────────────────────────────────────
   const [micEnabled, setMicEnabled] = useState(true);
@@ -135,16 +138,59 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
     transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [liveTranscript, transcript]);
 
+  // ─── Preloaded Session & Fullscreen Auto-start ────────────────
+  useEffect(() => {
+    if (preloadedData) {
+      if (preloadedData.questions && preloadedData.questions.length > 0) {
+        setBackendQuestions(preloadedData.questions);
+        setActiveQuestion({
+          id: preloadedData.questions[0].id,
+          text: preloadedData.questions[0].question_text,
+          type: 'main',
+          depth: 0,
+        });
+      }
+      if (preloadedData.session?.id) {
+        setSessionId(preloadedData.session.id);
+      }
+      if (preloadedData.policy) {
+        setProctoringPolicy((prev) => ({
+          ...prev,
+          ...preloadedData.policy,
+        }));
+      }
+      setScreenState('ACTIVE');
+      setTimerSeconds(180);
+      setIsTimerRunning(false);
+      requestFullscreen();
+      window.dispatchEvent(new CustomEvent('set-sidebar-collapsed', { detail: { collapsed: true } }));
+
+      if (initialStream) {
+        setWebcamStream(initialStream);
+        if (videoRef.current) {
+          videoRef.current.srcObject = initialStream;
+          videoRef.current.play().catch(() => {});
+        }
+      }
+    }
+  }, [preloadedData, initialStream]);
+
   // ─── Fullscreen Listener ──────────────────────────────────────
   useEffect(() => {
-    const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement || document.webkitFullscreenElement));
+    const onChange = () => {
+      const isFull = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+      setIsFullscreen(isFull);
+      if (!isFull && screenState === 'ACTIVE' && !hasExpiredRef.current) {
+        setShowExitConfirm(true);
+      }
+    };
     document.addEventListener('fullscreenchange', onChange);
     document.addEventListener('webkitfullscreenchange', onChange);
     return () => {
       document.removeEventListener('fullscreenchange', onChange);
       document.removeEventListener('webkitfullscreenchange', onChange);
     };
-  }, []);
+  }, [screenState]);
 
   const requestFullscreen = async () => {
     try {
@@ -162,6 +208,7 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
 
   // ─── Camera Setup ─────────────────────────────────────────────
   const requestDeviceCamera = async () => {
+    if (initialStream) return;
     try {
       setCameraError(null);
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -179,19 +226,22 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
   };
 
   useEffect(() => {
-    requestDeviceCamera();
+    if (!initialStream) {
+      requestDeviceCamera();
+    }
     return () => {
       resetRecorder();
       try { recognitionRef.current?.stop(); } catch (e) {}
       webcamStream?.getTracks().forEach(t => t.stop());
       if (document.fullscreenElement || document.webkitFullscreenElement) exitFullscreen();
+      window.dispatchEvent(new CustomEvent('set-sidebar-collapsed', { detail: { collapsed: false } }));
     };
   }, []);
 
   useEffect(() => {
     if (cameraEnabled) {
-      if (!webcamStream) requestDeviceCamera();
-      else if (videoRef.current) {
+      if (!webcamStream && !initialStream) requestDeviceCamera();
+      else if (videoRef.current && webcamStream) {
         videoRef.current.srcObject = webcamStream;
         videoRef.current.play().catch(() => {});
       }
@@ -201,17 +251,31 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
     }
   }, [cameraEnabled]);
 
-  // ─── Timer ────────────────────────────────────────────────────
+  // ─── 3-Minute Per-Question Timer ──────────────────────────────
+  // Countdown starts ONLY after AI speech has completed (isTimerRunning === true)
   useEffect(() => {
-    if (screenState !== 'ACTIVE' || isPaused || timerSeconds <= 0) return;
+    if (screenState !== 'ACTIVE' || isPaused || !isTimerRunning || timerSeconds <= 0) return;
     const interval = setInterval(() => {
-      setTimerSeconds(prev => {
-        if (prev <= 1) { clearInterval(interval); handleTimerExpiration(); return 0; }
+      setTimerSeconds((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          handleQuestionTimeExpired();
+          return 0;
+        }
         return prev - 1;
       });
     }, 1000);
     return () => clearInterval(interval);
-  }, [screenState, isPaused, timerSeconds]);
+  }, [screenState, isPaused, isTimerRunning, timerSeconds]);
+
+  const handleQuestionTimeExpired = () => {
+    // When 3-minute question timer expires, auto-submit current answer and advance
+    if (inputMode === 'voice') {
+      handleFinishUserAnswer();
+    } else {
+      handleFinishTextAnswer();
+    }
+  };
 
   const formatTimer = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
@@ -221,24 +285,60 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
     setTranscript('');
     setLiveTranscript('');
     setAudioError(null);
+    setTimerSeconds(180); // Reset timer to 3 minutes for every question
+    setIsTimerRunning(false); // Paused while AI speaks
   }, [activeQuestion]);
 
   // ─── TTS Playback ─────────────────────────────────────────────
   const playQuestionAudio = (text) => {
-    if (!text?.trim()) return;
+    if (!text?.trim()) {
+      setIsTimerRunning(true);
+      return;
+    }
     setTtsState('loading');
     setAiState('speaking');
-    if (!('speechSynthesis' in window)) { setTtsState('idle'); setAiState('listening'); return; }
+    isAiSpeakingRef.current = true;
+    setIsTimerRunning(false);
+
+    if (!('speechSynthesis' in window)) {
+      setTtsState('idle');
+      setAiState('listening');
+      isAiSpeakingRef.current = false;
+      setIsTimerRunning(true);
+      return;
+    }
     try {
       window.speechSynthesis.cancel();
       const utter = new SpeechSynthesisUtterance(text);
-      utter.rate = 1.0; utter.pitch = 1.0; utter.lang = 'en-US';
-      utter.onstart = () => { setTtsState('playing'); setAiState('speaking'); };
-      utter.onend = () => { setTtsState('idle'); setAiState('listening'); };
-      utter.onerror = () => { setTtsState('idle'); setAiState('listening'); };
+      utter.rate = 1.0;
+      utter.pitch = 1.0;
+      utter.lang = 'en-US';
+      utter.onstart = () => {
+        setTtsState('playing');
+        setAiState('speaking');
+        isAiSpeakingRef.current = true;
+        setIsTimerRunning(false);
+      };
+      utter.onend = () => {
+        setTtsState('idle');
+        setAiState('listening');
+        isAiSpeakingRef.current = false;
+        setIsTimerRunning(true); // 3-minute per-question timer starts NOW!
+      };
+      utter.onerror = () => {
+        setTtsState('idle');
+        setAiState('listening');
+        isAiSpeakingRef.current = false;
+        setIsTimerRunning(true);
+      };
       setTtsState('playing');
       window.speechSynthesis.speak(utter);
-    } catch { setTtsState('idle'); setAiState('listening'); }
+    } catch {
+      setTtsState('idle');
+      setAiState('listening');
+      isAiSpeakingRef.current = false;
+      setIsTimerRunning(true);
+    }
   };
 
   useEffect(() => {
@@ -248,13 +348,17 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
 
   const handleToggleAudio = () => {
     if ('speechSynthesis' in window && window.speechSynthesis.speaking) {
-      window.speechSynthesis.cancel(); setTtsState('idle'); setAiState('listening');
+      window.speechSynthesis.cancel();
+      setTtsState('idle');
+      setAiState('listening');
+      isAiSpeakingRef.current = false;
+      setIsTimerRunning(true);
     } else {
       playQuestionAudio(activeQuestion.text);
     }
   };
 
-  // ─── Speech Recognition ───────────────────────────────────────
+  // ─── Speech Recognition (Echo Filtered) ───────────────────────
   useEffect(() => {
     let rec = null;
     let active = true;
@@ -264,20 +368,37 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
       if (SR) {
         try {
           rec = new SR();
-          rec.continuous = true; rec.interimResults = true; rec.lang = 'en-US';
+          rec.continuous = true;
+          rec.interimResults = true;
+          rec.lang = 'en-US';
           rec.onresult = (e) => {
+            // FIX: Reject audio if AI is speaking so question is never transcribed!
+            if (isAiSpeakingRef.current || aiState === 'speaking') {
+              return;
+            }
             let t = '';
-            for (let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
-            if (t.trim() && active) setLiveTranscript(t.trim());
+            for (let i = 0; i < e.results.length; i++) {
+              t += e.results[i][0].transcript;
+            }
+            if (t.trim() && active) {
+              setLiveTranscript(t.trim());
+            }
           };
           rec.onerror = () => {};
-          rec.onend = () => { if (active && screenState === 'ACTIVE' && micEnabled) try { rec.start(); } catch (e) {} };
+          rec.onend = () => {
+            if (active && screenState === 'ACTIVE' && micEnabled) {
+              try { rec.start(); } catch (e) {}
+            }
+          };
           rec.start();
           recognitionRef.current = rec;
         } catch (e) {}
       }
     }
-    return () => { active = false; try { rec?.stop(); } catch (e) {} };
+    return () => {
+      active = false;
+      try { rec?.stop(); } catch (e) {}
+    };
   }, [screenState, micEnabled, webcamStream, startRecording]);
 
   // ─── Frame Capture ────────────────────────────────────────────
@@ -764,42 +885,40 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
 
         {/* Right — controls */}
         <div className="flex items-center gap-2">
-          {/* Timer */}
-          <div className={`font-mono text-sm font-semibold tabular-nums transition-colors px-2.5 py-1 rounded-lg ${
-            timerSeconds <= 60
-              ? 'text-red-400 bg-red-500/10'
-              : timerSeconds <= 120
-              ? 'text-amber-400 bg-amber-500/10'
-              : 'text-neutral-400 bg-white/[0.04]'
-          }`}>
-            {formatTimer(timerSeconds)}
+          {/* 3-Minute Question Timer */}
+          <div
+            className={`font-mono text-xs font-semibold tabular-nums transition-colors px-2.5 py-1 rounded-lg flex items-center gap-1.5 ${
+              timerSeconds <= 30
+                ? 'text-red-400 bg-red-500/10 border border-red-500/20 animate-pulse'
+                : timerSeconds <= 60
+                ? 'text-amber-400 bg-amber-500/10'
+                : 'text-neutral-300 bg-white/[0.04]'
+            }`}
+            title={isTimerRunning ? '3-minute timer per question' : 'Timer starts after AI speech finishes'}
+          >
+            <span className="text-[10px] text-neutral-500 font-sans uppercase">
+              {isTimerRunning ? 'Q Time:' : 'Waiting:'}
+            </span>
+            <span>{formatTimer(timerSeconds)}</span>
           </div>
 
           {/* Pause */}
           <button
             onClick={() => setIsPaused(!isPaused)}
             title={isPaused ? 'Resume' : 'Pause timer'}
-            className="p-2 rounded-lg text-neutral-500 hover:text-white hover:bg-white/[0.06] transition-colors"
+            className="p-2 rounded-lg text-neutral-500 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
           >
             {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
           </button>
 
-          {/* Fullscreen */}
+          {/* Exit Interview Button (Shows warning modal) */}
           <button
-            onClick={() => isFullscreen ? exitFullscreen() : requestFullscreen()}
-            title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-            className="p-2 rounded-lg text-neutral-500 hover:text-white hover:bg-white/[0.06] transition-colors"
-          >
-            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-          </button>
-
-          {/* End interview */}
-          <button
-            onClick={handleExitInterview}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-neutral-500 hover:text-red-400 hover:bg-red-500/[0.08] border border-white/[0.06] hover:border-red-500/20 transition-all"
+            onClick={() => setShowExitConfirm(true)}
+            title="Exit interview session"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-neutral-400 hover:text-red-400 hover:bg-red-500/[0.08] border border-white/[0.06] hover:border-red-500/20 transition-all cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
-            <span className="hidden sm:block">End</span>
+            <span className="hidden sm:block">Exit Interview</span>
           </button>
         </div>
       </div>
@@ -1178,6 +1297,66 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
         {/* end right panel */}
       </div>
       {/* end main body */}
+
+      {/* Exit Confirmation Warning Modal */}
+      <AnimatePresence>
+        {showExitConfirm && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/85 backdrop-blur-md"
+              onClick={() => setShowExitConfirm(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative z-10 w-full max-w-md bg-[#0A0A0A] border border-amber-500/40 rounded-3xl p-6 sm:p-7 shadow-2xl text-white space-y-5"
+            >
+              <div className="flex items-center gap-3 text-amber-400">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-amber-400" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Exit Interview Session?</h3>
+                  <span className="text-[10px] font-mono text-amber-400 uppercase tracking-wider">
+                    Session In Progress
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-xs text-neutral-300 leading-relaxed bg-[#141414] p-4 rounded-2xl border border-white/10 font-sans">
+                Are you sure you want to exit the interview? Your current progress will be ended, submitted answers will be evaluated, and your session scorecard generated.
+              </p>
+
+              <div className="flex items-center justify-end gap-3 pt-2 font-mono">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowExitConfirm(false);
+                    requestFullscreen();
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-[#141414] hover:bg-[#202020] text-neutral-200 text-xs font-semibold border border-white/15 transition-colors cursor-pointer"
+                >
+                  Continue Interview
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowExitConfirm(false);
+                    handleExitInterview();
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs shadow-lg transition-colors cursor-pointer"
+                >
+                  Confirm & End Interview
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Keyframes */}
       <style>{`

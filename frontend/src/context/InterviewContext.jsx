@@ -12,7 +12,17 @@ const InterviewContext = createContext({
 });
 
 export const InterviewProvider = ({ children }) => {
-  const [interviews, setInterviews] = useState([]);
+  const [interviews, setInterviews] = useState(() => {
+    try {
+      const cached = localStorage.getItem('interviewiq_cached_interviews');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return [];
+  });
+  const [isLoadingInterviews, setIsLoadingInterviews] = useState(true);
   const [reports, setReports] = useState({});
 
   const [activeConfig, setActiveConfig] = useState({
@@ -31,16 +41,24 @@ export const InterviewProvider = ({ children }) => {
   useEffect(() => {
     let isMounted = true;
     const token = localStorage.getItem('interviewiq_token');
-    if (!token) return;
+    if (!token) {
+      setIsLoadingInterviews(false);
+      return;
+    }
 
     const fetchApiInterviews = async () => {
       try {
         const data = await getUserInterviews();
         if (isMounted && data && Array.isArray(data)) {
           setInterviews(data);
+          try {
+            localStorage.setItem('interviewiq_cached_interviews', JSON.stringify(data));
+          } catch (e) {}
         }
       } catch (err) {
         console.warn('Backend interview history notice:', err);
+      } finally {
+        if (isMounted) setIsLoadingInterviews(false);
       }
     };
     fetchApiInterviews();
@@ -138,7 +156,13 @@ export const InterviewProvider = ({ children }) => {
   const saveCompletedInterview = (sessionData) => {
     const { id, newInterview, newReport } = formatReportAndInterview(sessionData);
 
-    setInterviews((prev) => [newInterview, ...prev.filter(i => i.id !== id)]);
+    setInterviews((prev) => {
+      const updated = [newInterview, ...prev.filter(i => i.id !== id)];
+      try {
+        localStorage.setItem('interviewiq_cached_interviews', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
     setReports((prev) => ({ ...prev, [id]: newReport }));
     return id;
   };
@@ -158,7 +182,13 @@ export const InterviewProvider = ({ children }) => {
           durationMinutes: 4,
           score: analytics.overall_score || 0
         });
-        setInterviews((prev) => [newInterview, ...prev.filter(i => i.id !== id)]);
+        setInterviews((prev) => {
+          const updated = [newInterview, ...prev.filter(i => i.id !== id)];
+          try {
+            localStorage.setItem('interviewiq_cached_interviews', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
         setReports((prev) => ({ ...prev, [id]: newReport }));
         return newReport;
       }
@@ -172,6 +202,7 @@ export const InterviewProvider = ({ children }) => {
     <InterviewContext.Provider
       value={{
         interviews,
+        isLoadingInterviews,
         reports,
         activeConfig,
         updateConfig,

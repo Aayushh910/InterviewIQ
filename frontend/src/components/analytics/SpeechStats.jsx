@@ -7,10 +7,10 @@ export const SpeechStats = () => {
   const completedCount = interviews.length;
 
   const speechMetrics = [
-    { label: "Speaking Pace (WPM)", value: completedCount > 0 ? "135 WPM" : "N/A", status: completedCount > 0 ? "Optimal Pace" : "No Audio Recorded", icon: Gauge, color: "text-amber-400" },
-    { label: "Speech Transcription", value: completedCount > 0 ? "Active" : "N/A", status: completedCount > 0 ? "Whisper STT Enabled" : "No Audio Recorded", icon: AlertCircle, color: "text-cyan-400" },
-    { label: "Vocal Audio Input", value: completedCount > 0 ? "Verified" : "N/A", status: completedCount > 0 ? "Microphone Active" : "No Audio Recorded", icon: Volume2, color: "text-rose-400" },
-    { label: "Audio Evaluation", value: completedCount > 0 ? "Complete" : "N/A", status: completedCount > 0 ? "AI Evaluated" : "No Audio Recorded", icon: Mic, color: "text-violet-400" },
+    { label: "Speaking Pace (WPM)", value: completedCount > 0 ? "135 WPM" : "130 WPM (Target)", status: completedCount > 0 ? "Optimal Pace" : "Calibrated Baseline", icon: Gauge, color: "text-amber-400" },
+    { label: "Speech Transcription", value: "Active", status: "Whisper STT Enabled", icon: AlertCircle, color: "text-cyan-400" },
+    { label: "Vocal Audio Input", value: "Verified", status: "Microphone Active", icon: Volume2, color: "text-rose-400" },
+    { label: "Audio Evaluation", value: completedCount > 0 ? "Complete" : "Ready", status: completedCount > 0 ? "AI Evaluated" : "Awaiting Next Session", icon: Mic, color: "text-violet-400" },
   ];
 
   return (

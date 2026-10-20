@@ -87,6 +87,15 @@ async function getObjectDetectorInstance() {
 }
 
 /**
+ * Preloads and warms up MediaPipe Vision, FaceLandmarker, and ObjectDetector
+ * on the preview / device check screen so analysis starts instantly without delay.
+ */
+export function preloadFaceDetectionModels() {
+  getFaceLandmarkerInstance().catch(() => {});
+  getObjectDetectorInstance().catch(() => {});
+}
+
+/**
  * Calculates Euclidean distance between two landmarks.
  */
 function dist(p1, p2) {

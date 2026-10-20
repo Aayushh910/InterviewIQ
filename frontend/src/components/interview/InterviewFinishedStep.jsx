@@ -112,8 +112,8 @@ export const InterviewFinishedStep = ({ result, onViewReport }) => {
           </div>
         </div>
 
-        {/* Action Trigger */}
-        <div className="pt-2">
+        {/* Action Triggers */}
+        <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3 max-w-md mx-auto">
           <Button
             variant="primary"
             size="lg"
@@ -121,10 +121,19 @@ export const InterviewFinishedStep = ({ result, onViewReport }) => {
             onClick={onViewReport}
             icon={FileText}
             iconPosition="right"
-            className="w-full max-w-md bg-white text-black hover:bg-neutral-200 font-bold shadow-xl border border-white/20 text-sm px-6 py-3"
+            className="w-full sm:flex-1 bg-white text-black hover:bg-neutral-200 font-bold shadow-xl border border-white/20 text-xs sm:text-sm px-5 py-3 cursor-pointer"
           >
-            View Detailed Performance Report
+            View Performance Report
           </Button>
+
+          <button
+            type="button"
+            disabled={!isComplete}
+            onClick={() => window.location.href = '/dashboard'}
+            className="w-full sm:w-auto px-5 py-3 rounded-xl bg-[#141414] hover:bg-[#1f1f1f] text-neutral-300 hover:text-white font-mono text-xs font-semibold border border-white/15 transition-all cursor-pointer disabled:opacity-40"
+          >
+            Back to Dashboard
+          </button>
         </div>
       </div>
     </motion.div>
