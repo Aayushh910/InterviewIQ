@@ -102,65 +102,44 @@ class HeuristicAnswerEvaluationProvider(BaseAnswerEvaluationProvider):
                 "recommended_response": recommended_resp
             }
 
-        # ─── 4. Extract Question Keywords and Measure Semantic Overlap ─────────
+        # ─── 4. Extract Real Domain / Technical Question Keywords ──────────────
         clean_q_text = re.sub(r'[^\w\s]', ' ', low_q)
         clean_ans_text = re.sub(r'[^\w\s]', ' ', low_ans)
 
-        stop_words = {
+        common_fillers = {
             "what", "how", "why", "when", "where", "which", "explain", "describe",
             "does", "with", "from", "that", "this", "your", "would", "could", "should",
-            "have", "been", "about", "using", "into", "their", "there", "these", "those"
+            "have", "been", "about", "using", "into", "their", "there", "these", "those",
+            "tell", "handle", "example", "make", "made", "good", "well", "work", "working",
+            "like", "just", "very", "much", "many", "some", "time", "project", "team",
+            "people", "thing", "things", "used", "uses", "different", "better", "need",
+            "help", "sure", "think", "know", "also", "want", "look", "come", "give", "call",
+            "first", "next", "after", "before", "each", "other", "same", "able", "case", "cases"
         }
-        q_words = set(w for w in clean_q_text.split() if len(w) > 3 and w not in stop_words)
-        ans_words = set(w for w in clean_ans_text.split() if len(w) > 3)
+
+        q_words = set(w for w in clean_q_text.split() if len(w) > 3 and w not in common_fillers)
+        ans_words = set(w for w in clean_ans_text.split() if len(w) > 3 and w not in common_fillers)
         common_words = q_words.intersection(ans_words)
-
-        stem_matches = 0
-        for qw in q_words:
-            if any(qw[:4] in aw or aw[:4] in qw for aw in ans_words if len(aw) >= 4):
-                stem_matches += 1
-
-        # Check explicit off-topic terms
-        off_topic_indicators = ["weather", "banana", "football", "pizza", "nba", "movie", "random text", "lorem ipsum", "yesterday i went"]
-        is_explicit_off_topic = any(ot in low_ans for ot in off_topic_indicators) and not common_words
-
-        if (len(q_words) >= 2 and len(common_words) == 0 and stem_matches == 0 and len(raw_ans.split()) > 3 and is_explicit_off_topic) or ("irrelevant" in low_ans and len(common_words) == 0):
-            return {
-                "relevance": 10.0,
-                "correctness": 10.0,
-                "technical_depth": 5.0,
-                "technical_accuracy": 5.0,
-                "completeness": 10.0,
-                "clarity": 50.0,
-                "communication": 30.0,
-                "confidence": 0.2,
-                "strengths": ["Clear sentence structure."],
-                "improvements": [
-                    f"Directly address the question prompt '{question_text[:60]}...' instead of unrelated topics."
-                ],
-                "summary": "The candidate response was completely off-topic and failed to address the question asked.",
-                "recommended_response": recommended_resp
-            }
 
         # ─── 5. Check for Direct Concise Exact Technical Definitions ───────────
         is_short_exact = False
-        if len(raw_ans) < 70 and any(k in low_q for k in ["rest", "virtual dom", "gil", "polymorphism", "acid", "what is"]):
+        if len(raw_ans) < 90 and any(k in low_q for k in ["rest", "virtual dom", "gil", "polymorphism", "acid", "what is"]):
             if any(term in low_ans for term in ["representational state", "virtual dom", "global interpreter lock", "atomicity", "objects", "forms", "override"]):
                 is_short_exact = True
 
         if is_short_exact:
             return {
-                "relevance": 95.0,
-                "correctness": 92.0,
+                "relevance": 92.0,
+                "correctness": 90.0,
                 "technical_depth": 75.0,
-                "technical_accuracy": 90.0,
+                "technical_accuracy": 88.0,
                 "completeness": 75.0,
-                "clarity": 95.0,
+                "clarity": 92.0,
                 "communication": 90.0,
                 "confidence": 0.9,
-                "strengths": ["Direct, precise, and accurate technical definition provided."],
-                "improvements": ["Consider elaborating further on practical production tradeoffs or implementation details."],
-                "summary": "Concise and accurate answer defining the core technical concept.",
+                "strengths": ["Direct, accurate technical definition matching the core concept."],
+                "improvements": ["Elaborate on production tradeoffs, edge cases, and real-world implementation."],
+                "summary": f"Concise and accurate answer defining the core technical concept for {domain}.",
                 "recommended_response": recommended_resp
             }
 
@@ -168,7 +147,6 @@ class HeuristicAnswerEvaluationProvider(BaseAnswerEvaluationProvider):
         words = raw_ans.split()
         word_count = len(words)
 
-        # Technical concept dictionary across software engineering, ML, databases, web
         tech_dictionary = [
             "redis", "cache", "caching", "database", "index", "indexes", "indexing", "sql", "postgres", "postgresql",
             "microservice", "microservices", "saga", "rate limit", "virtual dom", "fiber", "reconciliation",
@@ -177,78 +155,87 @@ class HeuristicAnswerEvaluationProvider(BaseAnswerEvaluationProvider):
             "inheritance", "encapsulation", "abstraction", "interface", "pattern", "acid", "mvcc", "b-tree",
             "gin", "gist", "explain analyze", "precision", "recall", "f1", "f1-score", "pr-auc", "roc-auc",
             "regularization", "overfitting", "underfitting", "bias", "variance", "cross-validation", "latency",
-            "throughput", "horizontal scaling", "sharding", "replication", "partitioning", "consistency"
+            "throughput", "horizontal scaling", "sharding", "replication", "partitioning", "consistency",
+            "props", "state", "redux", "zustand", "context", "lifecycle", "webpack", "vite", "typescript",
+            "closure", "prototype", "event loop", "callback", "promise", "debounce", "throttle", "rest", "graphql"
         ]
 
         matched_tech = [t for t in tech_dictionary if t in low_ans]
-        has_reasoning = any(k in low_ans for k in ["because", "therefore", "in order to", "enables", "reduces", "improves", "tradeoff", "specifically", "compared to"])
+        has_reasoning = any(k in low_ans for k in ["because", "therefore", "in order to", "enables", "reduces", "improves", "tradeoff", "specifically", "compared to", "result in", "leads to"])
 
-        # Base scores determined strictly from concept matches and question overlap
-        if len(common_words) == 0 and stem_matches == 0 and len(matched_tech) == 0:
-            # Low correlation answer
-            relevance_score = 25.0
-            correctness_score = 20.0
+        # Check if user spoke conversational English without real domain substance
+        tech_count = len(matched_tech)
+        common_count = len(common_words)
+
+        if tech_count == 0 and common_count == 0:
+            # Conversational English only, no domain technical keywords
+            relevance_score = 22.0
+            correctness_score = 18.0
             depth_score = 15.0
-            completeness_score = min(40.0, word_count * 1.5)
-            clarity_score = 65.0
-            summary_text = "The response did not address the required technical concepts for this question."
-        elif len(common_words) >= 1 or stem_matches >= 1 or len(matched_tech) >= 1:
-            # Partial to Strong Answer
-            tech_count = len(matched_tech)
-            overlap_count = max(len(common_words), stem_matches)
+            completeness_score = min(30.0, word_count * 1.0)
+            clarity_score = 75.0 if word_count >= 5 else 40.0
+            summary_text = (
+                f"The response was delivered in conversational English, but was off-topic and failed to address the technical "
+                f"concepts, terminology, and architectural details required for this {domain} question."
+            )
+            strengths = ["Clear sentence structure and verbal delivery."] if word_count >= 5 else []
+            improvements = [
+                f"Directly explain technical mechanisms and use appropriate {domain} terminology instead of generic conversational remarks.",
+                "Detail the step-by-step implementation, architectural components, or algorithmic logic."
+            ]
+        elif tech_count == 0 and common_count == 1:
+            # Bare minimum single keyword mentioned without technical backing
+            relevance_score = 42.0
+            correctness_score = 36.0
+            depth_score = 30.0
+            completeness_score = min(50.0, 25.0 + word_count * 0.8)
+            clarity_score = 78.0
+            summary_text = (
+                f"The answer mentioned the question subject but provided limited technical depth or concrete {domain} implementation details."
+            )
+            strengths = ["Identified the primary topic of the question prompt."]
+            improvements = [
+                f"Provide concrete architecture, code patterns, or algorithms specific to {domain}.",
+                "Explain the underlying mechanisms and trade-offs rather than high-level surface statements."
+            ]
+        else:
+            # Genuine technical answer with domain terms and topic overlap
+            relevance_score = min(96.0, 45.0 + common_count * 12.0 + tech_count * 10.0 + (10.0 if has_reasoning else 0.0))
+            correctness_score = min(96.0, 40.0 + tech_count * 14.0 + common_count * 8.0)
+            depth_score = min(95.0, 35.0 + tech_count * 14.0 + (15.0 if word_count > 30 else 5.0))
 
-            relevance_score = min(98.0, 50.0 + overlap_count * 15.0 + (10.0 if has_reasoning else 0.0))
-            correctness_score = min(98.0, 45.0 + tech_count * 12.0 + overlap_count * 8.0)
-            depth_score = min(95.0, 40.0 + tech_count * 15.0 + (15.0 if word_count > 30 else 0.0))
-
-            if word_count > 50:
-                completeness_score = min(95.0, 75.0 + (15.0 if has_reasoning else 5.0))
-            elif word_count > 25:
-                completeness_score = min(85.0, 60.0 + tech_count * 5.0)
-            elif word_count > 10:
-                completeness_score = min(75.0, 45.0 + tech_count * 6.0)
+            if word_count > 45:
+                completeness_score = min(95.0, 65.0 + tech_count * 6.0 + (10.0 if has_reasoning else 0.0))
+            elif word_count > 20:
+                completeness_score = min(85.0, 50.0 + tech_count * 5.0)
             else:
-                completeness_score = 40.0
+                completeness_score = min(70.0, 35.0 + tech_count * 6.0)
 
-            clarity_score = 85.0 if raw_ans.endswith(('.', '!', '?')) else 75.0
+            clarity_score = 88.0 if raw_ans.endswith(('.', '!', '?')) else 78.0
 
             if correctness_score >= 80.0:
-                summary_text = f"A solid and technically sound response demonstrating strong understanding of {domain} concepts."
+                summary_text = f"Solid technical response demonstrating deep understanding of {domain} concepts with clear reasoning."
             else:
-                summary_text = f"A partially correct response addressing {domain} fundamentals but missing key technical details."
-        else:
-            relevance_score = 40.0
-            correctness_score = 35.0
-            depth_score = 30.0
-            completeness_score = 35.0
-            clarity_score = 70.0
-            summary_text = "The response provided limited relevant context for the question."
+                summary_text = f"Partially complete answer addressing {domain} fundamentals with good technical awareness."
+
+            strengths = []
+            if matched_tech:
+                strengths.append(f"Demonstrated technical awareness of key domain concepts ({', '.join(matched_tech[:3])}).")
+            if has_reasoning:
+                strengths.append("Structured response with clear causal reasoning and analytical justification.")
+            if common_count >= 1:
+                strengths.append("Directly addressed the technical requirements in the question.")
+
+            improvements = []
+            if depth_score < 75:
+                improvements.append(f"Deepen technical explanation with production-grade edge cases and architectural constraints in {domain}.")
+            if completeness_score < 75:
+                improvements.append("Cover practical tradeoffs, error handling, and performance scalability.")
+            if not improvements:
+                improvements.append("Consider citing quantitative production benchmarks or failure modes.")
 
         communication_score = round((clarity_score + completeness_score) / 2.0, 1)
-        confidence_score = round(min(1.0, max(0.2, (correctness_score + clarity_score) / 200.0)), 2)
-
-        # ─── 7. Generate Strengths & Improvements ──────────────────────────────
-        strengths = []
-        improvements = []
-
-        if matched_tech:
-            strengths.append(f"Demonstrated technical awareness of key domain concepts ({', '.join(matched_tech[:3])}).")
-        elif len(common_words) >= 1:
-            strengths.append("Directly addressed the primary question subject matter.")
-        else:
-            strengths.append("Articulated response in complete sentences.")
-
-        if word_count > 30 and has_reasoning:
-            strengths.append("Structured the explanation with supporting causal reasoning.")
-
-        if depth_score < 75:
-            improvements.append(f"Deepen technical explanation with concrete architecture or algorithm details for {domain}.")
-
-        if completeness_score < 75:
-            improvements.append("Cover edge cases, performance tradeoffs, and production reliability considerations.")
-
-        if not improvements:
-            improvements.append("Consider citing quantitative benchmarks or production failure modes.")
+        confidence_score = round(min(1.0, max(0.15, (correctness_score + clarity_score) / 200.0)), 2)
 
         return {
             "relevance": round(relevance_score, 1),

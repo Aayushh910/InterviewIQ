@@ -19,29 +19,30 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema: create proctoring_events table and add termination_reason."""
-    # 1. Add termination_reason column to interview_sessions if missing
-    try:
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    existing_columns = [c['name'] for c in inspector.get_columns('interview_sessions')]
+    if 'termination_reason' not in existing_columns:
         op.add_column('interview_sessions', sa.Column('termination_reason', sa.String(length=100), nullable=True))
-    except Exception:
-        pass
 
-    # 2. Create proctoring_events table
-    op.create_table(
-        'proctoring_events',
-        sa.Column('id', sa.String(), primary_key=True),
-        sa.Column('session_id', sa.String(), sa.ForeignKey('interview_sessions.id', ondelete='CASCADE'), nullable=False),
-        sa.Column('event_type', sa.String(length=64), nullable=False),
-        sa.Column('confidence', sa.Float(), nullable=True),
-        sa.Column('duration_seconds', sa.Float(), nullable=True),
-        sa.Column('started_at', sa.DateTime(), nullable=True),
-        sa.Column('ended_at', sa.DateTime(), nullable=True),
-        sa.Column('recorded_at', sa.DateTime(), nullable=False),
-        sa.Column('metadata', sa.JSON(), nullable=True),
-        sa.Column('created_at', sa.DateTime(), nullable=False),
-    )
-    op.create_index('ix_proctoring_events_session_id', 'proctoring_events', ['session_id'])
-    op.create_index('ix_proctoring_events_event_type', 'proctoring_events', ['event_type'])
-    op.create_index('ix_proctoring_events_recorded_at', 'proctoring_events', ['recorded_at'])
+    existing_tables = inspector.get_table_names()
+    if 'proctoring_events' not in existing_tables:
+        op.create_table(
+            'proctoring_events',
+            sa.Column('id', sa.String(), primary_key=True),
+            sa.Column('session_id', sa.String(), sa.ForeignKey('interview_sessions.id', ondelete='CASCADE'), nullable=False),
+            sa.Column('event_type', sa.String(length=64), nullable=False),
+            sa.Column('confidence', sa.Float(), nullable=True),
+            sa.Column('duration_seconds', sa.Float(), nullable=True),
+            sa.Column('started_at', sa.DateTime(), nullable=True),
+            sa.Column('ended_at', sa.DateTime(), nullable=True),
+            sa.Column('recorded_at', sa.DateTime(), nullable=False),
+            sa.Column('metadata', sa.JSON(), nullable=True),
+            sa.Column('created_at', sa.DateTime(), nullable=False),
+        )
+        op.create_index('ix_proctoring_events_session_id', 'proctoring_events', ['session_id'])
+        op.create_index('ix_proctoring_events_event_type', 'proctoring_events', ['event_type'])
+        op.create_index('ix_proctoring_events_recorded_at', 'proctoring_events', ['recorded_at'])
 
 
 def downgrade() -> None:

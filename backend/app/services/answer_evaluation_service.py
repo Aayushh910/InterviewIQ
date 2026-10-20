@@ -16,7 +16,9 @@ def evaluate_answer(
     db: Session,
     answer_id: str,
     user_id: str,
-    override_provider: Optional[str] = None
+    override_provider: Optional[str] = None,
+    api_key: Optional[str] = None,
+    model: Optional[str] = None
 ) -> AnswerEvaluationResponse:
     """
     Validate answer ownership, retrieve question & interview context, execute structured answer evaluation,
@@ -70,6 +72,12 @@ def evaluate_answer(
         "question_type": q_type,
         "duration_seconds": duration_seconds
     }
+    if api_key:
+        meta["api_key"] = api_key
+    if override_provider:
+        meta["provider"] = override_provider
+    if model:
+        meta["model"] = model
 
     # 3. Execute AI Evaluation Engine
     logger.info(f"Initiating evaluation for answer_id '{answer_id}' (User '{user_id}')")

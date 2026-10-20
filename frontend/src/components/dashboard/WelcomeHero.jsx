@@ -4,7 +4,20 @@ import { Sparkles, Video, Play, ArrowRight, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '../common/Button';
 
-export const WelcomeHero = ({ userName, activeInterview }) => {
+export const WelcomeHero = ({ userName, activeInterview, readinessScore }) => {
+  const hasLiveScore = readinessScore !== undefined && readinessScore !== null && readinessScore !== 'N/A';
+  const numericScore = hasLiveScore ? Number(readinessScore) : 0;
+  
+  const scoreBadge = numericScore >= 85 
+    ? 'Top 5%' 
+    : numericScore >= 70 
+    ? 'Top 20%' 
+    : numericScore >= 50 
+    ? 'Competitive' 
+    : hasLiveScore 
+    ? 'Developing' 
+    : 'New Candidate';
+
   return (
     <div className="surface-container p-6 sm:p-8 lg:p-10 relative overflow-hidden">
       {/* Ambient Floating Orbs matching Landing */}
@@ -21,7 +34,7 @@ export const WelcomeHero = ({ userName, activeInterview }) => {
           <h1 className="text-2xl sm:text-4xl font-sans font-extrabold text-white tracking-tight leading-tight">
             Ready to master your next interview,{' '}
             <span className="bg-gradient-to-r from-cyan-400 via-violet-300 to-amber-300 bg-clip-text text-transparent">
-              {userName || 'Alex'}
+              {userName || 'Candidate'}
             </span>
             ?
           </h1>
@@ -67,28 +80,38 @@ export const WelcomeHero = ({ userName, activeInterview }) => {
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-mono text-neutral-400 uppercase tracking-wider">AI Readiness</span>
             <span className="px-2.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px] font-mono font-bold">
-              Top 5%
+              {scoreBadge}
             </span>
           </div>
 
           <div className="flex items-baseline gap-2 mb-2">
-            <span className="text-3xl font-sans font-extrabold text-white">88.5</span>
-            <span className="text-xs text-cyan-400 font-semibold flex items-center gap-1 font-mono">
-              <TrendingUp className="w-3.5 h-3.5" /> +4.2% this week
+            <span className="text-3xl font-sans font-extrabold text-white">
+              {hasLiveScore ? readinessScore : '0.0'}
             </span>
+            {hasLiveScore ? (
+              <span className="text-xs text-cyan-400 font-semibold flex items-center gap-1 font-mono">
+                <TrendingUp className="w-3.5 h-3.5" /> Evaluated
+              </span>
+            ) : (
+              <span className="text-xs text-neutral-400 font-mono">
+                Pending evaluation
+              </span>
+            )}
           </div>
 
           <div className="w-full bg-[#1A1A1A] rounded-full h-2 overflow-hidden mb-3 border border-white/10">
             <motion.div
               initial={{ width: 0 }}
-              animate={{ width: '88.5%' }}
+              animate={{ width: `${Math.min(100, Math.max(0, numericScore))}%` }}
               transition={{ duration: 1, ease: 'easeOut' }}
               className="bg-gradient-to-r from-cyan-400 via-violet-400 to-amber-400 h-full rounded-full"
             />
           </div>
 
           <p className="text-[11px] text-neutral-400 leading-tight">
-            Based on your last 5 sessions. Your vocal clarity and technical depth are at peak performance.
+            {hasLiveScore
+              ? `Real-time readiness computed from your evaluated practice interview sessions.`
+              : 'Complete your first practice interview to generate your live AI readiness benchmark.'}
           </p>
         </motion.div>
       </div>

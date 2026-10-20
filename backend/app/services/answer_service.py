@@ -17,7 +17,15 @@ from app.ai.evaluation.question_generation import (
 logger = logging.getLogger(__name__)
 
 
-def submit_answer(db: Session, session_id: str, user_id: str, data: AnswerCreate) -> AnswerSubmitResponse:
+def submit_answer(
+    db: Session,
+    session_id: str,
+    user_id: str,
+    data: AnswerCreate,
+    override_provider: Optional[str] = None,
+    api_key: Optional[str] = None,
+    model: Optional[str] = None
+) -> AnswerSubmitResponse:
     """
     Validate session and question ownership, create/update candidate answer, evaluate the answer,
     and dynamically determine the next question (either an adaptive counter question or the next main question).
@@ -104,7 +112,14 @@ def submit_answer(db: Session, session_id: str, user_id: str, data: AnswerCreate
     # 3. Evaluate Candidate Answer Automatically
     evaluation_schema = None
     try:
-        evaluation_schema = service_evaluate_answer(db, answer_id=saved_answer.id, user_id=user_id)
+        evaluation_schema = service_evaluate_answer(
+            db,
+            answer_id=saved_answer.id,
+            user_id=user_id,
+            override_provider=override_provider,
+            api_key=api_key,
+            model=model
+        )
     except Exception as e:
         logger.warning(f"Automatic answer evaluation notice: {e}")
 

@@ -53,7 +53,7 @@ export const InterviewProvider = ({ children }) => {
     setActiveConfig((prev) => ({ ...prev, ...newConfig }));
   };
 
-  const saveCompletedInterview = (sessionData) => {
+  const formatReportAndInterview = (sessionData) => {
     const id = sessionData.sessionId || `int_${Date.now()}`;
     const analytics = sessionData.analytics || {};
     const metrics = analytics.metrics || {};
@@ -61,6 +61,7 @@ export const InterviewProvider = ({ children }) => {
 
     const newInterview = {
       id,
+      session_id: id,
       title: sessionData.title || `${activeConfig.domain || activeConfig.interviewType || 'Technical'} Practice Session`,
       mode: activeConfig.mode === 'Resume Based' ? 'resume-jd' : 'general',
       modeLabel: activeConfig.mode === 'Resume Based' ? 'Resume Based' : 'General Technical',
@@ -131,6 +132,12 @@ export const InterviewProvider = ({ children }) => {
       questionAnalysis: questionAnalysisMapped
     };
 
+    return { id, newInterview, newReport };
+  };
+
+  const saveCompletedInterview = (sessionData) => {
+    const { id, newInterview, newReport } = formatReportAndInterview(sessionData);
+
     setInterviews((prev) => [newInterview, ...prev.filter(i => i.id !== id)]);
     setReports((prev) => ({ ...prev, [id]: newReport }));
     return id;
@@ -145,13 +152,15 @@ export const InterviewProvider = ({ children }) => {
     try {
       const analytics = await getSessionAnalytics(id);
       if (analytics) {
-        saveCompletedInterview({
+        const { newInterview, newReport } = formatReportAndInterview({
           sessionId: id,
           analytics,
           durationMinutes: 4,
           score: analytics.overall_score || 0
         });
-        return reports[id] || null;
+        setInterviews((prev) => [newInterview, ...prev.filter(i => i.id !== id)]);
+        setReports((prev) => ({ ...prev, [id]: newReport }));
+        return newReport;
       }
     } catch (err) {
       console.warn('Could not fetch backend session analytics on refresh:', err);
