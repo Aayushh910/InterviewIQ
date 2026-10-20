@@ -197,12 +197,19 @@ export const Achievements = () => {
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-bold text-white">{m.title}</h3>
-                      <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-semibold ${
+                      <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-mono font-semibold ${
                         isDone
                           ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                           : 'bg-[#141414] text-neutral-400 border border-white/10'
                       }`}>
-                        {isDone ? 'Completed ✓' : 'In Progress'}
+                        {isDone ? (
+                          <>
+                            <span>Completed</span>
+                            <Check className="w-3 h-3 text-emerald-400" />
+                          </>
+                        ) : (
+                          'In Progress'
+                        )}
                       </span>
                     </div>
                     <p className="text-xs text-neutral-400">{m.desc}</p>

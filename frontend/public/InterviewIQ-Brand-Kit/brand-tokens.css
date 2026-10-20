@@ -1,0 +1,7 @@
+:root{
+  --iq-bg:#050505; --iq-surface:#0B0B0B; --iq-surface-2:#111111; --iq-border:#1F1F1F;
+  --iq-text:#F5F5F5; --iq-muted:#A1A1AA;
+  --iq-teal:#2DD4BF; --iq-cyan:#22D3EE; --iq-violet:#A78BFA; --iq-amber:#FBBF24;
+  --iq-gradient:linear-gradient(90deg,#22D3EE,#A78BFA,#FBBF24);
+  --iq-font-sans:"Inter",system-ui,sans-serif; --iq-font-mono:"JetBrains Mono",ui-monospace,monospace;
+}

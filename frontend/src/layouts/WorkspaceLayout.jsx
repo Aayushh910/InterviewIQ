@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLenis } from '../hooks/useLenis';
 import { APP_NAME } from '../utils/constants';
+import { Logo } from '../components/common/Logo';
 
 export const WorkspaceLayout = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
@@ -140,12 +141,7 @@ export const WorkspaceLayout = ({ children }) => {
             >
               <div>
                 <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                      <Sparkles className="w-5 h-5" />
-                    </div>
-                    <span className="font-display font-bold text-lg text-slate-100">{APP_NAME}</span>
-                  </div>
+                  <Logo to="/dashboard" size="md" />
                   <button onClick={() => setMobileOpen(false)} className="p-1 text-slate-400 hover:text-slate-100">
                     <X className="w-6 h-6" />
                   </button>

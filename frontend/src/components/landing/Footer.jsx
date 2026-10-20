@@ -1,8 +1,9 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Bot, Github, Twitter, Linkedin } from 'lucide-react';
+import { Github, Twitter, Linkedin } from 'lucide-react';
 import { APP_NAME, APP_TAGLINE } from '../../utils/constants';
 import { Button } from '../common/Button';
+import { Logo } from '../common/Logo';
 
 export const Footer = () => {
   const navigate = useNavigate();
@@ -41,12 +42,7 @@ export const Footer = () => {
         {/* Navigation Grid */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-8 pb-10 border-b border-white/15">
           <div className="md:col-span-2 flex flex-col gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-white text-black flex items-center justify-center font-bold">
-                <Bot className="w-4.5 h-4.5 text-black" />
-              </div>
-              <span className="font-extrabold text-lg text-white">{APP_NAME}</span>
-            </div>
+            <Logo to="/" size="md" />
             <p className="text-neutral-400 text-xs sm:text-sm max-w-sm font-normal leading-relaxed">
               {APP_TAGLINE}. Engineered for software engineers, architects, & tech candidates.
             </p>

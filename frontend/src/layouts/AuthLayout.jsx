@@ -1,7 +1,8 @@
 import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Bot, Sparkles, ShieldCheck } from 'lucide-react';
+import { Sparkles, ShieldCheck, Check } from 'lucide-react';
 import { APP_NAME } from '../utils/constants';
+import { Logo } from '../components/common/Logo';
 
 export const AuthLayout = ({ children }) => {
   const location = useLocation();
@@ -36,14 +37,7 @@ export const AuthLayout = ({ children }) => {
 
       {/* Top Navbar Header */}
       <header className="w-full max-w-[1200px] mx-auto flex items-center justify-between z-10 py-3">
-        <Link to="/" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-lg bg-white text-black flex items-center justify-center font-bold shadow-sm">
-            <Bot className="w-4 h-4 text-black group-hover:rotate-12 transition-transform duration-300" />
-          </div>
-          <span className="font-sans font-bold text-base text-white tracking-tight">
-            {APP_NAME} <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-900 text-neutral-400 font-mono border border-neutral-800">AI</span>
-          </span>
-        </Link>
+        <Logo to="/" size="md" />
 
         <Link
           to="/"
@@ -76,8 +70,8 @@ export const AuthLayout = ({ children }) => {
             <div className="space-y-3 my-8">
               {content.features.map((feat, i) => (
                 <div key={i} className="flex items-center gap-2.5 text-xs text-neutral-300">
-                  <div className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px] font-bold">
-                    ✓
+                  <div className="w-4 h-4 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                    <Check className="w-2.5 h-2.5 text-emerald-400" />
                   </div>
                   <span>{feat}</span>
                 </div>

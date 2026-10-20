@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mic, MicOff, Camera, CameraOff, Pause, Play, Volume2,
   Maximize2, Minimize2, FlipHorizontal, AlertTriangle, RotateCcw, ChevronRight,
-  Sparkles, LogOut, CheckCircle2
+  Sparkles, LogOut, CheckCircle2, X, PenLine
 } from 'lucide-react';
+import { Logo } from '../common/Logo';
 import {
   createInterview,
   createSession,
@@ -736,12 +737,7 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
 
         {/* Left — brand + status */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0">
-              <Sparkles className="w-3.5 h-3.5 text-white" />
-            </div>
-            <span className="text-xs font-semibold text-white hidden sm:block">InterviewIQ</span>
-          </div>
+          <Logo to={null} size="sm" />
           <div className="w-px h-4 bg-white/10" />
           <div className="flex items-center gap-1.5">
             <span className={`w-1.5 h-1.5 rounded-full ${aiStateLabel.dot} ${aiState !== 'listening' ? 'animate-pulse' : ''}`} />
@@ -903,19 +899,21 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
                 <div className="flex items-center gap-1 p-1 bg-white/[0.03] border border-white/[0.07] rounded-lg">
                   <button
                     onClick={() => setInputMode('voice')}
-                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                       inputMode === 'voice' ? 'bg-white text-black shadow-sm' : 'text-neutral-500 hover:text-white'
                     }`}
                   >
-                    🎙 Speak
+                    <Mic className="w-3.5 h-3.5" />
+                    <span>Speak</span>
                   </button>
                   <button
                     onClick={() => setInputMode('text')}
-                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                       inputMode === 'text' ? 'bg-white text-black shadow-sm' : 'text-neutral-500 hover:text-white'
                     }`}
                   >
-                    ✏️ Type
+                    <PenLine className="w-3.5 h-3.5" />
+                    <span>Type</span>
                   </button>
                 </div>
 
@@ -985,9 +983,9 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
                     </div>
                     <button
                       onClick={() => setAudioError(null)}
-                      className="text-[11px] text-red-400/50 hover:text-red-400 transition-colors shrink-0"
+                      className="text-red-400/50 hover:text-red-400 transition-colors shrink-0 p-0.5"
                     >
-                      ✕
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   </motion.div>
                 )}
