@@ -7,7 +7,7 @@ import {
   AlertTriangle,
   FileQuestion,
   RefreshCw,
-  Sparkles,
+  Award,
   AlertCircle,
   Download,
 } from 'lucide-react';
@@ -130,7 +130,7 @@ export const Results = () => {
     return (
       <div className="max-w-xl mx-auto p-8 rounded-3xl bg-[#0A0A0A]/90 border border-white/15 shadow-2xl text-center space-y-6 my-12 backdrop-blur-xl">
         <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 mx-auto flex items-center justify-center">
-          <Sparkles className="w-7 h-7" />
+          <Award className="w-7 h-7" />
         </div>
         <div className="space-y-2">
           <h2 className="text-xl font-bold text-white">Session Completed — Evaluation Ready</h2>
@@ -152,7 +152,7 @@ export const Results = () => {
               </>
             ) : (
               <>
-                <Sparkles className="w-4 h-4" />
+                <Award className="w-4 h-4" />
                 <span>Generate Official Scorecard</span>
               </>
             )}

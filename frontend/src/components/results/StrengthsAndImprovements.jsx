@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, TrendingUp, Sparkles, Target } from 'lucide-react';
+import { CheckCircle2, TrendingUp, Target } from 'lucide-react';
 
 export const StrengthsAndImprovements = ({ strengths, improvements }) => {
   const safeStrengths = strengths && strengths.length > 0 ? strengths : [];

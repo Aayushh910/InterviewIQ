@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { BarChart3, Sparkles } from 'lucide-react';
+import { BarChart3 } from 'lucide-react';
 import { AnalyticsOverview } from '../../components/analytics/AnalyticsOverview';
 import { SpeechStats } from '../../components/analytics/SpeechStats';
 import { FacialComposure } from '../../components/analytics/FacialComposure';

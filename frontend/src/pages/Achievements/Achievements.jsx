@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Award, Target, GraduationCap, CheckCircle2, Lock, Sparkles,
+  Award, Target, GraduationCap, CheckCircle2, Lock,
   Download, Share2, ExternalLink, Check, ShieldCheck, Cpu,
   Layers, Star, Zap, Activity
 } from 'lucide-react';

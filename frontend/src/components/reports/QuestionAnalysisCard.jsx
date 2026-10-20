@@ -1,5 +1,5 @@
 import React from 'react';
-import { HelpCircle, CheckCircle2, Sparkles, MessageSquare, Volume2, Eye } from 'lucide-react';
+import { HelpCircle, CheckCircle2, MessageSquare, Volume2, Eye } from 'lucide-react';
 
 export const QuestionAnalysisCard = ({ qa, index }) => {
   return (
@@ -39,7 +39,7 @@ export const QuestionAnalysisCard = ({ qa, index }) => {
         {/* AI Suggested Answer */}
         <div className="p-4 rounded-2xl bg-[#141414]/80 border border-white/15 space-y-2">
           <div className="flex items-center gap-1 text-[11px] font-mono text-emerald-400 uppercase">
-            <Sparkles className="w-3.5 h-3.5" /> AI Recommended Response
+            AI Recommended Response
           </div>
           <p className="text-xs text-neutral-300 leading-relaxed font-sans">
             {qa.aiSuggestedAnswer}

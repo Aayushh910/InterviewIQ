@@ -40,53 +40,36 @@ export const Footer = () => {
         </div>
 
         {/* Navigation Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-8 pb-10 border-b border-white/15">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-10 border-b border-white/15">
           <div className="md:col-span-2 flex flex-col gap-3">
             <Logo to="/" size="md" />
             <p className="text-neutral-400 text-xs sm:text-sm max-w-sm font-normal leading-relaxed">
-              {APP_TAGLINE}. Engineered for software engineers, architects, & tech candidates.
+              {APP_TAGLINE}. Engineered for tech candidates and engineering interviews.
             </p>
           </div>
 
           <div>
-            <h4 className="text-xs font-mono uppercase tracking-wider text-white font-bold mb-4">Product</h4>
+            <h4 className="text-xs font-mono uppercase tracking-wider text-white font-bold mb-4">Features</h4>
             <ul className="space-y-2.5 text-xs sm:text-sm text-neutral-400 font-medium">
-              <li><a href="#demo-preview" onClick={(e) => handleNavClick(e, '#demo-preview')} className="hover:text-white transition-colors cursor-pointer">Live Demo</a></li>
-              <li><a href="#features" onClick={(e) => handleNavClick(e, '#features')} className="hover:text-white transition-colors cursor-pointer">AI Features</a></li>
+              <li><a href="#features" onClick={(e) => handleNavClick(e, '#features')} className="hover:text-white transition-colors cursor-pointer">AI Capabilities</a></li>
               <li><a href="#how-it-works" onClick={(e) => handleNavClick(e, '#how-it-works')} className="hover:text-white transition-colors cursor-pointer">How It Works</a></li>
               <li><a href="#interview-types" onClick={(e) => handleNavClick(e, '#interview-types')} className="hover:text-white transition-colors cursor-pointer">Interview Modes</a></li>
-              <li><a href="#analytics" onClick={(e) => handleNavClick(e, '#analytics')} className="hover:text-white transition-colors cursor-pointer">Performance Insights</a></li>
             </ul>
           </div>
 
           <div>
             <h4 className="text-xs font-mono uppercase tracking-wider text-white font-bold mb-4">Platform</h4>
             <ul className="space-y-2.5 text-xs sm:text-sm text-neutral-400 font-medium">
-              <li><Link to="/dashboard" className="hover:text-white transition-colors">Workspace</Link></li>
-              <li><Link to="/interview" className="hover:text-white transition-colors">Mock Room</Link></li>
+              <li><Link to="/dashboard" className="hover:text-white transition-colors">Dashboard</Link></li>
+              <li><Link to="/interview" className="hover:text-white transition-colors">Start Interview</Link></li>
               <li><Link to="/reports" className="hover:text-white transition-colors">Reports</Link></li>
-              <li><Link to="/admin" className="hover:text-white transition-colors">Admin Portal</Link></li>
             </ul>
-          </div>
-
-          <div>
-            <h4 className="text-xs font-mono uppercase tracking-wider text-white font-bold mb-4">Connect</h4>
-            <div className="flex items-center gap-2.5 text-neutral-300">
-              <a href="#" className="p-2.5 rounded-xl bg-[#0A0A0A] hover:text-white hover:border-white/50 border border-white/20 transition-colors"><Twitter className="w-4 h-4" /></a>
-              <a href="#" className="p-2.5 rounded-xl bg-[#0A0A0A] hover:text-white hover:border-white/50 border border-white/20 transition-colors"><Linkedin className="w-4 h-4" /></a>
-              <a href="#" className="p-2.5 rounded-xl bg-[#0A0A0A] hover:text-white hover:border-white/50 border border-white/20 transition-colors"><Github className="w-4 h-4" /></a>
-            </div>
           </div>
         </div>
 
         {/* Bottom Bar */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-neutral-400 font-medium">
           <p>© {new Date().getFullYear()} InterviewIQ Inc. All rights reserved.</p>
-          <div className="flex items-center gap-6">
-            <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
-            <a href="#" className="hover:text-white transition-colors">Security</a>
-          </div>
         </div>
       </div>
     </footer>

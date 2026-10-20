@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FileText, Briefcase, Code2, Users, Building2, Sliders, Sparkles, Check } from 'lucide-react';
+import { FileText, Briefcase, Code2, Users, Building2, Sliders, Check } from 'lucide-react';
 import { Badge } from '../common/Badge';
 
 const iconMap = {
@@ -13,7 +13,7 @@ const iconMap = {
 };
 
 export const InterviewModeCard = ({ mode, isSelected, onSelect }) => {
-  const Icon = iconMap[mode.icon] || Sparkles;
+  const Icon = iconMap[mode.icon] || FileText;
 
   return (
     <motion.div

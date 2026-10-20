@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, Video, Play, ArrowRight, TrendingUp } from 'lucide-react';
+import { Video, Play, ArrowRight, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '../common/Button';
 
@@ -27,7 +27,6 @@ export const WelcomeHero = ({ userName, activeInterview, readinessScore }) => {
       <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
         <div className="max-w-2xl space-y-4">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#1A1A1A] border border-white/10 text-neutral-200 text-xs font-mono shadow-md">
-            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
             InterviewIQ AI Interview Engine
           </div>
 

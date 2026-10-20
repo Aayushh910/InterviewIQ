@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Github, Linkedin, Globe, Code2, Award, Share2, Eye, X, Save, Sparkles } from 'lucide-react';
+import { User, Github, Linkedin, Globe, Code2, Award, Share2, Eye, X, Save } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/common/Button';
 import { apiClient } from '../../services/apiClient';
@@ -347,7 +347,7 @@ export const Profile = () => {
             >
               <div className="flex items-center justify-between border-b border-white/10 pb-4">
                 <span className="text-xs font-mono text-emerald-400 font-bold uppercase tracking-widest flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-emerald-400" /> Candidate Profile Preview
+                  Candidate Profile Preview
                 </span>
                 <button onClick={() => setShowPublicPreview(false)} className="p-1 text-neutral-400 hover:text-white">
                   <X className="w-6 h-6" />

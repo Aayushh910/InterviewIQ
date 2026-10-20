@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Settings as SettingsIcon, Bell, Camera, Mic, Shield, KeyRound, AlertTriangle,
-  Check, X, Cpu, Eye, EyeOff, Sparkles, Volume2, RefreshCw, CheckCircle2
+  Check, X, Cpu, Eye, EyeOff, Volume2, RefreshCw, CheckCircle2
 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 

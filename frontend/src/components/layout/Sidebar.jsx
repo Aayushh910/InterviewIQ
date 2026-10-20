@@ -2,7 +2,7 @@ import { Logo } from '../common/Logo';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Video, FileText, BarChart3, Award, History,
-  User, Settings, LogOut, ChevronLeft, ChevronRight, Sparkles
+  User, Settings, LogOut, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { APP_NAME } from '../../utils/constants';
 

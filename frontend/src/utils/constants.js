@@ -12,13 +12,12 @@ export const NAV_LINKS = [
   { name: "How It Works", href: "#how-it-works" },
   { name: "Interview Modes", href: "#interview-types" },
   { name: "Analytics", href: "#analytics" },
-  { name: "Testimonials", href: "#testimonials" },
 ];
 
 export const WORKSPACE_NAV = [
   { name: "Dashboard", path: "/dashboard", icon: "LayoutDashboard" },
   { name: "Interviews", path: "/interviews", icon: "Video" },
-  { name: "Resume Studio", path: "/resume", icon: "Sparkles" },
+  { name: "Resume Studio", path: "/resume", icon: "FileText" },
   { name: "AI Coach", path: "/coach", icon: "BotMessageSquare" },
   { name: "Analytics", path: "/analytics", icon: "BarChart3" },
   { name: "Reports", path: "/reports", icon: "FileText" },

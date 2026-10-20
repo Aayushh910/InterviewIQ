@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Award, CheckCircle2, Sparkles, FileText, ArrowRight, Loader2 } from 'lucide-react';
+import { Award, CheckCircle2, FileText, ArrowRight, Loader2 } from 'lucide-react';
 import { Button } from '../common/Button';
 
 export const InterviewFinishedStep = ({ result, onViewReport }) => {

@@ -34,10 +34,9 @@ export const Register = () => {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto">
-      <div className="mb-6">
-        <h2 className="text-2xl font-sans font-extrabold text-white tracking-tight">Create Your Account</h2>
-        <p className="text-xs text-neutral-400 mt-1">Practice smart. Interview with confidence.</p>
+    <div className="w-full">
+      <div className="mb-6 text-center">
+        <h2 className="text-2xl font-sans font-extrabold text-white tracking-tight">Create Account</h2>
       </div>
 
       {errorMessage && (
@@ -71,7 +70,6 @@ export const Register = () => {
           type="password"
           placeholder="••••••••••••"
           icon={Lock}
-          helperText="Use at least 8 characters including letters, numbers, and one special character."
           error={errors.password?.message}
           {...register('password')}
         />

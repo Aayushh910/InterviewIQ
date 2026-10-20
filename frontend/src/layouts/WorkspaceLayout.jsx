@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Menu, X, Search, Bell, Sun, Moon, Sparkles, User, LogOut, ChevronRight
+  Menu, X, Sun, Moon, User, LogOut, ChevronRight
 } from 'lucide-react';
 import { Sidebar, SIDEBAR_PRIMARY, SIDEBAR_SECONDARY } from '../components/layout/Sidebar';
 import { LogoutModal } from '../components/common/LogoutModal';
@@ -22,6 +22,16 @@ export const WorkspaceLayout = ({ children }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+
+  // Helper to extract clean initials (e.g., Aayush Savaliya -> AS)
+  const getInitials = (name) => {
+    if (!name || typeof name !== 'string') return 'AS';
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
 
   // Initialize smooth Lenis scroll targeting the workspace main scroll container
   const lenisRef = useLenis({ wrapper: mainRef });
@@ -63,16 +73,6 @@ export const WorkspaceLayout = ({ children }) => {
             >
               <Menu className="w-6 h-6" />
             </button>
-
-            {/* Quick Search Input */}
-            <div className="relative hidden sm:flex items-center w-64 lg:w-80">
-              <Search className="w-4 h-4 absolute left-3 text-neutral-400" />
-              <input
-                type="text"
-                placeholder="Search interviews, reports, skills..."
-                className="w-full bg-[#141414] border border-white/10 text-xs rounded-xl pl-9 pr-4 py-2 text-white placeholder-neutral-400 focus:outline-none focus:border-emerald-400 transition-colors"
-              />
-            </div>
           </div>
 
           <div className="flex items-center gap-3 sm:gap-4">
@@ -82,31 +82,20 @@ export const WorkspaceLayout = ({ children }) => {
               AI Score: 88.5%
             </div>
 
-            {/* Notifications */}
-            <button
-              className="relative p-2 text-neutral-400 hover:text-white rounded-xl hover:bg-[#141414] transition-colors border border-white/10"
-              title="Notifications"
-            >
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-black" />
-            </button>
-
             {/* User Profile Quick Card */}
             <Link
               to="/profile"
               className="flex items-center gap-3 p-1 rounded-xl hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-slate-100 transition-colors border border-transparent hover:border-white/10"
             >
-              <img
-                src={user?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"}
-                alt="Avatar"
-                className="w-8 h-8 rounded-full object-cover ring-2 ring-white/20 shrink-0"
-              />
+              <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-400 font-mono font-bold text-xs flex items-center justify-center shrink-0">
+                {getInitials(user?.name)}
+              </div>
               <div className="hidden md:flex flex-col text-left">
                 <span className="text-xs font-semibold text-white dark:text-white light:text-slate-900 truncate">
-                  {user?.name || 'Alex Rivera'}
+                  {user?.name || 'Aayush Savaliya'}
                 </span>
                 <span className="text-[10px] text-emerald-400 font-mono truncate">
-                  {user?.role || 'Full-Stack Candidate'}
+                  {user?.role || 'Candidate'}
                 </span>
               </div>
             </Link>

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mic, MicOff, Camera, CameraOff, Pause, Play, Volume2,
   Maximize2, Minimize2, FlipHorizontal, AlertTriangle, RotateCcw, ChevronRight,
-  Sparkles, LogOut, CheckCircle2, X, PenLine
+  Bot, LogOut, CheckCircle2, X, PenLine
 } from 'lucide-react';
 import { Logo } from '../common/Logo';
 import {
@@ -621,10 +621,8 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
         >
           {/* Brand badge */}
           <div className="flex items-center justify-center mb-8">
-            <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/[0.04] border border-white/10">
-              <div className="w-5 h-5 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center">
-                <Sparkles className="w-3 h-3 text-white" />
-              </div>
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/10">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-xs font-semibold text-white tracking-wide">InterviewIQ AI</span>
             </div>
           </div>
@@ -819,7 +817,6 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
             <div className="flex items-center gap-2">
               {activeQuestion.type === 'counter' ? (
                 <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full">
-                  <Sparkles className="w-3 h-3" />
                   Follow-up · Depth {activeQuestion.depth || 1}
                 </span>
               ) : (
@@ -1104,7 +1101,7 @@ export const AIInterviewScreen = ({ config, onFinish }) => {
                         ))}
                       </div>
                     ) : (
-                      <Sparkles className="w-4 h-4 text-indigo-400" />
+                      <Bot className="w-4 h-4 text-indigo-400" />
                     )}
                   </div>
                 </div>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Sliders, Video, FileText, Check, Sparkles, ChevronRight, HelpCircle } from 'lucide-react';
+import { Sliders, Video, FileText, Check, Users, ChevronRight, HelpCircle } from 'lucide-react';
 import { Button } from '../common/Button';
 import { useResumes } from '../../context/ResumeContext';
 
@@ -84,7 +84,7 @@ export const InterviewConfigStep = ({ config, onChange, onNext }) => {
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                 config.interviewType === 'HR' ? 'bg-white text-black' : 'bg-black text-neutral-400 border border-white/10'
               }`}>
-                <Sparkles className="w-5 h-5" />
+                <Users className="w-5 h-5" />
               </div>
               <div>
                 <div className="text-sm font-bold text-white dark:text-white light:text-slate-900">

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Video, FileUp, FileText, Sparkles, ChevronRight } from 'lucide-react';
+import { Video, FileUp, FileText, FileCheck, Zap, ChevronRight } from 'lucide-react';
 
 export const QuickActions = () => {
   const actions = [
@@ -31,7 +31,7 @@ export const QuickActions = () => {
     {
       title: "Resume Analysis",
       subtitle: "Deep-dive keyword & grammar rating",
-      icon: Sparkles,
+      icon: FileCheck,
       link: "/resume",
       colorClass: "text-rose-400 group-hover:text-rose-300",
       bgClass: "bg-rose-500/10 border-rose-500/20",
@@ -43,7 +43,7 @@ export const QuickActions = () => {
       <div className="border-b border-white/10 pb-3">
         <h2 className="text-base font-bold text-white flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-[#1A1A1A] border border-white/10 flex items-center justify-center text-cyan-400">
-            <Sparkles className="w-4 h-4" />
+            <Zap className="w-4 h-4" />
           </div>
           Instant Practice Launchpad & Shortcuts
         </h2>
