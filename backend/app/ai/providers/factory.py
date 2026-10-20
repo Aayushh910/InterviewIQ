@@ -8,6 +8,8 @@ from app.ai.providers.mock_provider import MockProvider
 logger = logging.getLogger(__name__)
 
 
+from app.core.context import groq_api_key_ctx
+
 def get_ai_provider(provider_name: Optional[str] = None, **kwargs) -> BaseAIProvider:
     """
     Factory function returning the configured AI Provider instance.
@@ -18,6 +20,9 @@ def get_ai_provider(provider_name: Optional[str] = None, **kwargs) -> BaseAIProv
     if p_name == "groq":
         logger.info(f"Instantiating Groq AI Provider (model: '{settings.AI_MODEL}')")
         groq_kwargs = {k: v for k, v in kwargs.items() if k in ["api_key", "model", "timeout"]}
+        ctx_key = groq_api_key_ctx.get()
+        if ctx_key and "api_key" not in groq_kwargs:
+            groq_kwargs["api_key"] = ctx_key
         return GroqProvider(**groq_kwargs)
 
     elif p_name in ["mock", "heuristic"]:

@@ -46,7 +46,43 @@ export const WorkspaceLayout = ({ children }) => {
     }
   }, [location.pathname]);
 
+  useEffect(() => {
+    const handleSidebarCollapsed = (e) => {
+      setCollapsed(Boolean(e.detail?.collapsed));
+    };
+    window.addEventListener('set-sidebar-collapsed', handleSidebarCollapsed);
+    return () => window.removeEventListener('set-sidebar-collapsed', handleSidebarCollapsed);
+  }, []);
+
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (location.pathname === '/profile') return;
+
+    const isComplete = localStorage.getItem('interviewiq_profile_completed') === 'true';
+    const isDismissed = sessionStorage.getItem('interviewiq_profile_prompt_dismissed') === 'true';
+
+    if (!isComplete && !isDismissed) {
+      const timer = setTimeout(() => {
+        setProfileModalOpen(true);
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [location.pathname]);
+
+  const handleDismissProfileModal = () => {
+    sessionStorage.setItem('interviewiq_profile_prompt_dismissed', 'true');
+    setProfileModalOpen(false);
+  };
+
+  const handleGoToProfile = () => {
+    sessionStorage.setItem('interviewiq_profile_prompt_dismissed', 'true');
+    setProfileModalOpen(false);
+    navigate('/profile');
+  };
+
   const handleConfirmLogout = () => {
+    sessionStorage.removeItem('interviewiq_profile_prompt_dismissed');
     logoutModalOpen && setLogoutModalOpen(false);
     logout();
     navigate('/', { replace: true });
@@ -182,6 +218,60 @@ export const WorkspaceLayout = ({ children }) => {
         onClose={() => setLogoutModalOpen(false)}
         onConfirm={handleConfirmLogout}
       />
+
+      {/* One-Time Profile Prompt Modal */}
+      <AnimatePresence>
+        {profileModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={handleDismissProfileModal}
+              className="fixed inset-0 bg-black/80 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative z-10 w-full max-w-md bg-[#0A0A0A] border border-emerald-500/30 rounded-3xl p-6 sm:p-7 shadow-2xl text-white space-y-5 backdrop-blur-xl"
+            >
+              <div className="flex items-center gap-3 text-emerald-400">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                  <User className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Complete Candidate Profile</h3>
+                  <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-wider">
+                    Recommended Setup
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-xs text-neutral-300 leading-relaxed font-sans bg-[#141414] p-4 rounded-2xl border border-white/10">
+                Complete your candidate profile so InterviewIQ can tailor questions, difficulty levels, and evaluations to your skills and target role.
+              </p>
+
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-end gap-3 font-mono">
+                <button
+                  type="button"
+                  onClick={handleDismissProfileModal}
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#141414] hover:bg-[#1f1f1f] text-neutral-300 hover:text-white border border-white/10 text-xs transition-colors cursor-pointer"
+                >
+                  Skip for Later
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGoToProfile}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-white text-black font-bold text-xs hover:bg-neutral-200 transition-all flex items-center justify-center gap-1.5 shadow-lg cursor-pointer"
+                >
+                  Complete Profile <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

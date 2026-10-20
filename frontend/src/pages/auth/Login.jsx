@@ -31,6 +31,7 @@ export const Login = () => {
 
   const onSubmit = async (data) => {
     setErrorMessage('');
+    sessionStorage.removeItem('interviewiq_profile_prompt_dismissed');
     const result = await login(data.email.trim(), data.password);
     if (result?.success) {
       navigate(from, { replace: true });

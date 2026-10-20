@@ -24,17 +24,15 @@ apiClient.interceptors.request.use((config) => {
     }
   }
 
-  // Attach Custom AI Model Provider & Key if configured by candidate
-  const customAiKey = localStorage.getItem('interviewiq_ai_api_key');
-  const customAiProvider = localStorage.getItem('interviewiq_ai_provider');
-  const customAiModel = localStorage.getItem('interviewiq_ai_model');
+  // Attach Groq API Key if configured by candidate
+  const groqKey = localStorage.getItem('interviewiq_groq_api_key') || localStorage.getItem('interviewiq_ai_api_key');
+  if (groqKey) {
+    config.headers['x-groq-api-key'] = groqKey;
+    config.headers['x-ai-api-key'] = groqKey;
+    config.headers['x-ai-provider'] = 'groq';
+  }
 
-  if (customAiKey) {
-    config.headers['x-ai-api-key'] = customAiKey;
-  }
-  if (customAiProvider) {
-    config.headers['x-ai-provider'] = customAiProvider;
-  }
+  const customAiModel = localStorage.getItem('interviewiq_ai_model');
   if (customAiModel) {
     config.headers['x-ai-model'] = customAiModel;
   }

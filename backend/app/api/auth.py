@@ -53,10 +53,10 @@ def get_me(current_user: User = Depends(get_current_user)):
     """
     return {
         "id": current_user.id,
-        "name": current_user.name or "Alex Rivera",
+        "name": current_user.name or "",
         "email": current_user.email,
-        "role": current_user.role or "Senior Full-Stack Candidate",
-        "avatar": current_user.avatar or "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
+        "role": current_user.role or "Candidate",
+        "avatar": current_user.avatar or None,
         "isAdmin": bool(current_user.is_admin),
         "is_active": current_user.is_active,
         "created_at": current_user.created_at
