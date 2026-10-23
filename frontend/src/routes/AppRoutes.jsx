@@ -21,9 +21,9 @@ const RouteLoadingFallback = () => (
 
 // Code-split / Lazy Load Pages for fast initial application startup
 const Landing = lazy(() => import('../pages/Landing/Landing').then(m => ({ default: m.Landing })));
-const Login = lazy(() => import('../pages/Auth/Login').then(m => ({ default: m.Login })));
-const Register = lazy(() => import('../pages/Auth/Register').then(m => ({ default: m.Register })));
-const ForgotPassword = lazy(() => import('../pages/Auth/ForgotPassword').then(m => ({ default: m.ForgotPassword })));
+const Login = lazy(() => import('../pages/auth/Login').then(m => ({ default: m.Login })));
+const Register = lazy(() => import('../pages/auth/Register').then(m => ({ default: m.Register })));
+const ForgotPassword = lazy(() => import('../pages/auth/ForgotPassword').then(m => ({ default: m.ForgotPassword })));
 
 const Dashboard = lazy(() => import('../pages/Dashboard/Dashboard').then(m => ({ default: m.Dashboard })));
 const Interview = lazy(() => import('../pages/Interview/Interview').then(m => ({ default: m.Interview })));
