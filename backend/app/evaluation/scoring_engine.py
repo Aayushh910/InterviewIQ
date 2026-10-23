@@ -295,9 +295,9 @@ class DeterministicScoringEngine:
             return 0.0
 
         # Sub-indicator calculations (0.0 - 100.0 scale)
-        presence = (norm_visual.face_presence_ratio or 1.0) * 100.0
-        alignment = (norm_visual.camera_alignment or 0.8) * 100.0
-        position = (norm_visual.position_quality or 0.8) * 100.0
+        presence = (norm_visual.face_presence_ratio if norm_visual.face_presence_ratio is not None else 1.0) * 100.0
+        alignment = (norm_visual.camera_alignment if norm_visual.camera_alignment is not None else 0.5) * 100.0
+        position = (norm_visual.position_quality if norm_visual.position_quality is not None else 0.5) * 100.0
 
         raw_score = (
             presence * VISUAL_METRIC_WEIGHTS["face_presence"] +

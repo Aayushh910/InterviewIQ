@@ -14,6 +14,9 @@ import {
   ShieldCheck,
   AlertTriangle,
   HelpCircle,
+  ScanFace,
+  Eye,
+  Sparkles,
 } from 'lucide-react';
 import {
   createInterview,
@@ -22,7 +25,8 @@ import {
   generateAIQuestions,
   getProctoringConfig,
 } from '../../services/interviewService';
-import { preloadFaceDetectionModels } from '../../hooks/useFaceDetection';
+import { useFaceDetection, preloadFaceDetectionModels } from '../../hooks/useFaceDetection';
+import { FaceDetectionOverlay } from './FaceDetectionOverlay';
 
 export const InterviewPreviewStep = ({ config, onStartInterview, onBack }) => {
   const selectedDomain = config.domain || config.interviewType || 'Frontend';
@@ -37,6 +41,23 @@ export const InterviewPreviewStep = ({ config, onStartInterview, onBack }) => {
   const [streamActive, setStreamActive] = useState(false);
   const [micVolume, setMicVolume] = useState(0);
   const [cameraError, setCameraError] = useState(null);
+
+  // Live Face Detection for Preview Step
+  const {
+    faceStatus,
+    faceCount,
+    boundingBoxes,
+    metrics: faceMetrics,
+    eyeMetrics,
+    gazeMetrics,
+    phoneDetection,
+    isOutOfFrame,
+    isMultipleFaces,
+  } = useFaceDetection(videoRef, {
+    isMirrored: true,
+    enabled: streamActive,
+    phoneDetectionEnabled: true,
+  });
 
   // Pre-fetching state
   const [preloadedData, setPreloadedData] = useState(null);
@@ -240,15 +261,15 @@ export const InterviewPreviewStep = ({ config, onStartInterview, onBack }) => {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -15 }}
-      className="max-w-5xl mx-auto space-y-6"
+      className="max-w-5xl mx-auto space-y-4"
     >
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#141414] border border-white/20 text-cyan-400 text-xs font-mono font-semibold mb-2 shadow-sm">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#141414] border border-white/20 text-cyan-400 text-xs font-mono font-semibold mb-1.5 shadow-sm">
             <Camera className="w-3.5 h-3.5" /> Step 3: Audio, Video & Navigation Preview
           </div>
-          <h1 className="text-2xl sm:text-3xl font-sans font-extrabold text-white tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-sans font-extrabold text-white tracking-tight">
             Frame Your Face & Test Microphone
           </h1>
           <p className="text-xs sm:text-sm text-neutral-400">
@@ -288,23 +309,42 @@ export const InterviewPreviewStep = ({ config, onStartInterview, onBack }) => {
                 <p className="text-xs text-rose-300 font-mono">{cameraError}</p>
               </div>
             ) : (
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-full object-cover -scale-x-100"
-              />
+              <>
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover -scale-x-100"
+                />
+                {streamActive && (
+                  <FaceDetectionOverlay
+                    boundingBoxes={boundingBoxes}
+                    faceStatus={faceStatus}
+                    faceCount={faceCount}
+                    metrics={faceMetrics}
+                    eyeMetrics={eyeMetrics}
+                    gazeMetrics={gazeMetrics}
+                    phoneDetection={phoneDetection}
+                    monitoringState={{ activeWarning: null, departureCount: 0 }}
+                    isOutOfFrame={isOutOfFrame}
+                    isMultipleFaces={isMultipleFaces}
+                    isCameraOn={streamActive}
+                  />
+                )}
+              </>
             )}
 
-            {/* Face Centering Oval Guide */}
-            <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-              <div className="w-48 h-64 border-2 border-dashed border-emerald-400/50 rounded-[50%] flex items-center justify-center shadow-[0_0_20px_rgba(52,211,153,0.15)]">
-                <span className="text-[10px] font-mono font-semibold text-emerald-300/80 bg-black/60 px-2 py-0.5 rounded-full">
-                  Keep Face Centered
-                </span>
+            {/* Face Centering Oval Guide (shown only while calibrating) */}
+            {faceStatus === 'initializing' && (
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                <div className="w-48 h-64 border-2 border-dashed border-emerald-400/50 rounded-[50%] flex items-center justify-center shadow-[0_0_20px_rgba(52,211,153,0.15)]">
+                  <span className="text-[10px] font-mono font-semibold text-emerald-300/80 bg-black/60 px-2 py-0.5 rounded-full">
+                    Keep Face Centered
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Countdown Overlay */}
             {countdown !== null && (
@@ -323,6 +363,56 @@ export const InterviewPreviewStep = ({ config, onStartInterview, onBack }) => {
                 </p>
               </div>
             )}
+          </div>
+
+          {/* Live AI Face Evaluation Telemetry Preview Card */}
+          <div className="rounded-2xl bg-[#0A0A0A]/90 border border-white/15 p-4 shadow-xl backdrop-blur-xl space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-mono font-bold text-white">
+                <ScanFace className="w-4 h-4 text-cyan-400" />
+                <span>AI Face & Gaze Evaluation Preview</span>
+              </div>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                Live Sensor Feedback
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2.5 text-center">
+              {/* Gaze Status */}
+              <div className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 ${
+                gazeMetrics.isLookingAway
+                  ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                  : 'bg-[#141414] border-white/10 text-emerald-400'
+              }`}>
+                <span className="text-[10px] font-mono text-neutral-400">Gaze Direction</span>
+                <span className="text-xs font-bold font-mono">
+                  {gazeMetrics.isLookingAway ? 'Looking Away' : gazeMetrics.gazeDirection === 'screen_directed' ? 'Screen Focused' : 'Camera Focused'}
+                </span>
+              </div>
+
+              {/* Live Eye Contact Score */}
+              <div className="p-2.5 rounded-xl bg-[#141414] border border-white/10 flex flex-col items-center justify-center gap-1">
+                <span className="text-[10px] font-mono text-neutral-400">Eye Alignment</span>
+                <span className={`text-xs font-bold font-mono ${
+                  (gazeMetrics.cameraDirectedGazePercentage ?? 90) >= 70 ? 'text-emerald-400' : 'text-amber-400'
+                }`}>
+                  {gazeMetrics.cameraDirectedGazePercentage ?? 92}%
+                </span>
+              </div>
+
+              {/* Face Framing Quality */}
+              <div className="p-2.5 rounded-xl bg-[#141414] border border-white/10 flex flex-col items-center justify-center gap-1">
+                <span className="text-[10px] font-mono text-neutral-400">Composure Framing</span>
+                <span className="text-xs font-bold font-mono text-cyan-400">
+                  {faceMetrics.postureState || 'Composed'} ({Math.round((faceMetrics.positionQuality || 0.9) * 100)}%)
+                </span>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-neutral-400 leading-normal flex items-start gap-1.5 pt-0.5">
+              <Eye className="w-3.5 h-3.5 text-cyan-400 shrink-0 mt-0.5" />
+              <span>Looking directly at your camera maintains a high score. Try turning your head or glancing away to see how the AI detects attention in real-time.</span>
+            </p>
           </div>
 
           {/* Live Mic Meter Card */}

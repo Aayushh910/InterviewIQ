@@ -472,28 +472,69 @@ export function useFaceDetection(videoRef, options = {}) {
             const cheekDist = dist(leftCheek, rightCheek);
             const headYawRatio = cheekDist > 0.01 ? dist(leftCheek, noseTip) / cheekDist : 0.5;
 
-            // Iris relative horizontal position in eye socket
-            const leftEyeWidth = dist(lm[33], lm[133]);
-            const leftIrisRatio = leftEyeWidth > 0.005 && leftIris ? (leftIris.x - lm[33].x) / leftEyeWidth : 0.5;
-
             // Vertical pitch ratio
             const verticalFaceHeight = dist(lm[10], lm[152]);
             const headPitchRatio = verticalFaceHeight > 0.01 ? dist(lm[10], noseTip) / verticalFaceHeight : 0.5;
 
+            // Detailed Iris displacement tracking for BOTH eyes
+            // Left eye: outer corner lm[33], inner corner lm[133], upper lid lm[159], lower lid lm[145]
+            const leftEyeWidth = dist(lm[33], lm[133]);
+            const leftEyeHeight = dist(lm[159], lm[145]);
+            const leftIrisHorizDev = leftEyeWidth > 0.005 && leftIris ? Math.abs((leftIris.x - lm[33].x) / leftEyeWidth - 0.5) : 0;
+            const leftIrisVertRatio = leftEyeHeight > 0.003 && leftIris ? (leftIris.y - lm[159].y) / leftEyeHeight : 0.5;
+
+            // Right eye: inner corner lm[362], outer corner lm[263], upper lid lm[386], lower lid lm[374]
+            const rightEyeWidth = dist(lm[362], lm[263]);
+            const rightEyeHeight = dist(lm[386], lm[374]);
+            const rightIrisHorizDev = rightEyeWidth > 0.005 && rightIris ? Math.abs((lm[263].x - rightIris.x) / rightEyeWidth - 0.5) : 0;
+            const rightIrisVertRatio = rightEyeHeight > 0.003 && rightIris ? (rightIris.y - lm[386].y) / rightEyeHeight : 0.5;
+
+            // MediaPipe Blendshapes eye gaze aversion detection
+            let blendshapeEyeAversion = 0;
+            if (result.faceBlendshapes && result.faceBlendshapes[0]) {
+              const cats = result.faceBlendshapes[0].categories || [];
+              for (let i = 0; i < cats.length; i++) {
+                const name = cats[i].categoryName || '';
+                const score = cats[i].score || 0;
+                if (
+                  name === 'eyeLookInLeft' ||
+                  name === 'eyeLookOutLeft' ||
+                  name === 'eyeLookInRight' ||
+                  name === 'eyeLookOutRight' ||
+                  name === 'eyeLookUpLeft' ||
+                  name === 'eyeLookUpRight' ||
+                  name === 'eyeLookDownLeft' ||
+                  name === 'eyeLookDownRight'
+                ) {
+                  if (score > blendshapeEyeAversion) blendshapeEyeAversion = score;
+                }
+              }
+            }
+
+            // Calibrated thresholds for eye contact evaluation:
+            // 1. Head yaw deviation: > 0.10 means head turned away
+            // 2. Iris horizontal deviation: > 0.11 means eyes looking away sideways
+            // 3. Iris vertical deviation: > 0.68 means looking down or away
+            // 4. Blendshape aversion: > 0.28 means intentional eye direction away from lens
+            const isHeadYawAverted = Math.abs(headYawRatio - 0.5) > 0.10;
+            const isHeadPitchAverted = headPitchRatio > 0.62 || headPitchRatio < 0.38;
+            const isIrisHorizAverted = leftIrisHorizDev > 0.11 || rightIrisHorizDev > 0.11;
+            const isIrisVertAverted = leftIrisVertRatio > 0.70 || rightIrisVertRatio > 0.70 || leftIrisVertRatio < 0.30 || rightIrisVertRatio < 0.30;
+            const isBlendshapeAverted = blendshapeEyeAversion > 0.28;
+
             let instantGaze = 'camera_directed';
-            // Off camera: extreme head turn or gaze looking far away
-            if (Math.abs(headYawRatio - 0.5) > 0.22 || Math.abs(leftIrisRatio - 0.5) > 0.35 || headPitchRatio > 0.65 || headPitchRatio < 0.35) {
+            if (isHeadYawAverted || isHeadPitchAverted || isIrisHorizAverted || isIrisVertAverted || isBlendshapeAverted) {
               instantGaze = 'off_camera';
-            } else if (headPitchRatio > 0.56 || (leftIris && leftIris.y > lm[33].y + 0.012)) {
-              // Looking down slightly at screen / questions
+            } else if (headPitchRatio > 0.54 || leftIrisVertRatio > 0.58 || rightIrisVertRatio > 0.58 || blendshapeEyeAversion > 0.18) {
+              // Looking slightly down at screen/question prompt
               instantGaze = 'screen_directed';
             } else {
               instantGaze = 'camera_directed';
             }
 
-            // Gaze smoothing buffer (rolling window of 6 frames)
+            // Gaze smoothing buffer (rolling window of 8 frames)
             gazeHistoryRef.current.push(instantGaze);
-            if (gazeHistoryRef.current.length > 6) gazeHistoryRef.current.shift();
+            if (gazeHistoryRef.current.length > 8) gazeHistoryRef.current.shift();
 
             const gazeCounts = gazeHistoryRef.current.reduce((acc, g) => {
               acc[g] = (acc[g] || 0) + 1;
@@ -522,7 +563,7 @@ export function useFaceDetection(videoRef, options = {}) {
                   offCameraEmittedRef.current = true;
                   emitEvent('off_camera_gaze', {
                     duration_seconds: offDuration,
-                    metadata: { gaze_direction: 'off_camera', head_yaw: headYawRatio },
+                    metadata: { gaze_direction: 'off_camera', head_yaw: headYawRatio, eye_aversion: blendshapeEyeAversion },
                   });
                 }
               }
@@ -537,14 +578,25 @@ export function useFaceDetection(videoRef, options = {}) {
             }
 
             const validCount = Math.max(1, validFramesCountRef.current);
-            const cameraPct = Math.round((cameraGazeFramesRef.current / validCount) * 100);
-            const screenPct = Math.round((screenGazeFramesRef.current / validCount) * 100);
+            const sessionCameraPct = Math.round((cameraGazeFramesRef.current / validCount) * 100);
+            const sessionScreenPct = Math.round((screenGazeFramesRef.current / validCount) * 100);
             const coverage = Math.min(1.0, Math.round((validFramesCountRef.current / totalFramesCountRef.current) * 100) / 100);
+
+            // Responsive live eye contact score (drops immediately when user looks away)
+            const recentCameraCount = gazeHistoryRef.current.filter((g) => g === 'camera_directed').length;
+            const recentRatio = recentCameraCount / gazeHistoryRef.current.length;
+            const responsiveEyeScore =
+              smoothedGaze === 'off_camera'
+                ? Math.min(25, Math.round(recentRatio * 40))
+                : smoothedGaze === 'screen_directed'
+                ? Math.min(75, Math.max(50, Math.round(recentRatio * 85)))
+                : Math.max(82, Math.min(99, Math.round(recentRatio * 100)));
 
             setGazeMetrics({
               gazeDirection: smoothedGaze,
-              cameraDirectedGazePercentage: cameraPct,
-              screenDirectedGazePercentage: screenPct,
+              cameraDirectedGazePercentage: responsiveEyeScore,
+              sessionCameraDirectedPercentage: sessionCameraPct,
+              screenDirectedGazePercentage: sessionScreenPct,
               offCameraGazeDurationSec: Math.round(totalOffCameraDurationRef.current * 10) / 10,
               longestOffCameraIntervalSec: Math.round(longestOffCameraIntervalRef.current * 10) / 10,
               isLookingAway: smoothedGaze === 'off_camera',
@@ -562,7 +614,7 @@ export function useFaceDetection(videoRef, options = {}) {
             else if (distFromCenter > 0.18) posture = 'Slight Turn';
 
             setMetrics({
-              eyeContactScore: cameraPct,
+              eyeContactScore: responsiveEyeScore,
               postureState: posture,
               positionQuality: Math.round(Math.max(0.2, 1.0 - distFromCenter * 1.5) * 100) / 100,
               centerX: Math.round(centerX * 100) / 100,

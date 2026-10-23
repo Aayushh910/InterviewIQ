@@ -32,7 +32,8 @@ export const AIInterviewScreen = ({ config, onFinish, preloadedData, initialStre
   const totalQuestions = config.questionsCount || 5;
 
   // ─── Screen State ────────────────────────────────────────────
-  const [screenState, setScreenState] = useState(preloadedData ? 'ACTIVE' : 'PREPARING');
+  const [screenState, setScreenState] = useState('PREPARING');
+  const [startupHoldSeconds, setStartupHoldSeconds] = useState(8);
   const [currentQIndex, setCurrentQIndex] = useState(0);
   const [timerSeconds, setTimerSeconds] = useState(180); // 3-minute timer per question
   const [isTimerRunning, setIsTimerRunning] = useState(false); // starts after AI finishes speaking
@@ -159,7 +160,8 @@ export const AIInterviewScreen = ({ config, onFinish, preloadedData, initialStre
           ...preloadedData.policy,
         }));
       }
-      setScreenState('ACTIVE');
+      setScreenState('PREPARING');
+      setStartupHoldSeconds(8);
       setTimerSeconds(180);
       setIsTimerRunning(false);
       requestFullscreen();
@@ -174,6 +176,26 @@ export const AIInterviewScreen = ({ config, onFinish, preloadedData, initialStre
       }
     }
   }, [preloadedData, initialStream]);
+
+  // ─── Startup Readiness Hold Countdown (8s hold for fullscreen & accessories) ───
+  useEffect(() => {
+    if (screenState !== 'PREPARING') return;
+    if (startupHoldSeconds <= 0) {
+      setScreenState('ACTIVE');
+      return;
+    }
+    const timer = setInterval(() => {
+      setStartupHoldSeconds((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setScreenState('ACTIVE');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [screenState, startupHoldSeconds]);
 
   // ─── Fullscreen Listener ──────────────────────────────────────
   useEffect(() => {
@@ -923,50 +945,117 @@ export const AIInterviewScreen = ({ config, onFinish, preloadedData, initialStre
         </div>
       </div>
 
-      {/* ══ MAIN BODY ═════════════════════════════════════════════════ */}
-      <div className="flex-1 flex min-h-0 overflow-hidden">
+      {/* ══ STARTUP READINESS HOLD OVERLAY (Prevents premature AI speech, verifies accessories) ══ */}
+      <AnimatePresence>
+        {screenState === 'PREPARING' && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-[#08080A]/95 backdrop-blur-2xl flex flex-col items-center justify-center p-6 text-center"
+          >
+            <div className="max-w-md w-full space-y-6">
+              {/* Circular Animated Countdown */}
+              <div className="relative w-28 h-28 mx-auto flex items-center justify-center">
+                <div className="absolute inset-0 rounded-full border-2 border-cyan-400/30 animate-ping opacity-25" />
+                <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-cyan-500/20 via-white/10 to-emerald-500/20 border border-white/20 flex flex-col items-center justify-center shadow-2xl backdrop-blur-xl">
+                  <span className="text-4xl font-black font-mono text-white leading-none">
+                    {startupHoldSeconds}
+                  </span>
+                  <span className="text-[9px] font-mono text-neutral-400 uppercase tracking-widest mt-1">SEC</span>
+                </div>
+              </div>
 
-        {/* ══ LEFT: QUESTION + RESPONSE PANEL ══════════════════════════ */}
-        <div className="flex-1 flex flex-col min-w-0 min-h-0 border-r border-white/[0.05]">
+              <div className="space-y-2">
+                <h2 className="text-xl font-sans font-extrabold text-white tracking-tight">
+                  Calibrating AI Interview Room
+                </h2>
+                <p className="text-xs text-neutral-400 leading-relaxed font-sans">
+                  Stabilizing camera stream, locking fullscreen mode, and warming up the AI speech examiner.
+                </p>
+              </div>
 
-          {/* Scrollable question area */}
-          <div className="flex-1 overflow-y-auto px-7 xl:px-10 pt-7 pb-2 flex flex-col gap-5">
+              {/* Hardware Readiness Telemetry Status Grid */}
+              <div className="grid grid-cols-2 gap-2 text-left text-xs font-mono">
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-neutral-300">Camera Active</span>
+                </div>
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-neutral-300">Microphone Ready</span>
+                </div>
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                  <span className="w-2 h-2 rounded-full bg-cyan-400" />
+                  <span className="text-neutral-300">Proctoring Calibrated</span>
+                </div>
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                  <span className="text-neutral-300">Questions Ready</span>
+                </div>
+              </div>
 
+              {/* Ready Now Action */}
+              <button
+                onClick={() => {
+                  setStartupHoldSeconds(0);
+                  setScreenState('ACTIVE');
+                }}
+                className="w-full py-3.5 rounded-xl bg-white text-black font-bold text-xs hover:bg-neutral-200 transition-all shadow-xl font-mono flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>Ready Now · Start Interview</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ══ MAIN BODY (Large Face Cam + Compact STT / Response Panel) ════════════════ */}
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
+
+        {/* ══ LEFT: QUESTION + RESPONSE PANEL (Compact & Streamlined) ══════════ */}
+        <div className="w-full lg:w-[440px] xl:w-[480px] shrink-0 flex flex-col min-h-0 border-r border-white/[0.06] bg-[#0A0A0D]">
+
+          {/* Question area */}
+          <div className="px-5 py-4 flex flex-col gap-3 shrink-0 border-b border-white/[0.05]">
             {/* Question type badge */}
-            <div className="flex items-center gap-2">
-              {activeQuestion.type === 'counter' ? (
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full">
-                  Follow-up · Depth {activeQuestion.depth || 1}
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-neutral-600 bg-white/[0.03] border border-white/[0.06] px-2.5 py-1 rounded-full">
-                  Question {currentQIndex + 1} of {totalQuestions}
-                </span>
-              )}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {activeQuestion.type === 'counter' ? (
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full">
+                    Follow-up · Depth {activeQuestion.depth || 1}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-neutral-400 bg-white/[0.03] border border-white/[0.06] px-2.5 py-0.5 rounded-full">
+                    Question {currentQIndex + 1} of {totalQuestions}
+                  </span>
+                )}
+              </div>
 
               {/* Replay audio button */}
               {aiState !== 'speaking' && activeQuestion.text && (
                 <button
                   onClick={handleToggleAudio}
                   title="Replay question audio"
-                  className="inline-flex items-center gap-1 text-[11px] text-neutral-600 hover:text-neutral-300 transition-colors px-2 py-1 rounded-lg hover:bg-white/[0.04]"
+                  className="inline-flex items-center gap-1 text-[11px] text-neutral-400 hover:text-white transition-colors px-2 py-0.5 rounded-lg hover:bg-white/[0.04]"
                 >
-                  <Volume2 className="w-3 h-3" />
-                  <span className="hidden sm:block">Replay</span>
+                  <Volume2 className="w-3.5 h-3.5" />
+                  <span>Replay</span>
                 </button>
               )}
             </div>
 
-            {/* THE QUESTION — Primary focus */}
+            {/* THE QUESTION */}
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeQuestion.id || activeQuestion.text}
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: 0.3 }}
               >
-                <h2 className="text-xl xl:text-2xl font-semibold text-white leading-relaxed tracking-tight">
+                <h2 className="text-base xl:text-lg font-semibold text-white leading-relaxed tracking-tight">
                   {activeQuestion.text || (
                     <span className="text-neutral-600">Loading question…</span>
                   )}
@@ -974,7 +1063,7 @@ export const AIInterviewScreen = ({ config, onFinish, preloadedData, initialStre
               </motion.div>
             </AnimatePresence>
 
-            {/* AI speaking state — inline under question */}
+            {/* AI speaking state */}
             <AnimatePresence>
               {aiState === 'speaking' && (
                 <motion.div
@@ -982,148 +1071,140 @@ export const AIInterviewScreen = ({ config, onFinish, preloadedData, initialStre
                   initial={{ opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 pt-0.5"
                 >
-                  <div className="flex items-end gap-[3px] h-4">
+                  <div className="flex items-end gap-[3px] h-3.5">
                     {[2, 4, 6, 4, 2].map((h, i) => (
                       <span
                         key={i}
-                        className="w-[3px] rounded-full bg-emerald-400/70"
-                        style={{ height: `${h * 2.5}px`, animation: `soundBar 0.7s ease-in-out ${i * 0.1}s infinite alternate` }}
+                        className="w-[2.5px] rounded-full bg-emerald-400"
+                        style={{ height: `${h * 2}px`, animation: `soundBar 0.7s ease-in-out ${i * 0.1}s infinite alternate` }}
                       />
                     ))}
                   </div>
-                  <span className="text-xs text-emerald-400/70">AI is reading the question</span>
+                  <span className="text-[11px] text-emerald-400 font-mono">AI speaking...</span>
                   <button
                     onClick={handleToggleAudio}
-                    className="text-[11px] text-emerald-400/50 hover:text-emerald-400 underline ml-1 transition-colors"
+                    className="text-[10px] text-emerald-400/60 hover:text-emerald-400 underline ml-1 transition-colors"
                   >
                     Stop
                   </button>
                 </motion.div>
               )}
             </AnimatePresence>
+          </div>
 
-            {/* Divider */}
-            <div className="h-px bg-white/[0.05]" />
-
-            {/* ── RESPONSE ZONE ─────────────────────────────── */}
-            <div className="flex-1 flex flex-col min-h-0 pb-2">
-
-              {/* Mode toggle + clear button */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-1 p-1 bg-white/[0.03] border border-white/[0.07] rounded-lg">
-                  <button
-                    onClick={() => setInputMode('voice')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                      inputMode === 'voice' ? 'bg-white text-black shadow-sm' : 'text-neutral-500 hover:text-white'
-                    }`}
-                  >
-                    <Mic className="w-3.5 h-3.5" />
-                    <span>Speak</span>
-                  </button>
-                  <button
-                    onClick={() => setInputMode('text')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                      inputMode === 'text' ? 'bg-white text-black shadow-sm' : 'text-neutral-500 hover:text-white'
-                    }`}
-                  >
-                    <PenLine className="w-3.5 h-3.5" />
-                    <span>Type</span>
-                  </button>
-                </div>
-
-                {inputMode === 'voice' && (liveTranscript || transcript) && (
-                  <button
-                    onClick={handleResetSpokenAnswer}
-                    disabled={isSubmitting}
-                    className="flex items-center gap-1 text-xs text-neutral-600 hover:text-red-400 transition-colors disabled:opacity-40 px-2 py-1 rounded-lg hover:bg-red-500/[0.06]"
-                  >
-                    <RotateCcw className="w-3 h-3" />
-                    Clear
-                  </button>
-                )}
+          {/* ── RESPONSE ZONE (Compact STT / Type Area) ───────────────────── */}
+          <div className="flex-1 flex flex-col min-h-0 p-4 space-y-3 overflow-y-auto">
+            {/* Mode toggle + clear button */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1 p-0.5 bg-white/[0.03] border border-white/[0.07] rounded-lg">
+                <button
+                  onClick={() => setInputMode('voice')}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                    inputMode === 'voice' ? 'bg-white text-black shadow-sm' : 'text-neutral-500 hover:text-white'
+                  }`}
+                >
+                  <Mic className="w-3.5 h-3.5" />
+                  <span>Speak</span>
+                </button>
+                <button
+                  onClick={() => setInputMode('text')}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                    inputMode === 'text' ? 'bg-white text-black shadow-sm' : 'text-neutral-500 hover:text-white'
+                  }`}
+                >
+                  <PenLine className="w-3.5 h-3.5" />
+                  <span>Type</span>
+                </button>
               </div>
 
-              {/* Voice transcript */}
-              {inputMode === 'voice' && (
-                <div className="flex-1 min-h-[90px] bg-white/[0.02] border border-white/[0.06] rounded-xl px-4 py-3.5 overflow-y-auto relative">
-                  {(liveTranscript || transcript) ? (
-                    <p className="text-[15px] text-neutral-200 leading-relaxed font-light">
-                      {liveTranscript || transcript}
-                      {liveTranscript && (
-                        <span className="inline-block w-0.5 h-4 ml-1 bg-white/40 animate-pulse align-middle" />
-                      )}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-neutral-700 italic">
-                      {isRecording
-                        ? 'Start speaking — your words will appear here in real-time…'
-                        : 'Waiting for microphone…'}
-                    </p>
-                  )}
-                  <div ref={transcriptEndRef} />
-                </div>
+              {inputMode === 'voice' && (liveTranscript || transcript) && (
+                <button
+                  onClick={handleResetSpokenAnswer}
+                  disabled={isSubmitting}
+                  className="flex items-center gap-1 text-[11px] text-neutral-500 hover:text-red-400 transition-colors disabled:opacity-40 px-2 py-0.5 rounded-lg hover:bg-red-500/[0.06]"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  Clear
+                </button>
               )}
-
-              {/* Text mode */}
-              {inputMode === 'text' && (
-                <div className="flex-1 flex flex-col min-h-[90px]">
-                  <textarea
-                    value={textAnswer}
-                    onChange={e => setTextAnswer(e.target.value)}
-                    placeholder="Type your answer here…"
-                    className="flex-1 w-full bg-white/[0.02] border border-white/[0.06] rounded-xl px-4 py-3.5 text-[15px] text-white placeholder-neutral-700 focus:outline-none focus:border-white/[0.16] resize-none transition-colors leading-relaxed font-light"
-                  />
-                  <div className="mt-1.5 flex items-center justify-between px-1">
-                    <span className="text-[11px] text-neutral-700">
-                      {textAnswer.split(/\s+/).filter(Boolean).length} words
-                    </span>
-                    <span className="text-[11px] text-neutral-700">{textAnswer.length} chars</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Error */}
-              <AnimatePresence>
-                {audioError && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    className="mt-3 flex items-start gap-2.5 bg-red-500/[0.08] border border-red-500/20 rounded-xl px-4 py-3"
-                  >
-                    <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-red-400 leading-relaxed">{audioError}</p>
-                    </div>
-                    <button
-                      onClick={() => setAudioError(null)}
-                      className="text-red-400/50 hover:text-red-400 transition-colors shrink-0 p-0.5"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </div>
+
+            {/* Compact Voice Transcript Box */}
+            {inputMode === 'voice' && (
+              <div className="h-[120px] max-h-[140px] bg-white/[0.02] border border-white/[0.06] rounded-xl px-3.5 py-2.5 overflow-y-auto relative">
+                {(liveTranscript || transcript) ? (
+                  <p className="text-sm text-neutral-200 leading-relaxed font-light">
+                    {liveTranscript || transcript}
+                    {liveTranscript && (
+                      <span className="inline-block w-0.5 h-3.5 ml-1 bg-white/40 animate-pulse align-middle" />
+                    )}
+                  </p>
+                ) : (
+                  <p className="text-xs text-neutral-600 italic">
+                    {isRecording
+                      ? 'Speak now — your speech is transcribed here in real-time…'
+                      : 'Microphone waiting for voice input…'}
+                  </p>
+                )}
+                <div ref={transcriptEndRef} />
+              </div>
+            )}
+
+            {/* Compact Text Mode Box */}
+            {inputMode === 'text' && (
+              <div className="flex flex-col h-[120px] max-h-[140px]">
+                <textarea
+                  value={textAnswer}
+                  onChange={(e) => setTextAnswer(e.target.value)}
+                  placeholder="Type your answer here…"
+                  className="flex-1 w-full bg-white/[0.02] border border-white/[0.06] rounded-xl px-3.5 py-2 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-white/[0.16] resize-none transition-colors leading-relaxed font-light"
+                />
+                <div className="mt-1 flex items-center justify-between px-1 text-[10px] text-neutral-600 font-mono">
+                  <span>{textAnswer.split(/\s+/).filter(Boolean).length} words</span>
+                  <span>{textAnswer.length} chars</span>
+                </div>
+              </div>
+            )}
+
+            {/* Error Banner */}
+            <AnimatePresence>
+              {audioError && (
+                <motion.div
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="flex items-start gap-2 bg-red-500/[0.08] border border-red-500/20 rounded-xl px-3 py-2"
+                >
+                  <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
+                  <p className="text-xs text-red-400 leading-relaxed flex-1">{audioError}</p>
+                  <button
+                    onClick={() => setAudioError(null)}
+                    className="text-red-400/50 hover:text-red-400 transition-colors p-0.5"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* ── BOTTOM DOCK ─────────────────────────────── */}
-          <div className="shrink-0 px-7 xl:px-10 py-4 border-t border-white/[0.05] bg-[#09090C]/60">
+          <div className="shrink-0 px-5 py-3.5 border-t border-white/[0.05] bg-[#09090C]/60">
             <button
               onClick={inputMode === 'voice' ? handleFinishUserAnswer : handleFinishTextAnswer}
               disabled={!canSubmit}
-              className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl bg-white text-black text-sm font-bold hover:bg-neutral-100 disabled:opacity-35 disabled:cursor-not-allowed transition-all"
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white text-black text-xs font-bold hover:bg-neutral-100 disabled:opacity-35 disabled:cursor-not-allowed transition-all shadow-lg"
             >
               {isSubmitting ? (
                 <>
-                  <span className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                  <span className="w-3.5 h-3.5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
                   <span>Evaluating response…</span>
                 </>
               ) : aiState === 'thinking' ? (
                 <>
-                  <span className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                  <span className="w-3.5 h-3.5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
                   <span>AI is thinking…</span>
                 </>
               ) : (
@@ -1135,166 +1216,141 @@ export const AIInterviewScreen = ({ config, onFinish, preloadedData, initialStre
             </button>
           </div>
         </div>
-        {/* end left panel */}
 
-        {/* ══ RIGHT: CAMERA PANEL ═══════════════════════════════════ */}
-        <div className="w-[560px] xl:w-[620px] shrink-0 flex flex-col min-h-0 bg-[#0A0A0D]">
+        {/* ══ RIGHT: DOMINANT USER CAMERA PANEL (Large Prominent Viewport) ═══ */}
+        <div className="flex-1 min-w-0 flex flex-col min-h-0 bg-[#070709] relative p-3 sm:p-4">
 
-          {/* Camera section */}
-          <div className="shrink-0">
-            {/* Camera container — 16:9 */}
-            <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
-              <div className="absolute inset-0 bg-[#0D0D10]">
-                {cameraEnabled ? (
-                  <>
-                    <video
-                      ref={node => {
-                        videoRef.current = node;
-                        if (node && webcamStream && node.srcObject !== webcamStream) {
-                          node.srcObject = webcamStream;
-                          node.play().catch(() => {});
-                        }
-                      }}
-                      autoPlay
-                      playsInline
-                      muted
-                      className={`absolute inset-0 w-full h-full object-cover ${isMirrored ? '-scale-x-100' : ''}`}
-                    />
-                    {cameraEnabled && webcamStream && (
-                      <FaceDetectionOverlay
-                        {...faceData}
-                        isCameraOn={cameraEnabled && !!webcamStream}
-                        monitoringState={browserMonitoring}
-                        onDismissWarning={browserMonitoring.dismissWarning}
+          {/* Large Camera Container */}
+          <div className="flex-1 relative w-full h-full min-h-[360px] rounded-2xl overflow-hidden bg-[#0D0D10] border border-white/10 shadow-2xl flex items-center justify-center">
+            {cameraEnabled ? (
+              <>
+                <video
+                  ref={(node) => {
+                    videoRef.current = node;
+                    if (node && webcamStream && node.srcObject !== webcamStream) {
+                      node.srcObject = webcamStream;
+                      node.play().catch(() => {});
+                    }
+                  }}
+                  autoPlay
+                  playsInline
+                  muted
+                  className={`absolute inset-0 w-full h-full object-cover ${isMirrored ? '-scale-x-100' : ''}`}
+                />
+                {cameraEnabled && webcamStream && (
+                  <FaceDetectionOverlay
+                    {...faceData}
+                    isCameraOn={cameraEnabled && !!webcamStream}
+                    monitoringState={browserMonitoring}
+                    onDismissWarning={browserMonitoring.dismissWarning}
+                  />
+                )}
+              </>
+            ) : (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#0D0D10]">
+                <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center">
+                  <CameraOff className="w-6 h-6 text-neutral-600" />
+                </div>
+                <span className="text-xs text-neutral-600 font-mono">Camera Off</span>
+              </div>
+            )}
+
+            {/* Camera error */}
+            {cameraError && cameraEnabled && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 bg-[#0D0D10]/90 z-20">
+                <AlertTriangle className="w-8 h-8 text-amber-500" />
+                <p className="text-xs text-neutral-400 text-center leading-relaxed font-mono">{cameraError}</p>
+              </div>
+            )}
+
+            {/* REC indicator */}
+            {isRecording && cameraEnabled && !cameraError && (
+              <div className="absolute top-3 left-3 flex items-center gap-1.5 text-[10px] font-bold text-white bg-black/75 backdrop-blur-sm px-2.5 py-1 rounded-lg border border-red-500/30 z-20">
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                REC LIVE
+              </div>
+            )}
+
+            {/* AI Examiner Orb */}
+            <div className="absolute bottom-3 right-3 z-20">
+              <div
+                className={`relative w-11 h-11 rounded-xl border flex items-center justify-center shadow-2xl transition-all duration-500 backdrop-blur-md ${
+                  aiState === 'speaking'
+                    ? 'bg-emerald-500/20 border-emerald-400/50 shadow-emerald-500/30'
+                    : aiState === 'thinking'
+                    ? 'bg-amber-500/20 border-amber-400/50 shadow-amber-500/30'
+                    : 'bg-indigo-500/15 border-indigo-400/30 shadow-indigo-500/20'
+                }`}
+              >
+                {aiState === 'speaking' ? (
+                  <div className="flex items-end gap-[2px] h-4">
+                    {[2, 3, 4, 3, 2].map((h, i) => (
+                      <span
+                        key={i}
+                        className="w-[2px] rounded-full bg-emerald-400"
+                        style={{ height: `${h * 2.5}px`, animation: `soundBar 0.7s ease-in-out ${i * 0.1}s infinite alternate` }}
                       />
-                    )}
-                  </>
+                    ))}
+                  </div>
+                ) : aiState === 'thinking' ? (
+                  <div className="flex items-center gap-0.5">
+                    {[0, 0.15, 0.3].map((d, i) => (
+                      <span key={i} className="w-1 h-1 rounded-full bg-amber-400 animate-bounce" style={{ animationDelay: `${d}s` }} />
+                    ))}
+                  </div>
                 ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#0D0D10]">
-                    <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center">
-                      <CameraOff className="w-6 h-6 text-neutral-700" />
-                    </div>
-                    <span className="text-xs text-neutral-700">Camera off</span>
-                  </div>
+                  <Bot className="w-5 h-5 text-indigo-400" />
                 )}
-
-                {/* Camera error */}
-                {cameraError && cameraEnabled && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 bg-[#0D0D10]">
-                    <AlertTriangle className="w-8 h-8 text-amber-500" />
-                    <p className="text-[11px] text-neutral-500 text-center leading-relaxed">{cameraError}</p>
-                  </div>
-                )}
-
-                {/* REC indicator */}
-                {isRecording && cameraEnabled && !cameraError && (
-                  <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 text-[10px] font-bold text-white bg-black/70 backdrop-blur-sm px-2 py-1 rounded-lg">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                    REC
-                  </div>
-                )}
-
-                {/* AI orb — corner overlay */}
-                <div className="absolute bottom-2.5 right-2.5">
-                  <div className={`relative w-10 h-10 rounded-xl border flex items-center justify-center shadow-2xl transition-all duration-500 ${
-                    aiState === 'speaking'
-                      ? 'bg-emerald-500/20 border-emerald-400/50 shadow-emerald-500/30'
-                      : aiState === 'thinking'
-                      ? 'bg-amber-500/20 border-amber-400/50 shadow-amber-500/30'
-                      : 'bg-indigo-500/15 border-indigo-400/30 shadow-indigo-500/20'
-                  } backdrop-blur-sm`}>
-                    {aiState === 'speaking' ? (
-                      <div className="flex items-end gap-[2px] h-4">
-                        {[2, 3, 4, 3, 2].map((h, i) => (
-                          <span
-                            key={i}
-                            className="w-[2px] rounded-full bg-emerald-400"
-                            style={{ height: `${h * 2.5}px`, animation: `soundBar 0.7s ease-in-out ${i * 0.1}s infinite alternate` }}
-                          />
-                        ))}
-                      </div>
-                    ) : aiState === 'thinking' ? (
-                      <div className="flex items-center gap-0.5">
-                        {[0, 0.15, 0.3].map((d, i) => (
-                          <span key={i} className="w-1 h-1 rounded-full bg-amber-400 animate-bounce" style={{ animationDelay: `${d}s` }} />
-                        ))}
-                      </div>
-                    ) : (
-                      <Bot className="w-4 h-4 text-indigo-400" />
-                    )}
-                  </div>
-                </div>
               </div>
-            </div>
-
-            {/* Camera controls strip */}
-            <div className="flex flex-col border-b border-white/[0.05]">
-              <div className="flex items-center justify-between px-4 py-2.5">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setMicEnabled(!micEnabled)}
-                    title={micEnabled ? 'Mute microphone' : 'Unmute microphone'}
-                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                      micEnabled
-                        ? 'bg-white/[0.04] border-white/[0.08] text-neutral-300 hover:text-white'
-                        : 'bg-red-500/15 border-red-500/30 text-red-400'
-                    }`}
-                  >
-                    {micEnabled ? <Mic className="w-3.5 h-3.5" /> : <MicOff className="w-3.5 h-3.5" />}
-                    <span>{micEnabled ? 'Mic' : 'Muted'}</span>
-                  </button>
-                  <button
-                    onClick={() => setCameraEnabled(!cameraEnabled)}
-                    title={cameraEnabled ? 'Turn camera off' : 'Turn camera on'}
-                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                      cameraEnabled
-                        ? 'bg-white/[0.04] border-white/[0.08] text-neutral-300 hover:text-white'
-                        : 'bg-red-500/15 border-red-500/30 text-red-400'
-                    }`}
-                  >
-                    {cameraEnabled ? <Camera className="w-3.5 h-3.5" /> : <CameraOff className="w-3.5 h-3.5" />}
-                    <span>{cameraEnabled ? 'Cam' : 'Cam off'}</span>
-                  </button>
-                </div>
-                <button
-                  onClick={() => setIsMirrored(!isMirrored)}
-                  title="Flip camera mirror"
-                  className="p-1.5 rounded-lg text-neutral-600 hover:text-neutral-300 hover:bg-white/[0.04] transition-colors"
-                >
-                  <FlipHorizontal className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              {/* Paused banner — inside controls strip */}
-              <AnimatePresence>
-                {isPaused && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="mx-4 mb-2.5 flex items-center justify-between gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3.5 py-2.5">
-                      <div className="flex items-center gap-2">
-                        <Pause className="w-3.5 h-3.5 text-amber-400" />
-                        <span className="text-xs text-amber-400 font-medium">Timer paused</span>
-                      </div>
-                      <button
-                        onClick={() => setIsPaused(false)}
-                        className="text-xs text-amber-400/60 hover:text-amber-400 transition-colors"
-                      >
-                        Resume
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </div>
           </div>
 
-          {/* No duplicate transcript here — answer is shown in the left panel only */}
+          {/* Camera Controls Strip */}
+          <div className="flex items-center justify-between px-3 py-2 mt-2 rounded-xl bg-[#0D0D10]/80 border border-white/[0.06] shrink-0">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setMicEnabled(!micEnabled)}
+                title={micEnabled ? 'Mute microphone' : 'Unmute microphone'}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-medium border transition-all ${
+                  micEnabled
+                    ? 'bg-white/[0.04] border-white/[0.08] text-neutral-300 hover:text-white'
+                    : 'bg-red-500/15 border-red-500/30 text-red-400'
+                }`}
+              >
+                {micEnabled ? <Mic className="w-3.5 h-3.5" /> : <MicOff className="w-3.5 h-3.5 text-red-400" />}
+                <span>{micEnabled ? 'Mic Active' : 'Mic Muted'}</span>
+              </button>
+              <button
+                onClick={() => setCameraEnabled(!cameraEnabled)}
+                title={cameraEnabled ? 'Turn camera off' : 'Turn camera on'}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-medium border transition-all ${
+                  cameraEnabled
+                    ? 'bg-white/[0.04] border-white/[0.08] text-neutral-300 hover:text-white'
+                    : 'bg-red-500/15 border-red-500/30 text-red-400'
+                }`}
+              >
+                {cameraEnabled ? <Camera className="w-3.5 h-3.5" /> : <CameraOff className="w-3.5 h-3.5 text-red-400" />}
+                <span>{cameraEnabled ? 'Camera On' : 'Camera Off'}</span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {isPaused && (
+                <div className="flex items-center gap-1.5 text-xs text-amber-400 font-mono font-semibold px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
+                  <Pause className="w-3 h-3 text-amber-400" /> Timer Paused
+                </div>
+              )}
+              <button
+                onClick={() => setIsMirrored(!isMirrored)}
+                title="Flip camera mirror"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-mono text-neutral-400 hover:text-white hover:bg-white/[0.04] border border-transparent hover:border-white/10 transition-colors"
+              >
+                <FlipHorizontal className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Flip View</span>
+              </button>
+            </div>
+          </div>
         </div>
-        {/* end right panel */}
       </div>
       {/* end main body */}
 
