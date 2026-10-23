@@ -16,10 +16,8 @@ export const NAV_LINKS = [
 
 export const WORKSPACE_NAV = [
   { name: "Dashboard", path: "/dashboard", icon: "LayoutDashboard" },
-  { name: "Interviews", path: "/interviews", icon: "Video" },
-  { name: "Resume Studio", path: "/resume", icon: "FileText" },
+  { name: "Interviews", path: "/interview", icon: "Video" },
   { name: "Analytics", path: "/analytics", icon: "BarChart3" },
-  { name: "Reports", path: "/reports", icon: "FileText" },
   { name: "History", path: "/history", icon: "History" },
   { name: "Profile", path: "/profile", icon: "User" },
   { name: "Settings", path: "/settings", icon: "Settings" },

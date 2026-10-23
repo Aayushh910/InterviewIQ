@@ -42,4 +42,9 @@ def get_current_user(
             detail="Inactive user account"
         )
 
+    # Automatically propagate user's uploaded Groq API key into context if not already provided via headers
+    from app.core.context import groq_api_key_ctx
+    if getattr(user, "groq_api_key", None) and not groq_api_key_ctx.get():
+        groq_api_key_ctx.set(user.groq_api_key.strip())
+
     return user

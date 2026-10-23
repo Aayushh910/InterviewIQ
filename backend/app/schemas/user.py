@@ -28,6 +28,7 @@ class UserResponse(BaseModel):
     avatar: Optional[str] = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
     isAdmin: bool = False
     is_active: bool = True
+    groq_api_key: Optional[str] = None
     created_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)

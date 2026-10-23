@@ -5,8 +5,8 @@ import { Link } from 'react-router-dom';
 import { Button } from '../common/Button';
 
 export const WelcomeHero = ({ userName, activeInterview, readinessScore }) => {
-  const hasLiveScore = readinessScore !== undefined && readinessScore !== null && readinessScore !== 'N/A';
-  const numericScore = hasLiveScore ? Number(readinessScore) : 0;
+  const numericScore = (readinessScore !== undefined && readinessScore !== null && readinessScore !== 'N/A') ? Number(readinessScore) : 0;
+  const hasLiveScore = numericScore > 0;
   
   const scoreBadge = numericScore >= 85 
     ? 'Top 5%' 

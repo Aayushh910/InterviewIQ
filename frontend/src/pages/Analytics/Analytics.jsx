@@ -17,13 +17,13 @@ export const Analytics = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#141414] border border-white/20 text-cyan-400 text-xs font-mono font-semibold mb-2 shadow-sm">
-            <BarChart3 className="w-3.5 h-3.5" /> Performance Intelligence
+            <BarChart3 className="w-3.5 h-3.5" /> Candidate Mastery & Growth Analytics
           </div>
           <h1 className="text-2xl sm:text-3xl font-sans font-extrabold text-white tracking-tight">
-            Performance Analytics & Sensor Intelligence
+            Performance & Improvement Analytics
           </h1>
           <p className="text-xs sm:text-sm text-neutral-400">
-            Granular evaluation across competency dimensions, vocal clarity, speech cadence, and computer vision face presence.
+            Longitudinal growth analysis tracking your technical answer depth, speech pacing, vocal clarity, and facial composure stability.
           </p>
         </div>
       </div>

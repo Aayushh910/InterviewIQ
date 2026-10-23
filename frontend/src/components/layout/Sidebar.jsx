@@ -9,9 +9,7 @@ import { APP_NAME } from '../../utils/constants';
 export const SIDEBAR_PRIMARY = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
   { name: "New Interview", path: "/interview", icon: Video },
-  { name: "Resume", path: "/resume", icon: FileText },
   { name: "Analytics", path: "/analytics", icon: BarChart3 },
-  { name: "Reports", path: "/reports", icon: FileText },
   { name: "History", path: "/history", icon: History },
 ];
 
@@ -51,9 +49,7 @@ export const Sidebar = ({ collapsed, setCollapsed, onLogoutClick }) => {
             const routeColors = {
               '/dashboard': { bar: 'bg-cyan-400', icon: 'text-cyan-400' },
               '/interview': { bar: 'bg-amber-400', icon: 'text-amber-400' },
-              '/resume': { bar: 'bg-violet-400', icon: 'text-violet-400' },
               '/analytics': { bar: 'bg-cyan-400', icon: 'text-cyan-400' },
-              '/reports': { bar: 'bg-rose-400', icon: 'text-rose-400' },
               '/history': { bar: 'bg-violet-400', icon: 'text-violet-400' },
             };
             const activeColor = routeColors[item.path] || { bar: 'bg-cyan-400', icon: 'text-cyan-400' };

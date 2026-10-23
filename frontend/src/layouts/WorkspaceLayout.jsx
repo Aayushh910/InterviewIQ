@@ -112,12 +112,6 @@ export const WorkspaceLayout = ({ children }) => {
           </div>
 
           <div className="flex items-center gap-3 sm:gap-4">
-            {/* AI Readiness Status Badge */}
-            <div className="hidden lg:flex items-center gap-2 px-3 py-1 rounded-full bg-[#141414] border border-white/10 text-emerald-400 text-xs font-semibold shadow-sm font-mono">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              AI Score: 88.5%
-            </div>
-
             {/* User Profile Quick Card */}
             <Link
               to="/profile"

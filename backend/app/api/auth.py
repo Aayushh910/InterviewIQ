@@ -59,5 +59,6 @@ def get_me(current_user: User = Depends(get_current_user)):
         "avatar": current_user.avatar or None,
         "isAdmin": bool(current_user.is_admin),
         "is_active": current_user.is_active,
+        "groq_api_key": getattr(current_user, "groq_api_key", None),
         "created_at": current_user.created_at
     }

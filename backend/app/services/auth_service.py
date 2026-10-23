@@ -106,6 +106,7 @@ def build_token_response(user: User) -> dict:
             "avatar": user.avatar or "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
             "isAdmin": bool(user.is_admin),
             "is_active": user.is_active,
+            "groq_api_key": getattr(user, "groq_api_key", None),
             "created_at": user.created_at
         }
     }

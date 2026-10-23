@@ -92,7 +92,7 @@ export const RecentInterviews = ({ interviews }) => {
                       </span>
                     </div>
                     <Link
-                      to={`/reports?id=${item.id}`}
+                      to={`/history?id=${item.session_id || item.id}`}
                       className="surface-control px-3.5 py-2 text-neutral-200 hover:text-white text-xs font-semibold"
                     >
                       View Report

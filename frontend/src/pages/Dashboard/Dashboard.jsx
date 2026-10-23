@@ -9,12 +9,10 @@ import { WeeklyGoals } from '../../components/dashboard/WeeklyGoals';
 import { QuickActions } from '../../components/dashboard/QuickActions';
 import { useAuth } from '../../context/AuthContext';
 import { useInterview } from '../../context/InterviewContext';
-import { useResumes } from '../../context/ResumeContext';
 
 export const Dashboard = () => {
   const { user } = useAuth();
   const { interviews, isLoadingInterviews } = useInterview();
-  const { resumes } = useResumes();
 
   // Compute real dynamic statistics strictly from database state
   const totalSessions = interviews.length;
@@ -24,19 +22,15 @@ export const Dashboard = () => {
   
   const readinessScore = evaluatedInterviews.length > 0
     ? (evaluatedInterviews.reduce((sum, item) => sum + Number(item.score), 0) / evaluatedInterviews.length).toFixed(1)
-    : totalSessions > 0
-    ? 'Calculating...'
-    : '82.0';
+    : '0.0';
 
   const avgConfidence = evaluatedInterviews.length > 0
     ? (evaluatedInterviews.reduce((sum, item) => sum + Number(item.confidence || item.score), 0) / evaluatedInterviews.length).toFixed(1)
-    : totalSessions > 0
-    ? 'Calculating...'
-    : '80.0';
+    : '0.0';
 
-  const atsScore = resumes.length > 0
-    ? `${resumes[0].match_score || resumes[0].matchScore || 85}%`
-    : '85%';
+  const avgAnswerQuality = evaluatedInterviews.length > 0
+    ? (evaluatedInterviews.reduce((sum, item) => sum + Number(item.correctness || item.score), 0) / evaluatedInterviews.length).toFixed(1)
+    : '0.0';
 
   const totalHours = totalSessions > 0
     ? (interviews.reduce((sum, item) => sum + Number(item.duration_minutes || 15), 0) / 60).toFixed(1)
@@ -46,7 +40,7 @@ export const Dashboard = () => {
     readinessScore,
     totalSessions,
     avgConfidence,
-    atsScore,
+    avgAnswerQuality,
     totalHours,
   };
 

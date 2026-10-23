@@ -1,15 +1,17 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Award, Video, Zap, FileCheck, Clock } from 'lucide-react';
+import { Award, Video, Zap, CheckCircle2, Clock } from 'lucide-react';
 
 export const KPICards = ({ stats }) => {
+  const hasSessions = stats?.totalSessions > 0;
+
   const kpis = [
     {
       title: "Overall AI Score",
-      value: stats?.readinessScore ?? '82.0',
-      suffix: stats?.readinessScore && stats.readinessScore !== 'Calculating...' ? "/100" : "",
-      change: stats?.totalSessions > 0 ? "Evaluated Score" : "Baseline AI Benchmark",
-      positive: true,
+      value: hasSessions ? stats?.readinessScore : '0.0',
+      suffix: "/100",
+      change: hasSessions ? "Evaluated Score" : "No sessions completed yet",
+      positive: hasSessions,
       icon: Award,
       colorClass: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
     },
@@ -17,37 +19,37 @@ export const KPICards = ({ stats }) => {
       title: "Interviews Completed",
       value: stats?.totalSessions ?? 0,
       suffix: " Sessions",
-      change: stats?.totalSessions > 0 ? "Active Candidate" : "0 completed sessions",
-      positive: true,
+      change: hasSessions ? "Active Candidate" : "0 completed sessions",
+      positive: hasSessions,
       icon: Video,
       colorClass: "text-amber-400 bg-amber-500/10 border-amber-500/20",
     },
     {
       title: "Average Confidence",
-      value: stats?.avgConfidence ?? '80.0',
-      suffix: stats?.avgConfidence && stats.avgConfidence !== 'Calculating...' ? "%" : "",
-      change: stats?.totalSessions > 0 ? "Voice & Visual Analysis" : "Baseline Calibrated",
-      positive: true,
+      value: hasSessions ? stats?.avgConfidence : '0.0',
+      suffix: "%",
+      change: hasSessions ? "Vocal & Facial Composure" : "Awaiting first session",
+      positive: hasSessions,
       icon: Zap,
       colorClass: "text-violet-400 bg-violet-500/10 border-violet-500/20",
     },
     {
-      title: "Resume Match Score",
-      value: stats?.atsScore ?? '85%',
-      suffix: "",
-      change: "ATS Keyword Match",
-      positive: true,
-      icon: FileCheck,
-      colorClass: "text-rose-400 bg-rose-500/10 border-rose-500/20",
+      title: "Answer Quality & Depth",
+      value: hasSessions ? stats?.avgAnswerQuality : '0.0',
+      suffix: "/100",
+      change: hasSessions ? "Technical Correctness" : "Not yet evaluated",
+      positive: hasSessions,
+      icon: CheckCircle2,
+      colorClass: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
     },
     {
       title: "Practice Hours",
       value: stats?.totalHours ?? '0.0',
       suffix: " Hours",
-      change: stats?.totalHours > 0 ? "Recorded" : "0.0 hrs",
-      positive: true,
+      change: hasSessions ? "Recorded Practice Time" : "0.0 hrs recorded",
+      positive: hasSessions,
       icon: Clock,
-      colorClass: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+      colorClass: "text-rose-400 bg-rose-500/10 border-rose-500/20",
     },
   ];
 
@@ -62,7 +64,7 @@ export const KPICards = ({ stats }) => {
             Real-Time AI Competency Matrix
           </h2>
           <p className="text-xs text-neutral-400 font-mono mt-0.5">
-            Track your overall score, completed mock loops, voice confidence, and resume match benchmarks.
+            Track your overall score, completed mock loops, voice confidence, and answer quality benchmarks.
           </p>
         </div>
       </div>

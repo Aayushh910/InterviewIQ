@@ -2,7 +2,6 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Sliders, Video, FileText, Check, Users, ChevronRight, HelpCircle } from 'lucide-react';
 import { Button } from '../common/Button';
-import { useResumes } from '../../context/ResumeContext';
 
 const DOMAINS = [
   'Frontend', 'Backend', 'Full Stack', 'Python', 'Java', 'C++',
@@ -14,8 +13,6 @@ const DIFFICULTIES = ['Easy', 'Medium', 'Hard'];
 const EXPERIENCE_LEVELS = ['Fresher', '1+', '2+', '3+', '5+', '10+'];
 
 export const InterviewConfigStep = ({ config, onChange, onNext }) => {
-  const { resumes } = useResumes();
-
   const handleSubmit = (e) => {
     e.preventDefault();
     onNext();
@@ -122,60 +119,6 @@ export const InterviewConfigStep = ({ config, onChange, onNext }) => {
             </div>
           </motion.div>
         )}
-
-        {/* Interview Mode & Resume Selector */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
-          <div>
-            <label className="block text-xs font-bold uppercase font-mono tracking-wider text-neutral-300 dark:text-neutral-300 light:text-slate-700 mb-2">
-              Interview Mode
-            </label>
-            <div className="grid grid-cols-2 gap-2 font-mono">
-              <button
-                type="button"
-                onClick={() => onChange({ mode: 'General' })}
-                className={`py-2.5 px-3 rounded-xl border text-xs font-semibold ${
-                  config.mode === 'General'
-                    ? 'bg-white text-black font-bold shadow-md border-white'
-                    : 'bg-[#141414]/80 border-white/10 text-neutral-400'
-                }`}
-              >
-                General Mode
-              </button>
-              <button
-                type="button"
-                onClick={() => onChange({ mode: 'Resume Based' })}
-                className={`py-2.5 px-3 rounded-xl border text-xs font-semibold ${
-                  config.mode === 'Resume Based'
-                    ? 'bg-white text-black font-bold shadow-md border-white'
-                    : 'bg-[#141414]/80 border-white/10 text-neutral-400'
-                }`}
-              >
-                Resume Based Mode
-              </button>
-            </div>
-          </div>
-
-          {/* Resume Dropdown (Visible if Resume Based) */}
-          {config.mode === 'Resume Based' && (
-            <div>
-              <label className="block text-xs font-bold uppercase font-mono tracking-wider text-neutral-300 dark:text-neutral-300 light:text-slate-700 mb-2">
-                Select Uploaded Resume
-              </label>
-              <select
-                value={config.resumeId}
-                onChange={(e) => onChange({ resumeId: e.target.value })}
-                className="w-full bg-[#141414] dark:bg-[#141414] light:bg-slate-100 border border-white/15 text-xs rounded-xl p-3 text-white focus:outline-none focus:border-emerald-400 transition-colors"
-              >
-                <option value="">-- Choose Resume --</option>
-                {resumes.map((res) => (
-                  <option key={res.id} value={res.id}>
-                    {res.fileName} ({res.targetRole})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-        </div>
 
         {/* Question Count, Difficulty, Experience Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-2">

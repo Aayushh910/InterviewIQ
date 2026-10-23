@@ -57,9 +57,9 @@ export const Interview = () => {
   const handleViewReport = () => {
     const targetId = finishedResult?.sessionId || finishedResult?.reportId;
     if (targetId) {
-      navigate(`/reports?id=${targetId}`);
+      navigate(`/history?id=${targetId}`);
     } else {
-      navigate('/reports');
+      navigate('/history');
     }
   };
 

@@ -32,7 +32,6 @@ export const InterviewProvider = ({ children }) => {
     difficulty: 'Medium',
     experience: '2+',
     mode: 'General',
-    resumeId: '',
     counterQuestions: true,
     language: 'English',
   });
@@ -81,8 +80,8 @@ export const InterviewProvider = ({ children }) => {
       id,
       session_id: id,
       title: sessionData.title || `${activeConfig.domain || activeConfig.interviewType || 'Technical'} Practice Session`,
-      mode: activeConfig.mode === 'Resume Based' ? 'resume-jd' : 'general',
-      modeLabel: activeConfig.mode === 'Resume Based' ? 'Resume Based' : 'General Technical',
+      mode: 'general',
+      modeLabel: 'General Technical',
       role: `${activeConfig.domain || 'Software'} Engineer (${activeConfig.experience || '2+'})`,
       date: new Date().toISOString().split('T')[0],
       timeAgo: 'Just now',
