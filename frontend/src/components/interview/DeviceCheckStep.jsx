@@ -163,13 +163,13 @@ export const DeviceCheckStep = ({ onNext, onBack }) => {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -15 }}
-      className="max-w-3xl mx-auto space-y-6"
+      className="max-w-3xl mx-auto space-y-4"
     >
-      <div className="text-center space-y-2">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#141414] border border-white/20 text-cyan-400 text-xs font-mono font-semibold shadow-sm">
-          <ShieldCheck className="w-4 h-4" /> Live System Readiness Check
+      <div className="text-center space-y-1.5">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#141414] border border-white/20 text-cyan-400 text-xs font-mono font-semibold shadow-sm">
+          <ShieldCheck className="w-3.5 h-3.5" /> Live System Readiness Check
         </div>
-        <h1 className="text-2xl sm:text-3xl font-sans font-extrabold text-white tracking-tight">
+        <h1 className="text-xl sm:text-2xl font-sans font-extrabold text-white tracking-tight">
           Verifying Permissions & Connection
         </h1>
         <p className="text-xs sm:text-sm text-neutral-400 max-w-lg mx-auto">
@@ -177,7 +177,7 @@ export const DeviceCheckStep = ({ onNext, onBack }) => {
         </p>
       </div>
 
-      <div className="rounded-3xl bg-[#0A0A0A]/90 border border-white/15 p-6 sm:p-8 shadow-2xl space-y-6 backdrop-blur-xl">
+      <div className="rounded-3xl bg-[#0A0A0A]/90 border border-white/15 p-4 sm:p-6 shadow-2xl space-y-4 backdrop-blur-xl">
         {/* Diagnostic Checklist */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {checkItems.map((item) => {

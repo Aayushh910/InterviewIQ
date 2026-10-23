@@ -127,15 +127,15 @@ export const Profile = () => {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto"
+      className="p-3 sm:p-4 lg:p-5 space-y-4 max-w-7xl mx-auto"
     >
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#141414] border border-white/20 text-emerald-400 text-xs font-mono font-semibold mb-2 shadow-sm">
             <User className="w-3.5 h-3.5" /> Candidate Profile & Portfolio
           </div>
-          <h1 className="text-2xl sm:text-3xl font-sans font-extrabold text-white dark:text-white light:text-slate-900 tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-sans font-extrabold text-white dark:text-white light:text-slate-900 tracking-tight">
             Professional Profile & Settings
           </h1>
           <p className="text-xs sm:text-sm text-neutral-400">

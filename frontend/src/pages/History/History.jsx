@@ -349,10 +349,10 @@ Generated securely by InterviewIQ AI Interview Engine
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto"
+        className="p-3 sm:p-4 lg:p-5 space-y-4 max-w-7xl mx-auto"
       >
         {/* Top Control Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
           <div className="flex items-center gap-3">
             <button
               onClick={handleCloseInspect}
@@ -437,15 +437,15 @@ Generated securely by InterviewIQ AI Interview Engine
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto"
+      className="p-3 sm:p-4 lg:p-5 space-y-4 max-w-7xl mx-auto"
     >
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#141414] border border-white/20 text-cyan-400 text-xs font-mono font-semibold mb-2">
             <HistoryIcon className="w-3.5 h-3.5" /> Session Timeline & Reports
           </div>
-          <h1 className="text-2xl sm:text-3xl font-sans font-extrabold text-white tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-sans font-extrabold text-white tracking-tight">
             Interview Session History
           </h1>
           <p className="text-xs sm:text-sm text-neutral-400">
@@ -464,7 +464,7 @@ Generated securely by InterviewIQ AI Interview Engine
 
       {/* Search, Filter & Sort Controls */}
       <div className="space-y-3">
-        <div className="rounded-3xl bg-[#0A0A0A]/90 border border-white/15 p-4 sm:p-6 shadow-2xl backdrop-blur-xl flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="rounded-3xl bg-[#0A0A0A]/90 border border-white/15 p-3.5 sm:p-4 shadow-2xl backdrop-blur-xl flex flex-col md:flex-row items-center justify-between gap-3">
           {/* Search */}
           <div className="relative w-full md:w-80">
             <Search className="w-4 h-4 absolute left-3.5 top-3 text-neutral-400" />

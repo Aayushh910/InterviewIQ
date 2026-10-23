@@ -64,7 +64,7 @@ export const Interview = () => {
   };
 
   return (
-    <div className={step === 4 ? 'w-full h-full' : 'p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto'}>
+    <div className={step === 4 ? 'w-full h-full' : 'p-3 sm:p-4 lg:p-5 max-w-6xl mx-auto'}>
       <AnimatePresence mode="wait">
         {step === 1 && (
           <InterviewConfigStep

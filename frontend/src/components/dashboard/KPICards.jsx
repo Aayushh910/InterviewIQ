@@ -54,8 +54,8 @@ export const KPICards = ({ stats }) => {
   ];
 
   return (
-    <section className="surface-container p-6 sm:p-7 space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-4">
+    <section className="surface-container p-4 sm:p-5 space-y-3.5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
         <div>
           <h2 className="text-base font-extrabold text-white tracking-tight flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-[#1A1A1A] border border-white/10 flex items-center justify-center text-cyan-400">

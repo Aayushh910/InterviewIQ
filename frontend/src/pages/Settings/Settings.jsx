@@ -212,14 +212,14 @@ export const Settings = () => {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto"
+      className="p-3 sm:p-4 lg:p-5 space-y-4 max-w-7xl mx-auto"
     >
       {/* Header */}
       <div>
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#141414] border border-white/20 text-cyan-400 text-xs font-mono font-semibold mb-2 shadow-sm">
           <SettingsIcon className="w-3.5 h-3.5" /> Workspace Control Center
         </div>
-        <h1 className="text-2xl sm:text-3xl font-sans font-extrabold text-white dark:text-white light:text-slate-900 tracking-tight">
+        <h1 className="text-xl sm:text-2xl font-sans font-extrabold text-white dark:text-white light:text-slate-900 tracking-tight">
           Application Settings & Groq AI Management
         </h1>
         <p className="text-xs sm:text-sm text-neutral-400">
@@ -228,17 +228,17 @@ export const Settings = () => {
       </div>
 
       {toast && (
-        <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-mono text-center shadow-md">
+        <div className="p-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-mono text-center shadow-md">
           {toast}
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
         {/* LEFT COLUMN: Groq AI Integration & Live Hardware Diagnostics */}
-        <div className="space-y-8">
+        <div className="space-y-4">
           {/* 1. Groq AI API Key Configuration */}
-          <div className="rounded-3xl bg-[#0A0A0A]/90 border border-white/15 p-6 sm:p-8 shadow-2xl backdrop-blur-xl space-y-6">
-            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+          <div className="rounded-3xl bg-[#0A0A0A]/90 border border-white/15 p-4 sm:p-5 shadow-2xl backdrop-blur-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2">
                 <Cpu className="w-5 h-5 text-cyan-400" />
                 <h2 className="text-base font-bold text-white">

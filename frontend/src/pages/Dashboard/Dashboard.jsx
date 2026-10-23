@@ -49,7 +49,7 @@ export const Dashboard = () => {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto relative z-10"
+      className="p-3 sm:p-4 lg:p-5 space-y-4 max-w-7xl mx-auto relative z-10"
     >
       {/* Background ambient light */}
       <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-white/[0.02] rounded-full blur-3xl pointer-events-none -z-10" />
@@ -64,7 +64,7 @@ export const Dashboard = () => {
       <QuickActions />
 
       {/* Performance Trend & Suggestions Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
         <div className="lg:col-span-2">
           <PerformanceTrend interviews={interviews} />
         </div>
@@ -74,7 +74,7 @@ export const Dashboard = () => {
       </div>
 
       {/* Recent Interviews & Weekly Goals Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
         <div className="lg:col-span-2">
           <RecentInterviews interviews={interviews} />
         </div>

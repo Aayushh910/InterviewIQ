@@ -23,13 +23,13 @@ export const InterviewConfigStep = ({ config, onChange, onNext }) => {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -15 }}
-      className="max-w-4xl mx-auto space-y-6"
+      className="max-w-4xl mx-auto space-y-4"
     >
-      <div className="text-center space-y-2">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#141414] border border-white/20 text-emerald-400 text-xs font-mono font-semibold shadow-sm">
-          <Sliders className="w-4 h-4" /> Step 1 of 4: Interview Setup
+      <div className="text-center space-y-1.5">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#141414] border border-white/20 text-emerald-400 text-xs font-mono font-semibold shadow-sm">
+          <Sliders className="w-3.5 h-3.5" /> Step 1 of 4: Interview Setup
         </div>
-        <h1 className="text-2xl sm:text-3xl font-sans font-extrabold text-white dark:text-white light:text-slate-900 tracking-tight">
+        <h1 className="text-xl sm:text-2xl font-sans font-extrabold text-white dark:text-white light:text-slate-900 tracking-tight">
           Configure Your AI Mock Interview
         </h1>
         <p className="text-xs sm:text-sm text-neutral-400 max-w-xl mx-auto">
@@ -37,7 +37,7 @@ export const InterviewConfigStep = ({ config, onChange, onNext }) => {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="rounded-3xl bg-[#0A0A0A]/90 dark:bg-[#0A0A0A]/90 light:bg-white border border-white/15 dark:border-white/15 light:border-slate-200 p-6 sm:p-8 shadow-2xl space-y-6 backdrop-blur-xl">
+      <form onSubmit={handleSubmit} className="rounded-3xl bg-[#0A0A0A]/90 dark:bg-[#0A0A0A]/90 light:bg-white border border-white/15 dark:border-white/15 light:border-slate-200 p-4 sm:p-6 shadow-2xl space-y-4 backdrop-blur-xl">
         
         {/* Interview Type Selector */}
         <div>
