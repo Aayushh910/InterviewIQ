@@ -247,7 +247,6 @@ export const InterviewPreviewStep = ({ config, onStartInterview, onBack }) => {
           // Hand off to active interview
           onStartInterview({
             preloadedData,
-            initialStream: streamRef.current,
           });
           return 0;
         }

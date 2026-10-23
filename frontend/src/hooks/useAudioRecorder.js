@@ -35,8 +35,8 @@ export const useAudioRecorder = () => {
 
     try {
       // Create audio-only MediaStream from audio tracks if stream has both video & audio
-      const audioTracks = stream.getAudioTracks();
-      const audioStream = audioTracks.length > 0 ? new MediaStream(audioTracks) : stream;
+      const audioTracks = targetStream.getAudioTracks();
+      const audioStream = audioTracks.length > 0 ? new MediaStream(audioTracks) : targetStream;
 
       audioChunksRef.current = [];
       const mimeType = getSupportedMimeType();

@@ -117,8 +117,8 @@ function computeEAR(pCorner1, pCorner2, pTop1, pBottom1, pTop2, pBottom2) {
  * gaze estimation, and mobile phone detection during interviews.
  */
 export function useFaceDetection(videoRef, options = {}) {
+  const isEnabled = options.isEnabled ?? options.enabled ?? true;
   const {
-    isEnabled = true,
     isMirrored = true,
     intervalMs = 120,
     phoneDetectionEnabled = true,

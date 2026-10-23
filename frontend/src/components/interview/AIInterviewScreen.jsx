@@ -27,7 +27,7 @@ import { useFaceDetection } from '../../hooks/useFaceDetection';
 import { useBrowserMonitoring } from '../../hooks/useBrowserMonitoring';
 import { FaceDetectionOverlay } from './FaceDetectionOverlay';
 
-export const AIInterviewScreen = ({ config, onFinish, preloadedData, initialStream }) => {
+export const AIInterviewScreen = ({ config, onFinish, preloadedData }) => {
   const selectedDomain = config.domain || config.interviewType || 'Frontend';
   const totalQuestions = config.questionsCount || 5;
 
@@ -166,16 +166,8 @@ export const AIInterviewScreen = ({ config, onFinish, preloadedData, initialStre
       setIsTimerRunning(false);
       requestFullscreen();
       window.dispatchEvent(new CustomEvent('set-sidebar-collapsed', { detail: { collapsed: true } }));
-
-      if (initialStream) {
-        setWebcamStream(initialStream);
-        if (videoRef.current) {
-          videoRef.current.srcObject = initialStream;
-          videoRef.current.play().catch(() => {});
-        }
-      }
     }
-  }, [preloadedData, initialStream]);
+  }, [preloadedData]);
 
   // ─── Startup Readiness Hold Countdown (8s hold for fullscreen & accessories) ───
   useEffect(() => {
@@ -228,50 +220,115 @@ export const AIInterviewScreen = ({ config, onFinish, preloadedData, initialStre
     } catch (e) {}
   };
 
-  // ─── Camera Setup ─────────────────────────────────────────────
+  // ─── Robust Camera Setup & Stream Binding ──────────────────────
   const requestDeviceCamera = async () => {
-    if (initialStream) return;
     try {
       setCameraError(null);
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: true,
-      });
+      if (webcamStream) {
+        try {
+          webcamStream.getTracks().forEach((t) => t.stop());
+        } catch (e) {}
+      }
+
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: true,
+        });
+      } catch (conErr) {
+        console.warn('High-res camera constraints failed, trying basic constraints:', conErr);
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
+        });
+      }
+
       setWebcamStream(stream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play().catch(() => {});
+
+      const v = videoRef.current;
+      if (v) {
+        v.muted = true;
+        v.playsInline = true;
+        v.srcObject = stream;
+        try {
+          await v.play();
+        } catch (pErr) {
+          console.warn('Initial video play caught:', pErr);
+        }
       }
     } catch (err) {
+      console.error('requestDeviceCamera failed:', err);
       setCameraError(err.message || 'Camera and microphone access is required.');
     }
   };
 
+  // Acquire fresh device camera immediately on mount
   useEffect(() => {
-    if (!initialStream) {
-      requestDeviceCamera();
+    requestDeviceCamera();
+  }, []);
+
+  // Keep HTML5 video element synchronized with webcamStream state
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !webcamStream) return;
+    video.muted = true;
+    video.playsInline = true;
+    if (video.srcObject !== webcamStream) {
+      video.srcObject = webcamStream;
     }
+    const playPromise = video.play();
+    if (playPromise !== undefined) {
+      playPromise.catch((e) => {
+        console.warn('HTML5 video play warning:', e);
+      });
+    }
+  }, [webcamStream]);
+
+  // Auto-recovery watchdog: if video element has 0 width or readyState < 2 after 2 seconds, re-request
+  useEffect(() => {
+    if (!webcamStream || !cameraEnabled) return;
+    const timeout = setTimeout(() => {
+      const v = videoRef.current;
+      if (v && (v.readyState < 2 || v.videoWidth === 0)) {
+        console.warn('Camera feed inactive or frozen (videoWidth === 0), retrying fresh acquisition...');
+        requestDeviceCamera();
+      }
+    }, 2000);
+    return () => clearTimeout(timeout);
+  }, [webcamStream, cameraEnabled]);
+
+  // Keep a ref to webcamStream for unmount cleanup only
+  const webcamStreamRef = useRef(null);
+  useEffect(() => {
+    webcamStreamRef.current = webcamStream;
+  }, [webcamStream]);
+
+  useEffect(() => {
     return () => {
       resetRecorder();
       try { recognitionRef.current?.stop(); } catch (e) {}
-      webcamStream?.getTracks().forEach(t => t.stop());
+      webcamStreamRef.current?.getTracks().forEach((t) => t.stop());
       if (document.fullscreenElement || document.webkitFullscreenElement) exitFullscreen();
       window.dispatchEvent(new CustomEvent('set-sidebar-collapsed', { detail: { collapsed: false } }));
     };
   }, []);
 
+  // Handle camera enabled/disabled toggle cleanly
   useEffect(() => {
-    if (cameraEnabled) {
-      if (!webcamStream && !initialStream) requestDeviceCamera();
-      else if (videoRef.current && webcamStream) {
-        videoRef.current.srcObject = webcamStream;
-        videoRef.current.play().catch(() => {});
+    if (!webcamStream) {
+      if (cameraEnabled) {
+        requestDeviceCamera();
       }
-    } else {
-      webcamStream?.getTracks().forEach(t => t.stop());
-      setWebcamStream(null);
+      return;
     }
-  }, [cameraEnabled]);
+    webcamStream.getVideoTracks().forEach((track) => {
+      track.enabled = cameraEnabled;
+    });
+    if (cameraEnabled && videoRef.current) {
+      videoRef.current.play().catch(() => {});
+    }
+  }, [cameraEnabled, webcamStream]);
 
   // ─── 3-Minute Per-Question Timer ──────────────────────────────
   // Countdown starts ONLY after AI speech has completed (isTimerRunning === true)
@@ -945,53 +1002,53 @@ export const AIInterviewScreen = ({ config, onFinish, preloadedData, initialStre
         </div>
       </div>
 
-      {/* ══ STARTUP READINESS HOLD OVERLAY (Prevents premature AI speech, verifies accessories) ══ */}
+      {/* ══ STARTUP READINESS HOLD OVERLAY (Non-blocking semi-transparent HUD) ══ */}
       <AnimatePresence>
         {screenState === 'PREPARING' && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-[#08080A]/95 backdrop-blur-2xl flex flex-col items-center justify-center p-6 text-center"
+            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] flex flex-col items-center justify-center p-6 text-center"
           >
-            <div className="max-w-md w-full space-y-6">
+            <div className="max-w-md w-full space-y-5 bg-[#0C0C10]/90 border border-white/15 rounded-3xl p-6 shadow-2xl backdrop-blur-xl">
               {/* Circular Animated Countdown */}
-              <div className="relative w-28 h-28 mx-auto flex items-center justify-center">
-                <div className="absolute inset-0 rounded-full border-2 border-cyan-400/30 animate-ping opacity-25" />
-                <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-cyan-500/20 via-white/10 to-emerald-500/20 border border-white/20 flex flex-col items-center justify-center shadow-2xl backdrop-blur-xl">
-                  <span className="text-4xl font-black font-mono text-white leading-none">
+              <div className="relative w-24 h-24 mx-auto flex items-center justify-center">
+                <div className="absolute inset-0 rounded-full border-2 border-cyan-400/40 animate-ping opacity-25" />
+                <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-cyan-500/25 via-white/10 to-emerald-500/25 border border-cyan-400/40 flex flex-col items-center justify-center shadow-2xl">
+                  <span className="text-3xl font-black font-mono text-white leading-none">
                     {startupHoldSeconds}
                   </span>
-                  <span className="text-[9px] font-mono text-neutral-400 uppercase tracking-widest mt-1">SEC</span>
+                  <span className="text-[8px] font-mono text-cyan-300 uppercase tracking-widest mt-1">SEC</span>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <h2 className="text-xl font-sans font-extrabold text-white tracking-tight">
+              <div className="space-y-1.5">
+                <h2 className="text-lg font-sans font-extrabold text-white tracking-tight">
                   Calibrating AI Interview Room
                 </h2>
-                <p className="text-xs text-neutral-400 leading-relaxed font-sans">
-                  Stabilizing camera stream, locking fullscreen mode, and warming up the AI speech examiner.
+                <p className="text-xs text-neutral-300 leading-relaxed font-sans">
+                  Camera feed active in background. Locking fullscreen & warming up AI examiner.
                 </p>
               </div>
 
               {/* Hardware Readiness Telemetry Status Grid */}
               <div className="grid grid-cols-2 gap-2 text-left text-xs font-mono">
-                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.1]">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-neutral-300">Camera Active</span>
+                  <span className="text-neutral-200">Camera Live</span>
                 </div>
-                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.1]">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-neutral-300">Microphone Ready</span>
+                  <span className="text-neutral-200">Microphone Ready</span>
                 </div>
-                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.1]">
                   <span className="w-2 h-2 rounded-full bg-cyan-400" />
-                  <span className="text-neutral-300">Proctoring Calibrated</span>
+                  <span className="text-neutral-200">Sensors Calibrated</span>
                 </div>
-                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.1]">
                   <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                  <span className="text-neutral-300">Questions Ready</span>
+                  <span className="text-neutral-200">Questions Loaded</span>
                 </div>
               </div>
 
@@ -1001,7 +1058,7 @@ export const AIInterviewScreen = ({ config, onFinish, preloadedData, initialStre
                   setStartupHoldSeconds(0);
                   setScreenState('ACTIVE');
                 }}
-                className="w-full py-3.5 rounded-xl bg-white text-black font-bold text-xs hover:bg-neutral-200 transition-all shadow-xl font-mono flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3 rounded-xl bg-white text-black font-bold text-xs hover:bg-neutral-200 transition-all shadow-xl font-mono flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Ready Now · Start Interview</span>
                 <ChevronRight className="w-4 h-4" />
@@ -1225,17 +1282,26 @@ export const AIInterviewScreen = ({ config, onFinish, preloadedData, initialStre
             {cameraEnabled ? (
               <>
                 <video
-                  ref={(node) => {
-                    videoRef.current = node;
-                    if (node && webcamStream && node.srcObject !== webcamStream) {
-                      node.srcObject = webcamStream;
-                      node.play().catch(() => {});
+                  ref={(el) => {
+                    videoRef.current = el;
+                    if (el && webcamStream && el.srcObject !== webcamStream) {
+                      el.muted = true;
+                      el.playsInline = true;
+                      el.srcObject = webcamStream;
+                      el.play().catch(() => {});
                     }
                   }}
                   autoPlay
                   playsInline
                   muted
-                  className={`absolute inset-0 w-full h-full object-cover ${isMirrored ? '-scale-x-100' : ''}`}
+                  onLoadedMetadata={(e) => {
+                    e.target.play().catch(() => {});
+                  }}
+                  onCanPlay={(e) => {
+                    e.target.play().catch(() => {});
+                  }}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  className={`absolute inset-0 w-full h-full object-cover z-0 ${isMirrored ? '-scale-x-100' : ''}`}
                 />
                 {cameraEnabled && webcamStream && (
                   <FaceDetectionOverlay

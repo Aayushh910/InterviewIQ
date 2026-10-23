@@ -97,7 +97,6 @@ export const Interview = () => {
             key="step4"
             config={activeConfig}
             preloadedData={sessionPayload?.preloadedData}
-            initialStream={sessionPayload?.initialStream}
             onFinish={handleInterviewFinish}
           />
         )}
