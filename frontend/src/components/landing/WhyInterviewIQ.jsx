@@ -9,7 +9,7 @@ const ROWS = [
   "Confidence & facial analysis",
   "Performance score tracking",
   "Downloadable PDF reports",
-  "Personalized learning roadmap",
+  "Detailed answer breakdown",
   "Available 24/7, unlimited sessions",
 ];
 

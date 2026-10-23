@@ -15,7 +15,7 @@ export const INTERVIEW_MODES = [
       "Adaptive follow-up questions",
       "Speech clarity & voice evaluation",
       "Confidence & composure scoring",
-      "AI-generated learning roadmap",
+      "Granular question evaluation",
       "Downloadable PDF report"
     ],
     ctaText: "Start Technical Interview",

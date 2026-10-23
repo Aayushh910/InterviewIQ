@@ -23,6 +23,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from app.core.context import groq_api_key_ctx
+
+@app.middleware("http")
+async def extract_groq_api_key_middleware(request, call_next):
+    user_key = request.headers.get("x-groq-api-key") or request.headers.get("x-ai-api-key")
+    if user_key and user_key.strip():
+        groq_api_key_ctx.set(user_key.strip())
+    else:
+        groq_api_key_ctx.set(None)
+    response = await call_next(request)
+    return response
+
 app.include_router(api_router)
 app.include_router(ai.router, prefix="/api/ai", tags=["AI Foundation Direct Alias"])
 app.include_router(speech.router, prefix="/api/ai/speech", tags=["Speech Recognition Direct Alias"])
@@ -40,6 +52,26 @@ def init_db_tables():
     try:
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE interview_sessions ADD COLUMN IF NOT EXISTS termination_reason VARCHAR(100)"))
+            # Ensure user profile columns exist
+            for col_sql in [
+                "ALTER TABLE users ADD COLUMN target_position VARCHAR(255)",
+                "ALTER TABLE users ADD COLUMN bio VARCHAR(1000)",
+                "ALTER TABLE users ADD COLUMN location VARCHAR(255)",
+                "ALTER TABLE users ADD COLUMN skills VARCHAR(1000)",
+                "ALTER TABLE users ADD COLUMN education VARCHAR(255)",
+                "ALTER TABLE users ADD COLUMN github VARCHAR(255)",
+                "ALTER TABLE users ADD COLUMN linkedin VARCHAR(255)",
+                "ALTER TABLE users ADD COLUMN website VARCHAR(255)",
+                "ALTER TABLE users ADD COLUMN leetcode VARCHAR(255)",
+                "ALTER TABLE users ADD COLUMN codeforces VARCHAR(255)",
+                "ALTER TABLE users ADD COLUMN codechef VARCHAR(255)",
+                "ALTER TABLE users ADD COLUMN hackerrank VARCHAR(255)",
+                "ALTER TABLE users ADD COLUMN groq_api_key VARCHAR(255)",
+            ]:
+                try:
+                    conn.execute(text(col_sql))
+                except Exception:
+                    pass
         MultimodalEvidence.__table__.create(bind=engine, checkfirst=True)
         FinalEvaluation.__table__.create(bind=engine, checkfirst=True)
         ProctoringEvent.__table__.create(bind=engine, checkfirst=True)

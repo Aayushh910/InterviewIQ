@@ -1,8 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Sliders, Video, FileText, Check, Sparkles, ChevronRight, HelpCircle } from 'lucide-react';
+import { Sliders, Video, FileText, Check, Users, ChevronRight, HelpCircle } from 'lucide-react';
 import { Button } from '../common/Button';
-import { useResumes } from '../../context/ResumeContext';
 
 const DOMAINS = [
   'Frontend', 'Backend', 'Full Stack', 'Python', 'Java', 'C++',
@@ -14,8 +13,6 @@ const DIFFICULTIES = ['Easy', 'Medium', 'Hard'];
 const EXPERIENCE_LEVELS = ['Fresher', '1+', '2+', '3+', '5+', '10+'];
 
 export const InterviewConfigStep = ({ config, onChange, onNext }) => {
-  const { resumes } = useResumes();
-
   const handleSubmit = (e) => {
     e.preventDefault();
     onNext();
@@ -26,13 +23,13 @@ export const InterviewConfigStep = ({ config, onChange, onNext }) => {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -15 }}
-      className="max-w-4xl mx-auto space-y-6"
+      className="max-w-4xl mx-auto space-y-4"
     >
-      <div className="text-center space-y-2">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#141414] border border-white/20 text-emerald-400 text-xs font-mono font-semibold shadow-sm">
-          <Sliders className="w-4 h-4" /> Step 1 of 4: Interview Setup
+      <div className="text-center space-y-1.5">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#141414] border border-white/20 text-emerald-400 text-xs font-mono font-semibold shadow-sm">
+          <Sliders className="w-3.5 h-3.5" /> Step 1 of 4: Interview Setup
         </div>
-        <h1 className="text-2xl sm:text-3xl font-sans font-extrabold text-white dark:text-white light:text-slate-900 tracking-tight">
+        <h1 className="text-xl sm:text-2xl font-sans font-extrabold text-white dark:text-white light:text-slate-900 tracking-tight">
           Configure Your AI Mock Interview
         </h1>
         <p className="text-xs sm:text-sm text-neutral-400 max-w-xl mx-auto">
@@ -40,7 +37,7 @@ export const InterviewConfigStep = ({ config, onChange, onNext }) => {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="rounded-3xl bg-[#0A0A0A]/90 dark:bg-[#0A0A0A]/90 light:bg-white border border-white/15 dark:border-white/15 light:border-slate-200 p-6 sm:p-8 shadow-2xl space-y-6 backdrop-blur-xl">
+      <form onSubmit={handleSubmit} className="rounded-3xl bg-[#0A0A0A]/90 dark:bg-[#0A0A0A]/90 light:bg-white border border-white/15 dark:border-white/15 light:border-slate-200 p-4 sm:p-6 shadow-2xl space-y-4 backdrop-blur-xl">
         
         {/* Interview Type Selector */}
         <div>
@@ -84,7 +81,7 @@ export const InterviewConfigStep = ({ config, onChange, onNext }) => {
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                 config.interviewType === 'HR' ? 'bg-white text-black' : 'bg-black text-neutral-400 border border-white/10'
               }`}>
-                <Sparkles className="w-5 h-5" />
+                <Users className="w-5 h-5" />
               </div>
               <div>
                 <div className="text-sm font-bold text-white dark:text-white light:text-slate-900">
@@ -122,60 +119,6 @@ export const InterviewConfigStep = ({ config, onChange, onNext }) => {
             </div>
           </motion.div>
         )}
-
-        {/* Interview Mode & Resume Selector */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
-          <div>
-            <label className="block text-xs font-bold uppercase font-mono tracking-wider text-neutral-300 dark:text-neutral-300 light:text-slate-700 mb-2">
-              Interview Mode
-            </label>
-            <div className="grid grid-cols-2 gap-2 font-mono">
-              <button
-                type="button"
-                onClick={() => onChange({ mode: 'General' })}
-                className={`py-2.5 px-3 rounded-xl border text-xs font-semibold ${
-                  config.mode === 'General'
-                    ? 'bg-white text-black font-bold shadow-md border-white'
-                    : 'bg-[#141414]/80 border-white/10 text-neutral-400'
-                }`}
-              >
-                General Mode
-              </button>
-              <button
-                type="button"
-                onClick={() => onChange({ mode: 'Resume Based' })}
-                className={`py-2.5 px-3 rounded-xl border text-xs font-semibold ${
-                  config.mode === 'Resume Based'
-                    ? 'bg-white text-black font-bold shadow-md border-white'
-                    : 'bg-[#141414]/80 border-white/10 text-neutral-400'
-                }`}
-              >
-                Resume Based Mode
-              </button>
-            </div>
-          </div>
-
-          {/* Resume Dropdown (Visible if Resume Based) */}
-          {config.mode === 'Resume Based' && (
-            <div>
-              <label className="block text-xs font-bold uppercase font-mono tracking-wider text-neutral-300 dark:text-neutral-300 light:text-slate-700 mb-2">
-                Select Uploaded Resume
-              </label>
-              <select
-                value={config.resumeId}
-                onChange={(e) => onChange({ resumeId: e.target.value })}
-                className="w-full bg-[#141414] dark:bg-[#141414] light:bg-slate-100 border border-white/15 text-xs rounded-xl p-3 text-white focus:outline-none focus:border-emerald-400 transition-colors"
-              >
-                <option value="">-- Choose Resume --</option>
-                {resumes.map((res) => (
-                  <option key={res.id} value={res.id}>
-                    {res.fileName} ({res.targetRole})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-        </div>
 
         {/* Question Count, Difficulty, Experience Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-2">

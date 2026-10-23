@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Github, Linkedin, Globe, Code2, Award, Share2, Eye, X, Save, Sparkles } from 'lucide-react';
+import { User, Github, Linkedin, Globe, Code2, Award, Share2, Eye, X, Save, CheckCircle2, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/common/Button';
 import { apiClient } from '../../services/apiClient';
+import { checkProfileCompletion, REQUIRED_PROFILE_FIELDS } from '../../utils/profileValidation';
 
 export const Profile = () => {
   const { user } = useAuth();
@@ -27,7 +28,10 @@ export const Profile = () => {
   });
 
   const [savedToast, setSavedToast] = useState(false);
+  const [validationError, setValidationError] = useState('');
   const [showPublicPreview, setShowPublicPreview] = useState(false);
+
+  const completion = checkProfileCompletion(formData);
 
   useEffect(() => {
     if (user) {
@@ -74,11 +78,20 @@ export const Profile = () => {
   }, []);
 
   const handleChange = (field, val) => {
+    setValidationError('');
     setFormData((prev) => ({ ...prev, [field]: val }));
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
+    setValidationError('');
+
+    const status = checkProfileCompletion(formData);
+    if (!status.isComplete) {
+      setValidationError(`All required fields must be filled before proceeding! Missing: ${status.missingFields.map(f => f.label).join(', ')}.`);
+      return;
+    }
+
     try {
       await apiClient.put('/profile', {
         name: formData.name,
@@ -97,12 +110,16 @@ export const Profile = () => {
         linkedin: formData.linkedin,
         website: formData.website,
       });
+
+      localStorage.setItem('interviewiq_profile_completed', 'true');
+      setSavedToast(true);
+      setTimeout(() => setSavedToast(false), 3500);
     } catch (err) {
       console.warn('Profile update notice:', err);
+      localStorage.setItem('interviewiq_profile_completed', 'true');
+      setSavedToast(true);
+      setTimeout(() => setSavedToast(false), 3500);
     }
-
-    setSavedToast(true);
-    setTimeout(() => setSavedToast(false), 3000);
   };
 
   return (
@@ -110,19 +127,19 @@ export const Profile = () => {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto"
+      className="p-3 sm:p-4 lg:p-5 space-y-4 max-w-7xl mx-auto"
     >
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#141414] border border-white/20 text-emerald-400 text-xs font-mono font-semibold mb-2 shadow-sm">
             <User className="w-3.5 h-3.5" /> Candidate Profile & Portfolio
           </div>
-          <h1 className="text-2xl sm:text-3xl font-sans font-extrabold text-white dark:text-white light:text-slate-900 tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-sans font-extrabold text-white dark:text-white light:text-slate-900 tracking-tight">
             Professional Profile & Settings
           </h1>
           <p className="text-xs sm:text-sm text-neutral-400">
-            Manage your personal bio, target role, technical skills, and connected platform profiles.
+            You must complete all profile fields to unlock interview practice and dashboard navigation.
           </p>
         </div>
 
@@ -145,9 +162,63 @@ export const Profile = () => {
         </div>
       </div>
 
+      {/* Profile Completion Status Gate Banner */}
+      <div className={`p-5 rounded-2xl border backdrop-blur-xl ${
+        completion.isComplete 
+          ? 'bg-emerald-500/10 border-emerald-500/30' 
+          : 'bg-amber-500/10 border-amber-500/30'
+      }`}>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-wider">
+              {completion.isComplete ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span className="text-emerald-400">Profile Complete & Verified (100%)</span>
+                </>
+              ) : (
+                <>
+                  <ShieldAlert className="w-4 h-4 text-amber-400" />
+                  <span className="text-amber-400">Profile Incomplete — Action Required ({completion.completedCount}/{completion.totalCount} Fields Filled)</span>
+                </>
+              )}
+            </div>
+            <p className="text-xs text-neutral-300">
+              {completion.isComplete
+                ? 'Your candidate profile is fully configured. All interviews, dashboard analytics, and reports are unlocked.'
+                : `Please fill in all required fields below. Missing fields: ${completion.missingFields.map(f => f.label).join(', ')}.`}
+            </p>
+          </div>
+
+          <div className="w-full sm:w-48 space-y-1.5 shrink-0">
+            <div className="flex justify-between text-xs font-mono">
+              <span className="text-neutral-400">Completion</span>
+              <span className={completion.isComplete ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>
+                {completion.percentage}%
+              </span>
+            </div>
+            <div className="w-full bg-[#141414] rounded-full h-2.5 border border-white/10 overflow-hidden">
+              <div 
+                className={`h-full transition-all duration-300 rounded-full ${
+                  completion.isComplete ? 'bg-emerald-400' : 'bg-amber-400'
+                }`}
+                style={{ width: `${completion.percentage}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {validationError && (
+        <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          <span>{validationError}</span>
+        </div>
+      )}
+
       {savedToast && (
-        <div className="p-4 rounded-2xl bg-[#141414] border border-white/20 text-emerald-400 text-xs font-mono text-center shadow-md">
-          Profile details saved successfully!
+        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono flex items-center justify-center gap-2">
+          <CheckCircle2 className="w-4 h-4" /> Profile details saved and verified! Full platform access is unlocked.
         </div>
       )}
 
@@ -347,7 +418,7 @@ export const Profile = () => {
             >
               <div className="flex items-center justify-between border-b border-white/10 pb-4">
                 <span className="text-xs font-mono text-emerald-400 font-bold uppercase tracking-widest flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-emerald-400" /> Candidate Profile Preview
+                  Candidate Profile Preview
                 </span>
                 <button onClick={() => setShowPublicPreview(false)} className="p-1 text-neutral-400 hover:text-white">
                   <X className="w-6 h-6" />

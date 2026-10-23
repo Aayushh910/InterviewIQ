@@ -2,17 +2,14 @@ import { Logo } from '../common/Logo';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Video, FileText, BarChart3, Award, History,
-  User, Settings, LogOut, ChevronLeft, ChevronRight, Sparkles
+  User, Settings, LogOut, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { APP_NAME } from '../../utils/constants';
 
 export const SIDEBAR_PRIMARY = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
   { name: "New Interview", path: "/interview", icon: Video },
-  { name: "Resume", path: "/resume", icon: FileText },
   { name: "Analytics", path: "/analytics", icon: BarChart3 },
-  { name: "Achievements", path: "/achievements", icon: Award },
-  { name: "Reports", path: "/reports", icon: FileText },
   { name: "History", path: "/history", icon: History },
 ];
 
@@ -36,7 +33,7 @@ export const Sidebar = ({ collapsed, setCollapsed, onLogoutClick }) => {
           <Logo showText={!collapsed} size="md" to="/dashboard" />
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-white/10 transition-colors hidden lg:block border border-white/10"
+            className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-white/10 transition-colors hidden lg:block border border-white/10 cursor-pointer"
             title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
           >
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
@@ -52,10 +49,7 @@ export const Sidebar = ({ collapsed, setCollapsed, onLogoutClick }) => {
             const routeColors = {
               '/dashboard': { bar: 'bg-cyan-400', icon: 'text-cyan-400' },
               '/interview': { bar: 'bg-amber-400', icon: 'text-amber-400' },
-              '/resume': { bar: 'bg-violet-400', icon: 'text-violet-400' },
               '/analytics': { bar: 'bg-cyan-400', icon: 'text-cyan-400' },
-              '/achievements': { bar: 'bg-amber-400', icon: 'text-amber-400' },
-              '/reports': { bar: 'bg-rose-400', icon: 'text-rose-400' },
               '/history': { bar: 'bg-violet-400', icon: 'text-violet-400' },
             };
             const activeColor = routeColors[item.path] || { bar: 'bg-cyan-400', icon: 'text-cyan-400' };
@@ -64,18 +58,20 @@ export const Sidebar = ({ collapsed, setCollapsed, onLogoutClick }) => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`relative flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 group ${
+                className={`relative flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 group ${
                   isActive
                     ? 'bg-[#141414] text-white border border-white/15 font-semibold shadow-sm'
                     : 'text-neutral-400 hover:text-white hover:bg-[#141414]/60 border border-transparent'
                 }`}
                 title={collapsed ? item.name : undefined}
               >
-                {isActive && (
-                  <span className={`absolute left-0 top-2 bottom-2 w-1 rounded-r-full ${activeColor.bar}`} />
-                )}
-                <Icon className={`w-5 h-5 shrink-0 transition-transform group-hover:scale-105 ${isActive ? activeColor.icon : 'text-neutral-400'}`} />
-                {!collapsed && <span>{item.name}</span>}
+                <div className="flex items-center gap-3">
+                  {isActive && (
+                    <span className={`absolute left-0 top-2 bottom-2 w-1 rounded-r-full ${activeColor.bar}`} />
+                  )}
+                  <Icon className={`w-5 h-5 shrink-0 transition-transform group-hover:scale-105 ${isActive ? activeColor.icon : 'text-neutral-400'}`} />
+                  {!collapsed && <span>{item.name}</span>}
+                </div>
               </Link>
             );
           })}
@@ -93,18 +89,20 @@ export const Sidebar = ({ collapsed, setCollapsed, onLogoutClick }) => {
             <Link
               key={item.path}
               to={item.path}
-              className={`relative flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 ${
+              className={`relative flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 ${
                 isActive
                   ? 'bg-[#141414] text-white border border-white/15 font-semibold'
                   : 'text-neutral-400 hover:text-white hover:bg-[#141414]/60 border border-transparent'
               }`}
               title={collapsed ? item.name : undefined}
             >
-              {isActive && (
-                <span className={`absolute left-0 top-2 bottom-2 w-1 rounded-r-full ${activeColor.split(' ')[1]}`} />
-              )}
-              <Icon className={`w-5 h-5 shrink-0 ${isActive ? activeColor.split(' ')[0] : 'text-neutral-400'}`} />
-              {!collapsed && <span>{item.name}</span>}
+              <div className="flex items-center gap-3">
+                {isActive && (
+                  <span className={`absolute left-0 top-2 bottom-2 w-1 rounded-r-full ${activeColor.split(' ')[1]}`} />
+                )}
+                <Icon className={`w-5 h-5 shrink-0 ${isActive ? activeColor.split(' ')[0] : 'text-neutral-400'}`} />
+                {!collapsed && <span>{item.name}</span>}
+              </div>
             </Link>
           );
         })}

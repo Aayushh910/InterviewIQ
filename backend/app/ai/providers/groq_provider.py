@@ -25,8 +25,16 @@ class GroqProvider(BaseAIProvider):
         timeout: Optional[float] = None,
         **kwargs
     ):
+        from app.core.context import groq_api_key_ctx
+        ctx_user_key = groq_api_key_ctx.get()
+        if ctx_user_key and ctx_user_key.strip():
+            logger.info("Using user-uploaded Groq API key from request context.")
+            self.api_key = ctx_user_key.strip()
+        else:
+            self.api_key = api_key or settings.AI_API_KEY
+            if self.api_key == settings.AI_API_KEY:
+                logger.debug("Falling back to server environment AI_API_KEY.")
 
-        self.api_key = api_key or settings.AI_API_KEY
         self.model = model or settings.AI_MODEL or "llama-3.3-70b-versatile"
         self.timeout = timeout or settings.AI_TIMEOUT_SECONDS or 15.0
 

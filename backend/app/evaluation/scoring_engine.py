@@ -164,6 +164,8 @@ class DeterministicScoringEngine:
             vis_score=avg_visual_score,
             answered_count=evidence.answered_questions_count,
             total_count=evidence.total_questions,
+            session_status=evidence.session_status,
+            termination_reason=evidence.termination_reason,
         )
 
         return FinalEvaluationResult(
@@ -295,9 +297,9 @@ class DeterministicScoringEngine:
             return 0.0
 
         # Sub-indicator calculations (0.0 - 100.0 scale)
-        presence = (norm_visual.face_presence_ratio or 1.0) * 100.0
-        alignment = (norm_visual.camera_alignment or 0.8) * 100.0
-        position = (norm_visual.position_quality or 0.8) * 100.0
+        presence = (norm_visual.face_presence_ratio if norm_visual.face_presence_ratio is not None else 1.0) * 100.0
+        alignment = (norm_visual.camera_alignment if norm_visual.camera_alignment is not None else 0.5) * 100.0
+        position = (norm_visual.position_quality if norm_visual.position_quality is not None else 0.5) * 100.0
 
         raw_score = (
             presence * VISUAL_METRIC_WEIGHTS["face_presence"] +
@@ -390,10 +392,23 @@ class DeterministicScoringEngine:
         vis_score: Optional[float],
         answered_count: int,
         total_count: int,
+        session_status: Optional[str] = None,
+        termination_reason: Optional[str] = None,
     ) -> str:
         """
         Generate a neutral, objective, explainable performance summary.
         """
+        summary_prefix = ""
+        if session_status == "terminated_by_policy" or termination_reason:
+            if termination_reason == "proctoring_tab_departures":
+                reason_clean = "Exceeded maximum allowed tab departures (2/2 tab switches detected)."
+            else:
+                reason_clean = termination_reason or "Exceeded maximum allowed tab departures (2/2 tab switches detected)."
+            summary_prefix = (
+                f"[Policy Violation Auto-Submit: This interview session was automatically terminated and submitted due to a proctoring policy violation: {reason_clean}. "
+                f"All responses submitted prior to the violation were preserved and fully evaluated.] "
+            )
+
         summary_parts = [
             f"Candidate achieved an overall performance score of {overall_score}/100 ({category}), "
             f"completing {answered_count} of {total_count} interview questions."
@@ -414,4 +429,4 @@ class DeterministicScoringEngine:
         else:
             summary_parts.append("Evaluation was derived exclusively from candidate answer content as multimodal telemetry was not recorded.")
 
-        return " ".join(summary_parts)
+        return summary_prefix + " ".join(summary_parts)

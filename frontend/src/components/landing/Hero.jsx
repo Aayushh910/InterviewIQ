@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Play, Sparkles, Activity, ShieldCheck, ChevronDown } from 'lucide-react';
+import { ArrowRight, Play, Activity, ShieldCheck, ChevronDown } from 'lucide-react';
 import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
 import { useAuth } from '../../context/AuthContext';
@@ -28,7 +28,6 @@ export const Hero = () => {
         {/* Crisp Outlined Top Badge */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
           <Badge size="md" className="mb-4 px-3 py-1 border border-white/20 bg-[#0A0A0A] shadow-md font-mono text-[11px] text-neutral-200">
-            <Sparkles className="w-3.5 h-3.5 text-emerald-400 mr-1.5" />
             InterviewIQ AI Interview Engine
           </Badge>
         </motion.div>

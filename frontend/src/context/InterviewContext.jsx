@@ -12,7 +12,17 @@ const InterviewContext = createContext({
 });
 
 export const InterviewProvider = ({ children }) => {
-  const [interviews, setInterviews] = useState([]);
+  const [interviews, setInterviews] = useState(() => {
+    try {
+      const cached = localStorage.getItem('interviewiq_cached_interviews');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return [];
+  });
+  const [isLoadingInterviews, setIsLoadingInterviews] = useState(true);
   const [reports, setReports] = useState({});
 
   const [activeConfig, setActiveConfig] = useState({
@@ -22,7 +32,6 @@ export const InterviewProvider = ({ children }) => {
     difficulty: 'Medium',
     experience: '2+',
     mode: 'General',
-    resumeId: '',
     counterQuestions: true,
     language: 'English',
   });
@@ -31,16 +40,24 @@ export const InterviewProvider = ({ children }) => {
   useEffect(() => {
     let isMounted = true;
     const token = localStorage.getItem('interviewiq_token');
-    if (!token) return;
+    if (!token) {
+      setIsLoadingInterviews(false);
+      return;
+    }
 
     const fetchApiInterviews = async () => {
       try {
         const data = await getUserInterviews();
         if (isMounted && data && Array.isArray(data)) {
           setInterviews(data);
+          try {
+            localStorage.setItem('interviewiq_cached_interviews', JSON.stringify(data));
+          } catch (e) {}
         }
       } catch (err) {
         console.warn('Backend interview history notice:', err);
+      } finally {
+        if (isMounted) setIsLoadingInterviews(false);
       }
     };
     fetchApiInterviews();
@@ -58,20 +75,35 @@ export const InterviewProvider = ({ children }) => {
     const analytics = sessionData.analytics || {};
     const metrics = analytics.metrics || {};
     const overallScore = Math.round(analytics.overall_score ?? sessionData.score ?? 0);
+    const isTerminated = sessionData.terminatedByPolicy ||
+      analytics.status === 'terminated_by_policy' ||
+      sessionData.status === 'Terminated (Policy Violation)' ||
+      sessionData.status === 'terminated_by_policy' ||
+      Boolean(sessionData.terminationReason);
+
+    const terminationReasonText = sessionData.terminationExplanation ||
+      analytics.termination_explanation ||
+      (isTerminated
+        ? 'Auto-submitted due to proctoring policy violation: Exceeded maximum allowed tab departures (2/2 tab switches detected).'
+        : null);
 
     const newInterview = {
       id,
       session_id: id,
       title: sessionData.title || `${activeConfig.domain || activeConfig.interviewType || 'Technical'} Practice Session`,
-      mode: activeConfig.mode === 'Resume Based' ? 'resume-jd' : 'general',
-      modeLabel: activeConfig.mode === 'Resume Based' ? 'Resume Based' : 'General Technical',
+      mode: 'general',
+      modeLabel: 'General Technical',
       role: `${activeConfig.domain || 'Software'} Engineer (${activeConfig.experience || '2+'})`,
       date: new Date().toISOString().split('T')[0],
       timeAgo: 'Just now',
       duration: `${sessionData.durationMinutes || 4} Mins`,
       score: overallScore,
-      status: 'Completed',
-      summary: analytics.session_summary || sessionData.summary || 'Session completed and evaluated.',
+      status: isTerminated ? 'Terminated (Policy Violation)' : 'Completed',
+      terminatedByPolicy: isTerminated,
+      terminationReason: terminationReasonText,
+      summary: isTerminated
+        ? `[Policy Auto-Submit] ${terminationReasonText}`
+        : (analytics.session_summary || sessionData.summary || 'Session completed and evaluated.'),
       typeBadge: activeConfig.interviewType || 'Technical',
     };
 
@@ -106,6 +138,9 @@ export const InterviewProvider = ({ children }) => {
       date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
       duration: newInterview.duration,
       overallScore: overallScore,
+      status: isTerminated ? 'Terminated (Policy Violation)' : 'Completed',
+      terminatedByPolicy: isTerminated,
+      terminationReason: terminationReasonText,
       performanceCategory: analytics.performance_category || 'Evaluated',
       scores: {
         correctness: metrics.correctness !== undefined ? Math.round(metrics.correctness) : 0,
@@ -138,7 +173,13 @@ export const InterviewProvider = ({ children }) => {
   const saveCompletedInterview = (sessionData) => {
     const { id, newInterview, newReport } = formatReportAndInterview(sessionData);
 
-    setInterviews((prev) => [newInterview, ...prev.filter(i => i.id !== id)]);
+    setInterviews((prev) => {
+      const updated = [newInterview, ...prev.filter(i => i.id !== id)];
+      try {
+        localStorage.setItem('interviewiq_cached_interviews', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
     setReports((prev) => ({ ...prev, [id]: newReport }));
     return id;
   };
@@ -158,7 +199,13 @@ export const InterviewProvider = ({ children }) => {
           durationMinutes: 4,
           score: analytics.overall_score || 0
         });
-        setInterviews((prev) => [newInterview, ...prev.filter(i => i.id !== id)]);
+        setInterviews((prev) => {
+          const updated = [newInterview, ...prev.filter(i => i.id !== id)];
+          try {
+            localStorage.setItem('interviewiq_cached_interviews', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
         setReports((prev) => ({ ...prev, [id]: newReport }));
         return newReport;
       }
@@ -172,6 +219,7 @@ export const InterviewProvider = ({ children }) => {
     <InterviewContext.Provider
       value={{
         interviews,
+        isLoadingInterviews,
         reports,
         activeConfig,
         updateConfig,

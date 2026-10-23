@@ -39,7 +39,7 @@ export const WeeklyGoals = ({ interviews = [] }) => {
           </div>
 
           <span className="text-xs font-mono font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20 shadow-sm">
-            {streak} Day Streak 🔥
+            {streak} Day Streak
           </span>
         </div>
 

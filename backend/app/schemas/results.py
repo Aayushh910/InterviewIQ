@@ -142,6 +142,8 @@ class CandidateResultsDTO(BaseModel):
     duration_minutes: Optional[int] = None
 
     # Overall summary
+    session_status: Optional[str] = None
+    termination_reason: Optional[str] = None
     overall_score: float = Field(..., ge=0.0, le=100.0)
     performance_category: str = Field(..., description="Exceptional, Strong, Proficient, Developing, Needs Improvement")
     evaluation_summary: str

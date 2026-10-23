@@ -1,12 +1,12 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, Video, Play, ArrowRight, TrendingUp } from 'lucide-react';
+import { Video, Play, ArrowRight, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '../common/Button';
 
 export const WelcomeHero = ({ userName, activeInterview, readinessScore }) => {
-  const hasLiveScore = readinessScore !== undefined && readinessScore !== null && readinessScore !== 'N/A';
-  const numericScore = hasLiveScore ? Number(readinessScore) : 0;
+  const numericScore = (readinessScore !== undefined && readinessScore !== null && readinessScore !== 'N/A') ? Number(readinessScore) : 0;
+  const hasLiveScore = numericScore > 0;
   
   const scoreBadge = numericScore >= 85 
     ? 'Top 5%' 
@@ -19,19 +19,18 @@ export const WelcomeHero = ({ userName, activeInterview, readinessScore }) => {
     : 'New Candidate';
 
   return (
-    <div className="surface-container p-6 sm:p-8 lg:p-10 relative overflow-hidden">
+    <div className="surface-container p-4 sm:p-5 lg:p-6 relative overflow-hidden">
       {/* Ambient Floating Orbs matching Landing */}
       <div className="absolute top-0 right-1/4 w-96 h-96 bg-white/[0.02] rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-        <div className="max-w-2xl space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#1A1A1A] border border-white/10 text-neutral-200 text-xs font-mono shadow-md">
-            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+      <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5">
+        <div className="max-w-2xl space-y-2.5">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1A1A1A] border border-white/10 text-neutral-200 text-xs font-mono shadow-md">
             InterviewIQ AI Interview Engine
           </div>
 
-          <h1 className="text-2xl sm:text-4xl font-sans font-extrabold text-white tracking-tight leading-tight">
+          <h1 className="text-xl sm:text-3xl font-sans font-extrabold text-white tracking-tight leading-tight">
             Ready to master your next interview,{' '}
             <span className="bg-gradient-to-r from-cyan-400 via-violet-300 to-amber-300 bg-clip-text text-transparent">
               {userName || 'Candidate'}
@@ -39,7 +38,7 @@ export const WelcomeHero = ({ userName, activeInterview, readinessScore }) => {
             ?
           </h1>
 
-          <p className="text-sm sm:text-base text-neutral-300 leading-relaxed font-normal">
+          <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed font-normal">
             Practice high-stakes technical & behavioral mock loops. Receive live facial composure, voice clarity, and STAR response scoring in real-time.
           </p>
 

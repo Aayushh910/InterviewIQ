@@ -6,7 +6,7 @@ const STEPS = [
   { icon: PlusCircle, step: "01", title: "Create Your Interview", desc: "Choose Resume-Based, JD-Based, Technical, or HR. Upload your resume or paste a job description.", color: "#F5A623" },
   { icon: MessageCircle, step: "02", title: "Answer AI Questions", desc: "Respond via voice or text to dynamic, context-aware questions. The AI adapts in real-time.", color: "#FF6B6B" },
   { icon: Cpu, step: "03", title: "AI Analyzes Everything", desc: "Technical knowledge, communication, speech patterns, confidence — all evaluated simultaneously.", color: "#A8E063" },
-  { icon: Download, step: "04", title: "Download Your Report", desc: "Get a detailed PDF with scores, question-wise feedback, and a personalized learning roadmap.", color: "#F5A623" },
+  { icon: Download, step: "04", title: "Download Your Report", desc: "Get a detailed PDF with scores, question-wise feedback, and actionable improvement recommendations.", color: "#F5A623" },
 ];
 
 function Step({ icon: Icon, step, title, desc, color, index, isLast }) {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Lightbulb, ArrowUpRight, CheckCircle2 } from 'lucide-react';
+import { Lightbulb, ArrowUpRight, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const AISuggestions = ({ interviews = [] }) => {
@@ -54,7 +54,7 @@ export const AISuggestions = ({ interviews = [] }) => {
       <div className="space-y-3 flex-1 flex flex-col justify-between">
         {dynamicSuggestions.length === 0 ? (
           <div className="p-6 rounded-2xl bg-[#0A0A0A] border border-white/10 text-center space-y-2">
-            <Sparkles className="w-8 h-8 text-neutral-500 mx-auto" />
+            <Lightbulb className="w-8 h-8 text-neutral-500 mx-auto" />
             <h3 className="text-xs font-bold text-white">No Coaching Suggestions Yet</h3>
             <p className="text-xs text-neutral-400 font-mono">
               Complete a practice interview session to generate personalized AI coaching recommendations.
@@ -76,7 +76,7 @@ export const AISuggestions = ({ interviews = [] }) => {
             >
               <div>
                 <h3 className={`text-xs font-bold flex items-center gap-1.5 mb-1 ${item.colorClass}`}>
-                  <Sparkles className="w-3.5 h-3.5" /> {item.title}
+                  <Lightbulb className="w-3.5 h-3.5" /> {item.title}
                 </h3>
                 <p className="text-xs text-neutral-300 leading-relaxed font-sans">
                   {item.description}

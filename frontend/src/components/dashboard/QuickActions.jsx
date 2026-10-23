@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Video, FileUp, FileText, Sparkles, ChevronRight } from 'lucide-react';
+import { Video, History, BarChart3, User, Zap, ChevronRight } from 'lucide-react';
 
 export const QuickActions = () => {
   const actions = [
@@ -13,28 +13,28 @@ export const QuickActions = () => {
       bgClass: "bg-cyan-500/10 border-cyan-500/20",
     },
     {
-      title: "Upload Resume",
-      subtitle: "Analyze PDF for ATS score & skill gap",
-      icon: FileUp,
-      link: "/resume",
+      title: "Interview History",
+      subtitle: "Review past sessions, scorecards & PDF reports",
+      icon: History,
+      link: "/history",
       colorClass: "text-amber-400 group-hover:text-amber-300",
       bgClass: "bg-amber-500/10 border-amber-500/20",
     },
     {
-      title: "View Reports",
-      subtitle: "Review saved interview feedback & PDF",
-      icon: FileText,
-      link: "/reports",
+      title: "Analytics Intelligence",
+      subtitle: "Speech cadence, composure & answer quality",
+      icon: BarChart3,
+      link: "/analytics",
       colorClass: "text-violet-400 group-hover:text-violet-300",
       bgClass: "bg-violet-500/10 border-violet-500/20",
     },
     {
-      title: "Resume Analysis",
-      subtitle: "Deep-dive keyword & grammar rating",
-      icon: Sparkles,
-      link: "/resume",
-      colorClass: "text-rose-400 group-hover:text-rose-300",
-      bgClass: "bg-rose-500/10 border-rose-500/20",
+      title: "Candidate Profile",
+      subtitle: "Target roles, technical skills & Groq AI key",
+      icon: User,
+      link: "/profile",
+      colorClass: "text-emerald-400 group-hover:text-emerald-300",
+      bgClass: "bg-emerald-500/10 border-emerald-500/20",
     },
   ];
 
@@ -43,12 +43,12 @@ export const QuickActions = () => {
       <div className="border-b border-white/10 pb-3">
         <h2 className="text-base font-bold text-white flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-[#1A1A1A] border border-white/10 flex items-center justify-center text-cyan-400">
-            <Sparkles className="w-4 h-4" />
+            <Zap className="w-4 h-4" />
           </div>
           Instant Practice Launchpad & Shortcuts
         </h2>
         <p className="text-xs text-neutral-400 font-mono mt-0.5">
-          Direct one-click access to launch interviews, upload resumes & view reports
+          Direct one-click access to launch mock interviews, inspect analytics & review history
         </p>
       </div>
 

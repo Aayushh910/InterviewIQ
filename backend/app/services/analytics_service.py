@@ -325,6 +325,7 @@ def get_session_analytics(
         session_id=session.id,
         interview_id=session.interview_id,
         status=session.status,
+        termination_reason=session.termination_reason,
         overall_score=overall_avg,
         performance_category=category,
         metrics=dim_metrics,

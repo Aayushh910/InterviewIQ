@@ -1,15 +1,17 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Award, Video, Zap, FileCheck, Clock } from 'lucide-react';
+import { Award, Video, Zap, CheckCircle2, Clock } from 'lucide-react';
 
 export const KPICards = ({ stats }) => {
+  const hasSessions = stats?.totalSessions > 0;
+
   const kpis = [
     {
       title: "Overall AI Score",
-      value: stats?.readinessScore ?? 'N/A',
-      suffix: stats?.readinessScore !== 'N/A' ? "/100" : "",
-      change: stats?.totalSessions > 0 ? "Evaluated" : "No evaluations",
-      positive: true,
+      value: hasSessions ? stats?.readinessScore : '0.0',
+      suffix: "/100",
+      change: hasSessions ? "Evaluated Score" : "No sessions completed yet",
+      positive: hasSessions,
       icon: Award,
       colorClass: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
     },
@@ -17,43 +19,43 @@ export const KPICards = ({ stats }) => {
       title: "Interviews Completed",
       value: stats?.totalSessions ?? 0,
       suffix: " Sessions",
-      change: stats?.totalSessions > 0 ? "Active Candidate" : "0 this week",
-      positive: true,
+      change: hasSessions ? "Active Candidate" : "0 completed sessions",
+      positive: hasSessions,
       icon: Video,
       colorClass: "text-amber-400 bg-amber-500/10 border-amber-500/20",
     },
     {
       title: "Average Confidence",
-      value: stats?.avgConfidence ?? 'N/A',
-      suffix: stats?.avgConfidence !== 'N/A' ? "%" : "",
-      change: stats?.avgConfidence !== 'N/A' ? "Voice & Visual" : "Pending",
-      positive: true,
+      value: hasSessions ? stats?.avgConfidence : '0.0',
+      suffix: "%",
+      change: hasSessions ? "Vocal & Facial Composure" : "Awaiting first session",
+      positive: hasSessions,
       icon: Zap,
       colorClass: "text-violet-400 bg-violet-500/10 border-violet-500/20",
     },
     {
-      title: "Resume Match Score",
-      value: stats?.atsScore ?? 'N/A',
-      suffix: stats?.atsScore !== 'N/A' ? "" : "",
-      change: stats?.atsScore !== 'N/A' ? "Parsed" : "No resume",
-      positive: true,
-      icon: FileCheck,
-      colorClass: "text-rose-400 bg-rose-500/10 border-rose-500/20",
+      title: "Answer Quality & Depth",
+      value: hasSessions ? stats?.avgAnswerQuality : '0.0',
+      suffix: "/100",
+      change: hasSessions ? "Technical Correctness" : "Not yet evaluated",
+      positive: hasSessions,
+      icon: CheckCircle2,
+      colorClass: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
     },
     {
       title: "Practice Hours",
       value: stats?.totalHours ?? '0.0',
       suffix: " Hours",
-      change: stats?.totalHours > 0 ? "Recorded" : "0.0 hrs",
-      positive: true,
+      change: hasSessions ? "Recorded Practice Time" : "0.0 hrs recorded",
+      positive: hasSessions,
       icon: Clock,
-      colorClass: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+      colorClass: "text-rose-400 bg-rose-500/10 border-rose-500/20",
     },
   ];
 
   return (
-    <section className="surface-container p-6 sm:p-7 space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-4">
+    <section className="surface-container p-4 sm:p-5 space-y-3.5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
         <div>
           <h2 className="text-base font-extrabold text-white tracking-tight flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-[#1A1A1A] border border-white/10 flex items-center justify-center text-cyan-400">
@@ -62,7 +64,7 @@ export const KPICards = ({ stats }) => {
             Real-Time AI Competency Matrix
           </h2>
           <p className="text-xs text-neutral-400 font-mono mt-0.5">
-            Track your overall score, completed mock loops, voice confidence, and resume match benchmarks.
+            Track your overall score, completed mock loops, voice confidence, and answer quality benchmarks.
           </p>
         </div>
       </div>

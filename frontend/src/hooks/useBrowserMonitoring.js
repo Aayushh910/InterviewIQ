@@ -86,63 +86,46 @@ export function useBrowserMonitoring(options = {}) {
       lastVisibilityEventTimeRef.current = now;
 
       if (document.visibilityState === 'hidden') {
-        // Tab hidden
+        // Tab hidden -> Candidate switched away from interview
         setIsTabHidden(true);
         tabHiddenStartTimeRef.current = now;
 
+        departureCountRef.current += 1;
+        const newCount = departureCountRef.current;
+        setDepartureCount(newCount);
+
         emitEvent('tab_hidden', {
-          metadata: { current_departures: departureCountRef.current },
+          metadata: { departure_count: newCount, max_allowed: maxTabDepartures },
         });
 
-        // Start grace period countdown
-        setIsInGracePeriod(true);
-        setGracePeriodRemainingSec(gracePeriodSeconds);
+        // Auto-submit after reaching maxTabDepartures (default: 2)
+        if (newCount >= maxTabDepartures) {
+          isTerminalRef.current = true;
+          setActiveWarning({
+            type: 'auto_submit',
+            message: `Maximum allowed tab departures (${newCount}/${maxTabDepartures}) exceeded. Auto-submitting interview for proctoring violation...`,
+            departureCount: newCount,
+            maxAllowed: maxTabDepartures,
+          });
 
-        if (graceTimerIntervalRef.current) clearInterval(graceTimerIntervalRef.current);
-        if (graceTimerTimeoutRef.current) clearTimeout(graceTimerTimeoutRef.current);
-
-        let countdown = gracePeriodSeconds;
-        graceTimerIntervalRef.current = setInterval(() => {
-          countdown -= 1;
-          setGracePeriodRemainingSec(Math.max(0, countdown));
-        }, 1000);
-
-        // Grace period expired while still away
-        graceTimerTimeoutRef.current = setTimeout(() => {
-          clearInterval(graceTimerIntervalRef.current);
-          setIsInGracePeriod(false);
-
-          // Confirm qualifying departure
-          departureCountRef.current += 1;
-          setDepartureCount(departureCountRef.current);
-
-          const newCount = departureCountRef.current;
-          const isViolation = newCount >= maxTabDepartures && (autoSubmissionEnabled || policyMode === 'auto_submit');
-
-          if (isViolation) {
-            isTerminalRef.current = true;
-            setActiveWarning({
-              type: 'auto_submit',
-              message: `Maximum allowed tab departures (${maxTabDepartures}) exceeded. Submitting interview...`,
+          if (typeof onPolicyViolationRef.current === 'function') {
+            onPolicyViolationRef.current({
+              reason: 'proctoring_tab_departures',
               departureCount: newCount,
               maxAllowed: maxTabDepartures,
-            });
-            if (typeof onPolicyViolationRef.current === 'function') {
-              onPolicyViolationRef.current({
-                reason: 'proctoring_tab_departures',
-                departureCount: newCount,
-                maxAllowed: maxTabDepartures,
-              });
-            }
-          } else {
-            setActiveWarning({
-              type: 'departure_confirmed',
-              message: `Tab departure ${newCount} of ${maxTabDepartures} recorded. Please remain in the interview.`,
-              departureCount: newCount,
-              maxAllowed: maxTabDepartures,
+              explanation: `Auto-submitted due to proctoring policy violation: Exceeded maximum allowed tab departures (${newCount}/${maxTabDepartures} tab switches detected).`,
             });
           }
-        }, gracePeriodSeconds * 1000);
+          return;
+        }
+
+        // First switch warning (e.g. 1 of 2)
+        setActiveWarning({
+          type: 'tab_warning',
+          message: `Warning: Tab switch ${newCount} of ${maxTabDepartures} recorded! One more tab departure will automatically terminate and submit your interview.`,
+          departureCount: newCount,
+          maxAllowed: maxTabDepartures,
+        });
 
       } else if (document.visibilityState === 'visible') {
         // Candidate returned to tab
@@ -153,19 +136,17 @@ export function useBrowserMonitoring(options = {}) {
 
         emitEvent('tab_visible', {
           duration_seconds: Math.round(awayDurationSec * 10) / 10,
-          metadata: { away_duration_seconds: awayDurationSec },
+          metadata: {
+            away_duration_seconds: awayDurationSec,
+            departure_count: departureCountRef.current,
+          },
         });
 
-        // If returned within grace period
-        if (graceTimerTimeoutRef.current && awayDurationSec < gracePeriodSeconds) {
-          clearTimeout(graceTimerTimeoutRef.current);
-          if (graceTimerIntervalRef.current) clearInterval(graceTimerIntervalRef.current);
-          setIsInGracePeriod(false);
-
-          // Display informative non-penalizing grace warning
+        // Remind candidate of recorded tab switches
+        if (!isTerminalRef.current && departureCountRef.current > 0) {
           setActiveWarning({
-            type: 'grace_warning',
-            message: `Interview tab switch detected. Please remain focused on this screen (${departureCountRef.current}/${maxTabDepartures} departures recorded).`,
+            type: 'tab_warning',
+            message: `Warning: Tab switch ${departureCountRef.current} of ${maxTabDepartures} recorded! Leaving this screen one more time will automatically terminate and submit your interview.`,
             departureCount: departureCountRef.current,
             maxAllowed: maxTabDepartures,
           });

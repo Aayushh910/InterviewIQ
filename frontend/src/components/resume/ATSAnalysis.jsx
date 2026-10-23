@@ -1,5 +1,5 @@
 import React from 'react';
-import { Award, CheckCircle2, AlertTriangle, Sparkles, FileCheck, ArrowUpRight } from 'lucide-react';
+import { Award, CheckCircle2, AlertTriangle, FileCheck, ArrowUpRight } from 'lucide-react';
 
 export const ATSAnalysis = ({ resume }) => {
   if (!resume) return null;
@@ -68,7 +68,7 @@ export const ATSAnalysis = ({ resume }) => {
         {/* Actionable Suggestions */}
         <div className="p-4 rounded-2xl bg-[#141414]/80 border border-white/10 space-y-2">
           <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400 font-mono">
-            <Sparkles className="w-4 h-4 text-emerald-400" /> AI Recommendations
+            AI Recommendations
           </div>
           <ul className="space-y-1.5 text-xs text-neutral-300">
             {resume.improvementSuggestions?.map((sug, i) => (

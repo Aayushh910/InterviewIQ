@@ -17,8 +17,8 @@ def estimate_camera_alignment(head_pose: Dict[str, float]) -> Dict[str, float]:
     # Angular deviation vector length (weighted slightly lower for roll)
     deviation_deg = math.sqrt((yaw ** 2) + (pitch ** 2) + ((roll * 0.5) ** 2))
 
-    # 0 deg deviation -> 1.0 score; >= 45 deg deviation -> 0.0 score
-    alignment_score = max(0.0, 1.0 - (deviation_deg / 45.0))
+    # Calibrated angular deviation: >= 36 deg deviation produces 0.0 camera alignment
+    alignment_score = max(0.0, 1.0 - (deviation_deg / 36.0))
     alignment_score = round(float(alignment_score), 4)
 
     return {"alignment_score": alignment_score}

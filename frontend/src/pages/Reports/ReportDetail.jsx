@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Award, Calendar, Clock, CheckCircle2, AlertTriangle, Sparkles, FileText, Loader2 } from 'lucide-react';
+import { ArrowLeft, Award, Calendar, Clock, CheckCircle2, AlertTriangle, FileText, Loader2 } from 'lucide-react';
 import { useInterview } from '../../context/InterviewContext';
 import { QuestionAnalysisCard } from '../../components/reports/QuestionAnalysisCard';
 import { DownloadPDFButton } from '../../components/reports/DownloadPDFButton';
@@ -83,7 +82,7 @@ export const ReportDetail = ({ reportIdOverride }) => {
             to={`/results/${id}`}
             className="px-3.5 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 text-xs font-mono font-bold flex items-center gap-1.5 transition-colors"
           >
-            <Sparkles className="w-3.5 h-3.5" /> Full Results Dashboard
+            Full Results Dashboard
           </Link>
           <DownloadPDFButton sessionId={id} reportTitle={report.title} />
         </div>
@@ -129,7 +128,7 @@ export const ReportDetail = ({ reportIdOverride }) => {
       {/* Question-wise Analysis */}
       <div className="space-y-4">
         <h2 className="text-lg font-bold text-white dark:text-white light:text-slate-900 flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-emerald-400" /> Question-wise Transcript & AI Evaluation ({report.questionAnalysis?.length || 0})
+          Question-wise Transcript & AI Evaluation ({report.questionAnalysis?.length || 0})
         </h2>
 
         <div className="space-y-4">

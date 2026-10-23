@@ -31,6 +31,7 @@ export const Login = () => {
 
   const onSubmit = async (data) => {
     setErrorMessage('');
+    sessionStorage.removeItem('interviewiq_profile_prompt_dismissed');
     const result = await login(data.email.trim(), data.password);
     if (result?.success) {
       navigate(from, { replace: true });
@@ -40,10 +41,9 @@ export const Login = () => {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto">
-      <div className="mb-6">
-        <h2 className="text-2xl font-sans font-extrabold text-white tracking-tight">Welcome Back</h2>
-        <p className="text-xs text-neutral-400 mt-1">Log into your InterviewIQ account to continue your practice.</p>
+    <div className="w-full">
+      <div className="mb-6 text-center">
+        <h2 className="text-2xl font-sans font-extrabold text-white tracking-tight">Sign In</h2>
       </div>
 
       {errorMessage && (

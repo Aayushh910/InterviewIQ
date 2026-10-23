@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Clock, Gauge, HelpCircle, CheckCircle2, Sparkles, Cpu, Activity } from 'lucide-react';
+import { ArrowRight, Clock, Gauge, HelpCircle, CheckCircle2, Cpu, Activity } from 'lucide-react';
 import { GlassCard } from '../common/GlassCard';
 import { Badge } from '../common/Badge';
 import { Button } from '../common/Button';
@@ -23,7 +23,6 @@ export const InterviewModeDetail = ({ selectedMode }) => {
           {/* Top Metadata Badges */}
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2.5 border-b border-white/15">
             <Badge size="sm" className="px-2.5 py-0.5 font-mono text-[11px] border border-white/25 bg-white/5 text-white">
-              <Sparkles className="w-3 h-3 mr-1 text-emerald-400" />
               InterviewIQ AI Engine
             </Badge>
 

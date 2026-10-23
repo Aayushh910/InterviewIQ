@@ -25,7 +25,8 @@ class GroqWhisperSTTProvider(BaseSTTProvider):
         model: Optional[str] = None,
         timeout: Optional[float] = None
     ):
-        self.api_key = api_key or settings.STT_API_KEY or settings.AI_API_KEY
+        from app.core.context import groq_api_key_ctx
+        self.api_key = api_key or groq_api_key_ctx.get() or settings.STT_API_KEY or settings.AI_API_KEY
         self.model = model or settings.STT_MODEL or "whisper-large-v3-turbo"
         self.timeout = timeout or settings.STT_TIMEOUT_SECONDS or 30.0
 

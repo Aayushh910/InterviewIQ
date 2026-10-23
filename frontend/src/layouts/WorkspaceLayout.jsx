@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Menu, X, Search, Bell, Sun, Moon, Sparkles, User, LogOut, ChevronRight
+  Menu, X, Sun, Moon, User, LogOut, ChevronRight
 } from 'lucide-react';
 import { Sidebar, SIDEBAR_PRIMARY, SIDEBAR_SECONDARY } from '../components/layout/Sidebar';
 import { LogoutModal } from '../components/common/LogoutModal';
@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLenis } from '../hooks/useLenis';
 import { APP_NAME } from '../utils/constants';
+import { Logo } from '../components/common/Logo';
 
 export const WorkspaceLayout = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
@@ -21,6 +22,16 @@ export const WorkspaceLayout = ({ children }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+
+  // Helper to extract clean initials (e.g., Aayush Savaliya -> AS)
+  const getInitials = (name) => {
+    if (!name || typeof name !== 'string') return 'AS';
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
 
   // Initialize smooth Lenis scroll targeting the workspace main scroll container
   const lenisRef = useLenis({ wrapper: mainRef });
@@ -35,7 +46,43 @@ export const WorkspaceLayout = ({ children }) => {
     }
   }, [location.pathname]);
 
+  useEffect(() => {
+    const handleSidebarCollapsed = (e) => {
+      setCollapsed(Boolean(e.detail?.collapsed));
+    };
+    window.addEventListener('set-sidebar-collapsed', handleSidebarCollapsed);
+    return () => window.removeEventListener('set-sidebar-collapsed', handleSidebarCollapsed);
+  }, []);
+
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (location.pathname === '/profile') return;
+
+    const isComplete = localStorage.getItem('interviewiq_profile_completed') === 'true';
+    const isDismissed = sessionStorage.getItem('interviewiq_profile_prompt_dismissed') === 'true';
+
+    if (!isComplete && !isDismissed) {
+      const timer = setTimeout(() => {
+        setProfileModalOpen(true);
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [location.pathname]);
+
+  const handleDismissProfileModal = () => {
+    sessionStorage.setItem('interviewiq_profile_prompt_dismissed', 'true');
+    setProfileModalOpen(false);
+  };
+
+  const handleGoToProfile = () => {
+    sessionStorage.setItem('interviewiq_profile_prompt_dismissed', 'true');
+    setProfileModalOpen(false);
+    navigate('/profile');
+  };
+
   const handleConfirmLogout = () => {
+    sessionStorage.removeItem('interviewiq_profile_prompt_dismissed');
     logoutModalOpen && setLogoutModalOpen(false);
     logout();
     navigate('/', { replace: true });
@@ -62,50 +109,23 @@ export const WorkspaceLayout = ({ children }) => {
             >
               <Menu className="w-6 h-6" />
             </button>
-
-            {/* Quick Search Input */}
-            <div className="relative hidden sm:flex items-center w-64 lg:w-80">
-              <Search className="w-4 h-4 absolute left-3 text-neutral-400" />
-              <input
-                type="text"
-                placeholder="Search interviews, reports, skills..."
-                className="w-full bg-[#141414] border border-white/10 text-xs rounded-xl pl-9 pr-4 py-2 text-white placeholder-neutral-400 focus:outline-none focus:border-emerald-400 transition-colors"
-              />
-            </div>
           </div>
 
           <div className="flex items-center gap-3 sm:gap-4">
-            {/* AI Readiness Status Badge */}
-            <div className="hidden lg:flex items-center gap-2 px-3 py-1 rounded-full bg-[#141414] border border-white/10 text-emerald-400 text-xs font-semibold shadow-sm font-mono">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              AI Score: 88.5%
-            </div>
-
-            {/* Notifications */}
-            <button
-              className="relative p-2 text-neutral-400 hover:text-white rounded-xl hover:bg-[#141414] transition-colors border border-white/10"
-              title="Notifications"
-            >
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-black" />
-            </button>
-
             {/* User Profile Quick Card */}
             <Link
               to="/profile"
               className="flex items-center gap-3 p-1 rounded-xl hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-slate-100 transition-colors border border-transparent hover:border-white/10"
             >
-              <img
-                src={user?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"}
-                alt="Avatar"
-                className="w-8 h-8 rounded-full object-cover ring-2 ring-white/20 shrink-0"
-              />
+              <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-400 font-mono font-bold text-xs flex items-center justify-center shrink-0">
+                {getInitials(user?.name)}
+              </div>
               <div className="hidden md:flex flex-col text-left">
                 <span className="text-xs font-semibold text-white dark:text-white light:text-slate-900 truncate">
-                  {user?.name || 'Alex Rivera'}
+                  {user?.name || 'Aayush Savaliya'}
                 </span>
                 <span className="text-[10px] text-emerald-400 font-mono truncate">
-                  {user?.role || 'Full-Stack Candidate'}
+                  {user?.role || 'Candidate'}
                 </span>
               </div>
             </Link>
@@ -140,12 +160,7 @@ export const WorkspaceLayout = ({ children }) => {
             >
               <div>
                 <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                      <Sparkles className="w-5 h-5" />
-                    </div>
-                    <span className="font-display font-bold text-lg text-slate-100">{APP_NAME}</span>
-                  </div>
+                  <Logo to="/dashboard" size="md" />
                   <button onClick={() => setMobileOpen(false)} className="p-1 text-slate-400 hover:text-slate-100">
                     <X className="w-6 h-6" />
                   </button>
@@ -197,6 +212,60 @@ export const WorkspaceLayout = ({ children }) => {
         onClose={() => setLogoutModalOpen(false)}
         onConfirm={handleConfirmLogout}
       />
+
+      {/* One-Time Profile Prompt Modal */}
+      <AnimatePresence>
+        {profileModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={handleDismissProfileModal}
+              className="fixed inset-0 bg-black/80 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative z-10 w-full max-w-md bg-[#0A0A0A] border border-emerald-500/30 rounded-3xl p-6 sm:p-7 shadow-2xl text-white space-y-5 backdrop-blur-xl"
+            >
+              <div className="flex items-center gap-3 text-emerald-400">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                  <User className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Complete Candidate Profile</h3>
+                  <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-wider">
+                    Recommended Setup
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-xs text-neutral-300 leading-relaxed font-sans bg-[#141414] p-4 rounded-2xl border border-white/10">
+                Complete your candidate profile so InterviewIQ can tailor questions, difficulty levels, and evaluations to your skills and target role.
+              </p>
+
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-end gap-3 font-mono">
+                <button
+                  type="button"
+                  onClick={handleDismissProfileModal}
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#141414] hover:bg-[#1f1f1f] text-neutral-300 hover:text-white border border-white/10 text-xs transition-colors cursor-pointer"
+                >
+                  Skip for Later
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGoToProfile}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-white text-black font-bold text-xs hover:bg-neutral-200 transition-all flex items-center justify-center gap-1.5 shadow-lg cursor-pointer"
+                >
+                  Complete Profile <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

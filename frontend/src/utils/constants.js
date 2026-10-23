@@ -12,19 +12,13 @@ export const NAV_LINKS = [
   { name: "How It Works", href: "#how-it-works" },
   { name: "Interview Modes", href: "#interview-types" },
   { name: "Analytics", href: "#analytics" },
-  { name: "Testimonials", href: "#testimonials" },
 ];
 
 export const WORKSPACE_NAV = [
   { name: "Dashboard", path: "/dashboard", icon: "LayoutDashboard" },
-  { name: "Interviews", path: "/interviews", icon: "Video" },
-  { name: "Resume Studio", path: "/resume", icon: "Sparkles" },
-  { name: "AI Coach", path: "/coach", icon: "BotMessageSquare" },
+  { name: "Interviews", path: "/interview", icon: "Video" },
   { name: "Analytics", path: "/analytics", icon: "BarChart3" },
-  { name: "Reports", path: "/reports", icon: "FileText" },
-  { name: "History", path: "/interviews/history", icon: "History" },
-  { name: "Learning", path: "/learning", icon: "GraduationCap" },
-  { name: "Achievements", path: "/achievements", icon: "Award" },
+  { name: "History", path: "/history", icon: "History" },
   { name: "Profile", path: "/profile", icon: "User" },
   { name: "Settings", path: "/settings", icon: "Settings" },
 ];
@@ -65,7 +59,7 @@ export const FEATURES_LIST = [
   },
   {
     title: "Personalized AI Feedback",
-    description: "Generates improvement tips, AI learning roadmap and downloadable PDF reports.",
+    description: "Generates actionable improvement tips, detailed question scorecards and downloadable PDF reports.",
     icon: "Compass",
   },
 ];

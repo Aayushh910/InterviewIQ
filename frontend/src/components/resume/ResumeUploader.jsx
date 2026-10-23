@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UploadCloud, FileText, Sparkles, AlertCircle } from 'lucide-react';
+import { UploadCloud, FileText, FileCheck, AlertCircle } from 'lucide-react';
 import { useResumes } from '../../context/ResumeContext';
 
 export const ResumeUploader = () => {
@@ -69,7 +69,7 @@ export const ResumeUploader = () => {
           </div>
 
           <div className="p-2.5 rounded-xl bg-[#0A0A0A] border border-white/15 text-[11px] text-violet-400 font-mono flex items-center gap-2">
-            <Sparkles className="w-4 h-4 shrink-0 text-violet-400" />
+            <FileCheck className="w-4 h-4 shrink-0 text-violet-400" />
             <span>Resumes automatically sync to your Technical Mock loops.</span>
           </div>
         </div>

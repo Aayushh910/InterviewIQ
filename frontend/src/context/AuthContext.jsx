@@ -47,6 +47,10 @@ export const AuthProvider = ({ children }) => {
           setUser(res.data);
           setIsAuthenticated(true);
           localStorage.setItem('interviewiq_user', JSON.stringify(res.data));
+          if (res.data.groq_api_key) {
+            localStorage.setItem('interviewiq_groq_api_key', res.data.groq_api_key);
+            localStorage.setItem('interviewiq_ai_api_key', res.data.groq_api_key);
+          }
         }
       } catch (err) {
         console.warn('Authentication token expired or invalid:', err);
@@ -86,6 +90,10 @@ export const AuthProvider = ({ children }) => {
 
       localStorage.setItem('interviewiq_token', access_token);
       localStorage.setItem('interviewiq_user', JSON.stringify(userData));
+      if (userData?.groq_api_key) {
+        localStorage.setItem('interviewiq_groq_api_key', userData.groq_api_key);
+        localStorage.setItem('interviewiq_ai_api_key', userData.groq_api_key);
+      }
       setUser(userData);
       setIsAuthenticated(true);
 
@@ -119,6 +127,7 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(false);
     localStorage.removeItem('interviewiq_token');
     localStorage.removeItem('interviewiq_user');
+    localStorage.removeItem('interviewiq_cached_interviews');
     sessionStorage.clear();
   };
 

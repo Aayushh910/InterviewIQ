@@ -5,7 +5,6 @@ import { Features } from '../../components/landing/Features';
 import { Timeline } from '../../components/landing/Timeline';
 import { InterviewTypes } from '../../components/landing/InterviewTypes';
 import { AnalyticsPreview } from '../../components/landing/AnalyticsPreview';
-import { Testimonials } from '../../components/landing/Testimonials';
 
 export const Landing = () => {
   return (
@@ -16,7 +15,6 @@ export const Landing = () => {
       <Timeline />
       <InterviewTypes />
       <AnalyticsPreview />
-      <Testimonials />
     </div>
   );
 };

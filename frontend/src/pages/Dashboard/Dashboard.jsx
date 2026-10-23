@@ -9,28 +9,28 @@ import { WeeklyGoals } from '../../components/dashboard/WeeklyGoals';
 import { QuickActions } from '../../components/dashboard/QuickActions';
 import { useAuth } from '../../context/AuthContext';
 import { useInterview } from '../../context/InterviewContext';
-import { useResumes } from '../../context/ResumeContext';
 
 export const Dashboard = () => {
   const { user } = useAuth();
-  const { interviews } = useInterview();
-  const { resumes } = useResumes();
+  const { interviews, isLoadingInterviews } = useInterview();
 
   // Compute real dynamic statistics strictly from database state
   const totalSessions = interviews.length;
-  const evaluatedInterviews = interviews.filter(i => i.score !== undefined && i.score !== null && Number(i.score) > 0);
+  const evaluatedInterviews = interviews.filter(
+    (i) => i.score !== undefined && i.score !== null && Number(i.score) > 0
+  );
   
   const readinessScore = evaluatedInterviews.length > 0
     ? (evaluatedInterviews.reduce((sum, item) => sum + Number(item.score), 0) / evaluatedInterviews.length).toFixed(1)
-    : 'N/A';
+    : '0.0';
 
   const avgConfidence = evaluatedInterviews.length > 0
     ? (evaluatedInterviews.reduce((sum, item) => sum + Number(item.confidence || item.score), 0) / evaluatedInterviews.length).toFixed(1)
-    : 'N/A';
+    : '0.0';
 
-  const atsScore = resumes.length > 0
-    ? `${resumes[0].match_score || resumes[0].matchScore || 85}%`
-    : 'N/A';
+  const avgAnswerQuality = evaluatedInterviews.length > 0
+    ? (evaluatedInterviews.reduce((sum, item) => sum + Number(item.correctness || item.score), 0) / evaluatedInterviews.length).toFixed(1)
+    : '0.0';
 
   const totalHours = totalSessions > 0
     ? (interviews.reduce((sum, item) => sum + Number(item.duration_minutes || 15), 0) / 60).toFixed(1)
@@ -40,7 +40,7 @@ export const Dashboard = () => {
     readinessScore,
     totalSessions,
     avgConfidence,
-    atsScore,
+    avgAnswerQuality,
     totalHours,
   };
 
@@ -49,7 +49,7 @@ export const Dashboard = () => {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto relative z-10"
+      className="p-3 sm:p-4 lg:p-5 space-y-4 max-w-7xl mx-auto relative z-10"
     >
       {/* Background ambient light */}
       <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-white/[0.02] rounded-full blur-3xl pointer-events-none -z-10" />
@@ -64,7 +64,7 @@ export const Dashboard = () => {
       <QuickActions />
 
       {/* Performance Trend & Suggestions Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
         <div className="lg:col-span-2">
           <PerformanceTrend interviews={interviews} />
         </div>
@@ -74,7 +74,7 @@ export const Dashboard = () => {
       </div>
 
       {/* Recent Interviews & Weekly Goals Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
         <div className="lg:col-span-2">
           <RecentInterviews interviews={interviews} />
         </div>

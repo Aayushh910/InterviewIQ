@@ -50,8 +50,8 @@ export const Features = () => {
       tag: "Downloadable PDF",
       subtitle: "Personalized Guidance",
       title: "Personalized AI Feedback",
-      description: "Generates improvement tips, AI learning roadmap and downloadable PDF reports.",
-      highlights: ["Personalized Tips", "AI Learning Roadmap", "Downloadable PDF"],
+      description: "Generates improvement tips, detailed question evaluations and downloadable PDF reports.",
+      highlights: ["Personalized Tips", "Question Scorecards", "Downloadable PDF"],
     },
   ];
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Award, CheckCircle2, Sparkles, FileText, ArrowRight, Loader2 } from 'lucide-react';
+import { Award, CheckCircle2, FileText, ArrowRight, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '../common/Button';
 
 export const InterviewFinishedStep = ({ result, onViewReport }) => {
@@ -28,6 +28,7 @@ export const InterviewFinishedStep = ({ result, onViewReport }) => {
 
   const isComplete = analyzingStep === steps.length - 1;
   const finalScore = Math.round(result?.score ?? result?.analytics?.overall_score ?? 0);
+  const isTerminated = result?.terminatedByPolicy || result?.status === 'Terminated (Policy Violation)';
 
   return (
     <motion.div
@@ -37,38 +38,61 @@ export const InterviewFinishedStep = ({ result, onViewReport }) => {
     >
       <div className="rounded-3xl bg-[#0A0A0A]/90 dark:bg-[#0A0A0A]/90 light:bg-white border border-white/15 dark:border-white/15 light:border-slate-200 p-8 shadow-2xl space-y-6 backdrop-blur-xl">
         
-        {/* Celebration Trophy Badge */}
+        {/* Celebration Trophy / Warning Badge */}
         <div className="w-20 h-20 rounded-3xl bg-[#141414] border border-white/20 shadow-2xl mx-auto flex items-center justify-center">
-          <div className="w-full h-full bg-[#0A0A0A] rounded-[22px] flex items-center justify-center text-emerald-400 border border-white/15">
-            <Award className="w-10 h-10 animate-bounce" style={{ animationDuration: '2s' }} />
+          <div className="w-full h-full bg-[#0A0A0A] rounded-[22px] flex items-center justify-center border border-white/15">
+            {isTerminated ? (
+              <AlertTriangle className="w-10 h-10 text-amber-400" />
+            ) : (
+              <Award className="w-10 h-10 text-emerald-400 animate-bounce" style={{ animationDuration: '2s' }} />
+            )}
           </div>
         </div>
 
         <div className="space-y-2">
           <span className={`text-xs font-mono font-bold uppercase tracking-widest px-3.5 py-1 rounded-full border shadow-sm ${
-            finalScore >= 75
+            isTerminated
+              ? 'text-amber-400 bg-amber-500/10 border-amber-500/30'
+              : finalScore >= 75
               ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
               : finalScore >= 50
               ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
               : 'text-rose-400 bg-rose-500/10 border-rose-500/20'
           }`}>
-            Interview Complete
+            {isTerminated ? 'Auto-Submitted (Policy Violation)' : 'Interview Complete'}
           </span>
           <h1 className="text-3xl font-sans font-extrabold text-white dark:text-white light:text-slate-900 tracking-tight">
-            {finalScore >= 75
+            {isTerminated
+              ? 'Session Auto-Submitted'
+              : finalScore >= 75
               ? 'Outstanding Performance!'
               : finalScore >= 50
               ? 'Solid Foundation - Good Effort'
               : 'Evaluation Complete - Areas for Growth'}
           </h1>
           <p className="text-xs sm:text-sm text-neutral-400 max-w-md mx-auto">
-            {finalScore >= 75
+            {isTerminated
+              ? 'Your interview was automatically submitted due to exceeding allowed tab departures. Answers recorded prior to the violation have been evaluated.'
+              : finalScore >= 75
               ? 'Your answers demonstrated deep technical accuracy, concise structure, and clear communication.'
               : finalScore >= 50
               ? 'You answered relevant concepts well, with specific recommendations for deeper technical depth.'
               : 'Your responses were evaluated. Domain terminology and technical depth need focused practice.'}
           </p>
         </div>
+
+        {/* Auto-Submit Proctoring Reason Banner */}
+        {isTerminated && (
+          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-left space-y-1.5 max-w-md mx-auto">
+            <div className="flex items-center gap-2 font-bold text-xs font-mono text-amber-400">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>Proctoring Auto-Submission Reason</span>
+            </div>
+            <p className="text-xs text-neutral-300 leading-relaxed font-sans">
+              {result?.terminationExplanation || 'Exceeded maximum allowed tab departures (2/2 tab switches detected). The interview was automatically ended and submitted for evaluation.'}
+            </p>
+          </div>
+        )}
 
         {/* Overall Score Badge */}
         <div className="p-6 rounded-2xl bg-[#141414] border border-white/15 inline-block w-full max-w-sm font-mono shadow-md">
@@ -112,8 +136,8 @@ export const InterviewFinishedStep = ({ result, onViewReport }) => {
           </div>
         </div>
 
-        {/* Action Trigger */}
-        <div className="pt-2">
+        {/* Action Triggers */}
+        <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3 max-w-md mx-auto">
           <Button
             variant="primary"
             size="lg"
@@ -121,10 +145,19 @@ export const InterviewFinishedStep = ({ result, onViewReport }) => {
             onClick={onViewReport}
             icon={FileText}
             iconPosition="right"
-            className="w-full max-w-md bg-white text-black hover:bg-neutral-200 font-bold shadow-xl border border-white/20 text-sm px-6 py-3"
+            className="w-full sm:flex-1 bg-white text-black hover:bg-neutral-200 font-bold shadow-xl border border-white/20 text-xs sm:text-sm px-5 py-3 cursor-pointer"
           >
-            View Detailed Performance Report
+            View Performance Report
           </Button>
+
+          <button
+            type="button"
+            disabled={!isComplete}
+            onClick={() => window.location.href = '/dashboard'}
+            className="w-full sm:w-auto px-5 py-3 rounded-xl bg-[#141414] hover:bg-[#1f1f1f] text-neutral-300 hover:text-white font-mono text-xs font-semibold border border-white/15 transition-all cursor-pointer disabled:opacity-40"
+          >
+            Back to Dashboard
+          </button>
         </div>
       </div>
     </motion.div>

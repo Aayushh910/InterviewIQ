@@ -1,12 +1,12 @@
 import React from 'react';
-import { BookOpen, Mic, Video, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
+import { BookOpen, Mic, Video, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export const PillarsBreakdown = ({ answerQuality, communication, visualPresentation }) => {
   return (
     <div className="space-y-4">
       <div className="px-1 flex items-center justify-between">
         <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-emerald-400" /> Evaluation Pillars Breakdown
+          Evaluation Pillars Breakdown
         </h2>
         <span className="text-xs text-neutral-400 font-mono">3 Core Pillars</span>
       </div>

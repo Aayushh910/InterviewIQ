@@ -2,10 +2,10 @@ import { useRef, useEffect, useState } from "react";
 import { motion, useInView } from "framer-motion";
 
 const STATS = [
-  { value: 10000, suffix: "+", label: "Mock Interviews", icon: "🎯" },
-  { value: 95, suffix: "%", label: "AI Accuracy Rate", icon: "🤖" },
-  { value: 4.9, suffix: "★", label: "Average Rating", icon: "⭐" },
-  { value: 500, suffix: "+", label: "Companies Supported", icon: "🏢" },
+  { value: 10000, suffix: "+", label: "Mock Interviews" },
+  { value: 95, suffix: "%", label: "AI Accuracy Rate" },
+  { value: 4.9, suffix: "/5", label: "Average Rating" },
+  { value: 500, suffix: "+", label: "Companies Supported" },
 ];
 
 function Counter({ value, suffix, decimals = 0 }) {
@@ -49,7 +49,7 @@ export default function Stats() {
           transition={{ duration: 0.5 }}
           className="grid grid-cols-2 lg:grid-cols-4 gap-4"
         >
-          {STATS.map(({ value, suffix, label, icon }, i) => (
+          {STATS.map(({ value, suffix, label }, i) => (
             <motion.div
               key={label}
               initial={{ opacity: 0, y: 24 }}
@@ -57,7 +57,6 @@ export default function Stats() {
               transition={{ duration: 0.5, delay: i * 0.1 }}
               className="card-3d bg-[#1E1E2E] border border-white/6 rounded-2xl p-6 text-center group"
             >
-              <div className="text-2xl mb-3">{icon}</div>
               <div className="text-4xl sm:text-5xl font-extrabold text-[#F5A623] mb-2 tracking-tight">
                 <Counter value={value} suffix={suffix} decimals={value % 1 !== 0 ? 1 : 0} />
               </div>

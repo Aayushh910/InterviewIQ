@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, MessageSquare, ChevronDown, ChevronUp, CheckCircle2, AlertTriangle, Eye, Mic, Award } from 'lucide-react';
+import { MessageSquare, ChevronDown, ChevronUp, CheckCircle2, AlertTriangle, Eye, Mic, Award } from 'lucide-react';
 import { Badge } from '../common/Badge';
 
 export const PerQuestionAnalysis = ({ questions }) => {
@@ -22,7 +22,7 @@ export const PerQuestionAnalysis = ({ questions }) => {
       <div className="px-1 flex items-center justify-between">
         <div>
           <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-emerald-400" /> Per-Question Performance Analysis ({questions.length})
+            Per-Question Performance Analysis ({questions.length})
           </h2>
           <p className="text-xs text-neutral-400">Granular assessment across main questions and counter follow-ups</p>
         </div>
