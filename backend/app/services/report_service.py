@@ -312,13 +312,29 @@ class ReportService:
         ]))
 
         card_table = Table([[score_box, summary_box]], colWidths=[125, 415])
-        card_table.setStyle(TableStyle([
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ("LEFTPADDING", (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-        ]))
+        elements = []
+        if dto.session_status == "terminated_by_policy" or dto.termination_reason:
+            if dto.termination_reason == "proctoring_tab_departures":
+                viol_reason = "Exceeded maximum allowed tab departures (2/2 tab switches detected)."
+            else:
+                viol_reason = dto.termination_reason or "Exceeded maximum allowed tab departures (2/2 tab switches detected)."
+            alert_text = (
+                f"<b>PROCTORING AUTO-SUBMISSION:</b> This interview session was automatically terminated and submitted due to policy violation: "
+                f"<b>{viol_reason}</b>. Answers recorded prior to the violation were preserved and evaluated."
+            )
+            alert_table = Table([[Paragraph(alert_text, styles["BodySmall"])]], colWidths=[540])
+            alert_table.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FEF2F2")),
+                ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#FCA5A5")),
+                ("TOPPADDING", (0, 0), (-1, -1), 5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+            ]))
+            elements.extend([alert_table, Spacer(1, 6)])
 
-        return [card_table]
+        elements.append(card_table)
+        return elements
 
     @classmethod
     def _build_pillars_breakdown(cls, dto: CandidateResultsDTO, styles: Dict[str, ParagraphStyle]) -> List[Any]:

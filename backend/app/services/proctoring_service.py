@@ -284,7 +284,9 @@ def terminate_session_by_policy(
     if session.status in ["completed", "terminated_by_policy"]:
         return session
 
-    reason = termination_in.reason or "proctoring_tab_departures"
+    details = termination_in.details or {}
+    raw_reason = termination_in.reason or "proctoring_tab_departures"
+    reason_to_store = details.get("reasonText") or raw_reason
 
     # Record terminal proctoring event
     terminal_event = ProctoringEvent(
@@ -293,9 +295,9 @@ def terminate_session_by_policy(
         confidence=1.0,
         recorded_at=datetime.utcnow(),
         event_metadata={
-            "reason": reason,
+            "reason": raw_reason,
             "departure_count": termination_in.departure_count,
-            "details": termination_in.details or {},
+            "details": details,
         }
     )
     db.add(terminal_event)
@@ -306,5 +308,5 @@ def terminate_session_by_policy(
         session_id=session_id,
         user_id=user_id,
         status="terminated_by_policy",
-        termination_reason=reason
+        termination_reason=reason_to_store
     )

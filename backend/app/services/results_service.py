@@ -216,6 +216,8 @@ class ResultsService:
             candidate_name=candidate_name,
             completed_at=session.completed_at or final_eval.created_at,
             duration_minutes=duration_minutes,
+            session_status=session.status,
+            termination_reason=session.termination_reason,
             overall_score=final_eval.overall_score,
             performance_category=final_eval.performance_category,
             evaluation_summary=final_eval.summary,

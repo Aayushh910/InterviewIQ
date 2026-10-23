@@ -77,6 +77,7 @@ class InterviewAnalyticsResponse(BaseModel):
     session_id: str
     interview_id: str
     status: str
+    termination_reason: Optional[str] = None
     overall_score: Optional[float] = None
     performance_category: str
     metrics: Optional[DimensionMetrics] = None

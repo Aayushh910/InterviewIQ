@@ -168,6 +168,7 @@ class EvidenceAggregator:
             interview_id=session.interview_id,
             user_id=user_id,
             session_status=session.status,
+            termination_reason=session.termination_reason,
             total_questions=len(question_bundles),
             answered_questions_count=answered_count,
             questions=question_bundles,

@@ -75,6 +75,17 @@ export const InterviewProvider = ({ children }) => {
     const analytics = sessionData.analytics || {};
     const metrics = analytics.metrics || {};
     const overallScore = Math.round(analytics.overall_score ?? sessionData.score ?? 0);
+    const isTerminated = sessionData.terminatedByPolicy ||
+      analytics.status === 'terminated_by_policy' ||
+      sessionData.status === 'Terminated (Policy Violation)' ||
+      sessionData.status === 'terminated_by_policy' ||
+      Boolean(sessionData.terminationReason);
+
+    const terminationReasonText = sessionData.terminationExplanation ||
+      analytics.termination_explanation ||
+      (isTerminated
+        ? 'Auto-submitted due to proctoring policy violation: Exceeded maximum allowed tab departures (2/2 tab switches detected).'
+        : null);
 
     const newInterview = {
       id,
@@ -87,8 +98,12 @@ export const InterviewProvider = ({ children }) => {
       timeAgo: 'Just now',
       duration: `${sessionData.durationMinutes || 4} Mins`,
       score: overallScore,
-      status: 'Completed',
-      summary: analytics.session_summary || sessionData.summary || 'Session completed and evaluated.',
+      status: isTerminated ? 'Terminated (Policy Violation)' : 'Completed',
+      terminatedByPolicy: isTerminated,
+      terminationReason: terminationReasonText,
+      summary: isTerminated
+        ? `[Policy Auto-Submit] ${terminationReasonText}`
+        : (analytics.session_summary || sessionData.summary || 'Session completed and evaluated.'),
       typeBadge: activeConfig.interviewType || 'Technical',
     };
 
@@ -123,6 +138,9 @@ export const InterviewProvider = ({ children }) => {
       date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
       duration: newInterview.duration,
       overallScore: overallScore,
+      status: isTerminated ? 'Terminated (Policy Violation)' : 'Completed',
+      terminatedByPolicy: isTerminated,
+      terminationReason: terminationReasonText,
       performanceCategory: analytics.performance_category || 'Evaluated',
       scores: {
         correctness: metrics.correctness !== undefined ? Math.round(metrics.correctness) : 0,

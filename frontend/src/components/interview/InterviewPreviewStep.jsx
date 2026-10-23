@@ -92,6 +92,11 @@ export const InterviewPreviewStep = ({ config, onStartInterview, onBack }) => {
       description: 'Clicking Begin Interview enters fullscreen. To end early, click "End Interview" with the exit confirmation popup.',
       highlight: 'fullscreen',
     },
+    {
+      title: 'Proctoring & Focus Policy',
+      description: 'Tab switching is strictly monitored. You are allowed at most 1 tab switch; a 2nd departure will automatically terminate and submit your interview.',
+      highlight: 'proctoring',
+    },
   ];
 
   // ─── 1. Setup Live Camera & Audio Level Meter ─────────────────────────────

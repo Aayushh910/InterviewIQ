@@ -82,6 +82,7 @@ class AggregatedSessionEvidence(BaseModel):
     interview_id: str
     user_id: str
     session_status: str
+    termination_reason: Optional[str] = None
     total_questions: int
     answered_questions_count: int
     questions: List[QuestionEvidenceBundle] = Field(default_factory=list)

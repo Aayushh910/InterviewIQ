@@ -590,12 +590,18 @@ export const AIInterviewScreen = ({ config, onFinish, preloadedData }) => {
 
     let analytics = null;
     const reason = violation.reason || 'proctoring_tab_departures';
+    const reasonText = violation.explanation ||
+      `Auto-submitted due to proctoring policy violation: Exceeded maximum allowed tab departures (${violation.departureCount || 2}/${violation.maxAllowed || 2} tab switches detected).`;
+
     if (sessionId) {
       try {
         await terminateSessionByPolicy(sessionId, {
-          reason,
-          departureCount: violation.departureCount || proctoringPolicy.maxTabDepartures,
-          details: { maxAllowed: proctoringPolicy.maxTabDepartures },
+          reason: 'proctoring_tab_departures',
+          departureCount: violation.departureCount || proctoringPolicy.maxTabDepartures || 2,
+          details: {
+            maxAllowed: violation.maxAllowed || proctoringPolicy.maxTabDepartures || 2,
+            reasonText,
+          },
         });
         try {
           await calculateFinalEvaluation(sessionId);
@@ -613,14 +619,17 @@ export const AIInterviewScreen = ({ config, onFinish, preloadedData }) => {
     setWebcamStream(null);
 
     onFinish({
-      durationMinutes: Math.max(1, Math.ceil((240 - timerSeconds) / 60)),
+      durationMinutes: Math.max(1, Math.ceil((180 - timerSeconds) / 60)),
       score: analytics?.overall_score ?? 0,
       sessionId,
       analytics,
       title: `${selectedDomain} Technical Interview`,
+      status: 'Terminated (Policy Violation)',
       terminatedByPolicy: true,
-      terminationReason: reason,
-      departureCount: violation.departureCount,
+      terminationReason: 'proctoring_tab_departures',
+      terminationExplanation: reasonText,
+      departureCount: violation.departureCount || 2,
+      maxTabDepartures: violation.maxAllowed || 2,
     });
   };
 

@@ -189,16 +189,40 @@ export const History = () => {
     const strengths = evalData?.strengths || ['Clear communication', 'Technical accuracy'];
     const improvements = evalData?.improvements || ['Deepen architectural trade-offs'];
 
+    const matchingContextItem = interviews.find((i) => i.session_id === sessionId || i.id === sessionId);
+    const isTerminated =
+      evalData?.session_status === 'terminated_by_policy' ||
+      evalData?.status === 'terminated_by_policy' ||
+      evalData?.status === 'Terminated (Policy Violation)' ||
+      Boolean(evalData?.termination_reason) ||
+      matchingContextItem?.terminatedByPolicy ||
+      matchingContextItem?.status?.toLowerCase().includes('terminated');
+
+    const violationReason =
+      evalData?.termination_reason ||
+      matchingContextItem?.terminationReason ||
+      (isTerminated ? 'Exceeded maximum allowed tab departures (2/2 tab switches detected).' : null);
+
+    const statusLine = isTerminated
+      ? `Status:       Terminated by Proctoring Policy (Auto-Submitted)\nViolation:    ${violationReason}`
+      : 'Status:       Completed & Evaluated';
+
+    const execSummary = evalData?.evaluation_summary || evalData?.summary || (
+      isTerminated
+        ? `[Policy Violation Auto-Submit] This interview session was automatically terminated and submitted due to policy violation: ${violationReason}. Answers recorded prior to the violation were preserved and evaluated.`
+        : 'Candidate demonstrated consistent technical knowledge and structured articulation.'
+    );
+
     return `# InterviewIQ — Official Candidate Assessment Report
 ======================================================
 Session ID:   ${sessionId}
 Title:        ${title || 'Technical Practice Session'}
 Date:         ${new Date().toLocaleDateString()}
-Status:       Completed & Evaluated
+${statusLine}
 Overall Score: ${overallScore} / 100
 
 ## 1. Executive Performance Summary
-${evalData?.summary || 'Candidate demonstrated consistent technical knowledge and structured articulation.'}
+${execSummary}
 
 ## 2. Pillar Breakdown
 - Answer Quality:        ${evalData?.answer_quality?.score ?? overallScore}%
@@ -344,6 +368,22 @@ Generated securely by InterviewIQ AI Interview Engine
       );
     }
 
+    const matchingContextItem = interviews.find(
+      (i) => i.session_id === inspectingSessionId || i.id === inspectingSessionId
+    );
+    const isTerminatedSession =
+      results?.session_status === 'terminated_by_policy' ||
+      results?.status === 'terminated_by_policy' ||
+      Boolean(results?.termination_reason) ||
+      results?.evaluation_summary?.includes('Policy Violation') ||
+      matchingContextItem?.terminatedByPolicy ||
+      matchingContextItem?.status?.toLowerCase().includes('terminated');
+
+    const terminationReasonText =
+      results?.termination_reason ||
+      matchingContextItem?.terminationReason ||
+      'Exceeded maximum allowed tab departures (2/2 tab switches detected).';
+
     return (
       <motion.div
         initial={{ opacity: 0, y: 12 }}
@@ -388,6 +428,21 @@ Generated securely by InterviewIQ AI Interview Engine
             toastMessage.type === 'success' ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border border-red-500/20 text-red-400'
           }`}>
             {toastMessage.text}
+          </div>
+        )}
+
+        {isTerminatedSession && (
+          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200 flex items-start gap-3 shadow-lg backdrop-blur-md">
+            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <div className="text-xs font-bold uppercase tracking-wider text-amber-400 font-mono flex items-center gap-2">
+                <span>Proctoring Auto-Submission Notice</span>
+                <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px]">Policy Violation</span>
+              </div>
+              <p className="text-xs text-amber-100/90 leading-relaxed font-sans">
+                This interview was automatically submitted due to policy violation: <strong className="text-white font-semibold">{terminationReasonText}</strong>. All responses and evaluations recorded prior to the auto-submission were preserved and incorporated into your final evaluation.
+              </p>
+            </div>
           </div>
         )}
 
@@ -567,6 +622,12 @@ Generated securely by InterviewIQ AI Interview Engine
               const targetSessionId = item.session_id || item.id;
               const isCurrentlyDownloading = downloadingId === targetSessionId;
 
+              const isTerminatedCard =
+                item.terminatedByPolicy ||
+                item.status === 'Terminated (Policy Violation)' ||
+                item.status === 'terminated_by_policy' ||
+                item.status?.toLowerCase().includes('terminated');
+
               return (
                 <div
                   key={item.id}
@@ -578,15 +639,27 @@ Generated securely by InterviewIQ AI Interview Engine
                     </div>
 
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="text-base font-bold text-white">
                           {item.title || item.job_role || 'Practice Session'}
                         </h3>
                         <Badge variant="emerald" size="sm" className="bg-[#141414] border-white/20 text-neutral-200 font-mono text-[10px]">
                           {item.typeBadge || item.interview_type || 'Technical'}
                         </Badge>
+                        {isTerminatedCard && (
+                          <span
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 font-mono text-[10px] font-semibold"
+                            title={item.terminationReason || 'Auto-submitted due to proctoring policy violation'}
+                          >
+                            <AlertTriangle className="w-3 h-3 text-amber-400" /> Auto-Submitted (Tab Limit Exceeded)
+                          </span>
+                        )}
                       </div>
-                      <p className="text-xs text-neutral-400 line-clamp-1">{item.summary || item.role || item.job_role}</p>
+                      <p className="text-xs text-neutral-400 line-clamp-1">
+                        {isTerminatedCard
+                          ? `Auto-submitted: ${item.terminationReason || 'Exceeded maximum allowed tab departures (2/2 tab switches detected).'}`
+                          : (item.summary || item.role || item.job_role)}
+                      </p>
 
                       <div className="flex items-center gap-4 text-xs text-neutral-400 font-mono pt-1">
                         <span className="flex items-center gap-1">
